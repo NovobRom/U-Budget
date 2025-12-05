@@ -116,7 +116,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         });
     }, [activeBudgetId, getBudgetDocRef, user]);
 
-    // 2.1 Fetch Member Details (Fix: Merging Owner + Members)
+    // 2.1 Fetch Member Details
     useEffect(() => {
         const fetchMembers = async () => {
             const uniqueIds = new Set();
@@ -204,7 +204,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         fetchMembers();
     }, [allowedUsers, budgetOwnerId, user]);
 
-    // 3. Loans Listener (ВІДНОВЛЕНО)
+    // 3. Loans Listener
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setLoans([]); return; }
         return onSnapshot(query(getLoansColRef()), (snap) => { 
@@ -212,7 +212,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         });
     }, [activeBudgetId, isPendingApproval, getLoansColRef]);
 
-    // 3.1 Calculate Total Debt (Async) (ВІДНОВЛЕНО)
+    // 3.1 Calculate Total Debt
     useEffect(() => {
         let isMounted = true;
         const calculateTotalDebt = async () => {
@@ -239,7 +239,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => { isMounted = false; };
     }, [loans, mainCurrency]);
 
-    // 4. Assets Listener & History (ВІДНОВЛЕНО)
+    // 4. Assets Listener
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setAssets([]); return; }
         
@@ -258,7 +258,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         };
     }, [activeBudgetId, isPendingApproval, getAssetsColRef, getHistoryColRef]);
 
-    // 4.1 Automatic Snapshot Logic (ВІДНОВЛЕНО)
+    // 4.1 Automatic Snapshot Logic
     useEffect(() => {
         const recordSnapshot = async () => {
             if (assets.length === 0 || !activeBudgetId) return;
@@ -357,16 +357,24 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
 
     const leaveBudget = async () => {
         if (!user || !activeBudgetId) return;
-        
         const budgetRef = getBudgetDocRef();
-        await updateDoc(budgetRef, {
-            authorizedUsers: arrayRemove(user.uid)
-        });
-        
+        await updateDoc(budgetRef, { authorizedUsers: arrayRemove(user.uid) });
         const userProfileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile');
         await updateDoc(userProfileRef, { activeBudgetId: null });
-        
         window.location.reload(); 
+    };
+
+    // 🔥 НОВА ФУНКЦІЯ ПРИМУСОВОГО ПЕРЕМИКАННЯ
+    const switchBudget = async (newBudgetId) => {
+        if (!user || !newBudgetId) return;
+        const userProfileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile');
+        
+        await updateDoc(userProfileRef, { 
+            activeBudgetId: newBudgetId,
+            isPendingApproval: false
+        });
+        
+        window.location.reload();
     };
 
     return {
@@ -382,6 +390,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         saveLimit, deleteCategory, addCategory,
         removeUser,
         leaveBudget,
+        switchBudget, // <-- Експорт
         getBudgetDocRef
     };
 };

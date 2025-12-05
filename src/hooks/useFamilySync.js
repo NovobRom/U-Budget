@@ -5,12 +5,12 @@ import {
     arrayUnion, serverTimestamp 
 } from 'firebase/firestore';
 import { db, appId } from '../firebase';
-import { toast } from 'react-hot-toast'; // Додали для повідомлень
+import { toast } from 'react-hot-toast';
 
 export const useFamilySync = (currentUserId, userEmail, userName) => {
     const [incomingRequests, setIncomingRequests] = useState([]);
 
-    // 1. Слухаємо ВХІДНІ запити (хто хоче до нас) - Тільки активні (pending)
+    // 1. Слухаємо ВХІДНІ запити (хто хоче до нас)
     useEffect(() => {
         if (!currentUserId) return;
         const q = query(
@@ -23,36 +23,44 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         });
     }, [currentUserId]);
 
-    // 2. 🔥 НОВЕ: Слухаємо МІЙ ВИХІДНИЙ запит (чи прийняли мене?)
+    // 2. Слухаємо МІЙ ВИХІДНИЙ запит (чи прийняли мене?)
     useEffect(() => {
         if (!currentUserId) return;
         
-        // Слухаємо документ запиту, де ID документа == мій ID
+        // Слухаємо документ запиту, де ID документа == мій UID
         const myRequestRef = doc(db, 'artifacts', appId, 'public', 'data', 'budget_requests', currentUserId);
         
         const unsubscribe = onSnapshot(myRequestRef, async (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
                 
-                // СЦЕНАРІЙ А: Мене прийняли
+                // СЦЕНАРІЙ А: Мене прийняли (Approved)
                 if (data.status === 'approved') {
-                    // Я сам оновлюю свій профіль (бо я маю на це права)
-                    await updateDoc(doc(db, 'artifacts', appId, 'users', currentUserId, 'metadata', 'profile'), { 
-                        activeBudgetId: data.targetBudgetId, 
-                        isPendingApproval: false 
-                    });
-                    
-                    // Видаляємо запит, бо справу зроблено
-                    await deleteDoc(myRequestRef);
-                    toast.success("Ваш запит прийнято! Бюджет підключено.");
+                    try {
+                        // 1. Оновлюємо свій профіль: підключаємося до бюджету
+                        await updateDoc(doc(db, 'artifacts', appId, 'users', currentUserId, 'metadata', 'profile'), { 
+                            activeBudgetId: data.targetBudgetId, 
+                            isPendingApproval: false 
+                        });
+                        
+                        // 2. Видаляємо запит (прибирання за собою)
+                        await deleteDoc(myRequestRef);
+                        
+                        toast.success("Ваш запит прийнято! Бюджет підключено.");
+                        
+                        // 3. Форсуємо перезавантаження, щоб підтягнути нові дані
+                        window.location.reload();
+                    } catch (error) {
+                        console.error("Auto-switch error:", error);
+                        toast.error("Помилка перемикання бюджету. Спробуйте ще раз.");
+                    }
                 }
                 
-                // СЦЕНАРІЙ Б: Мене відхилили
+                // СЦЕНАРІЙ Б: Мене відхилили (Rejected)
                 if (data.status === 'rejected') {
-                    // Я сам знімаю з себе статус "очікування"
                     await updateDoc(doc(db, 'artifacts', appId, 'users', currentUserId, 'metadata', 'profile'), { 
                         isPendingApproval: false,
-                        activeBudgetId: currentUserId 
+                        activeBudgetId: currentUserId // Повертаємося до свого бюджету
                     });
                     
                     await deleteDoc(myRequestRef);
@@ -64,6 +72,8 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         return () => unsubscribe();
     }, [currentUserId]);
 
+    // Дії (Actions)
+
     const sendJoinRequest = async (targetBudgetId) => {
         if (targetBudgetId === currentUserId) throw new Error("cannot_join_self");
 
@@ -72,15 +82,17 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
 
         if (!targetSnap.exists()) throw new Error("budget_not_found");
 
+        // Створюємо запит
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budget_requests', currentUserId), { 
             requesterUid: currentUserId, 
             targetBudgetId: targetBudgetId, 
             status: 'pending', 
             timestamp: serverTimestamp(), 
-            name: userName || userEmail, 
+            name: userName || 'Unknown', 
             email: userEmail 
         });
         
+        // Ставимо собі статус "Очікування"
         await updateDoc(doc(db, 'artifacts', appId, 'users', currentUserId, 'metadata', 'profile'), { 
             isPendingApproval: true, 
             activeBudgetId: targetBudgetId 
@@ -95,31 +107,30 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         });
     };
 
-    // 🔥 ВИПРАВЛЕНО: Ми не міняємо чужий профіль. Ми міняємо статус запиту.
     const approveRequest = async (req) => {
-        // 1. Додаємо юзера до списку "своїх" у бюджеті
+        // 1. Додаємо UID партнера в authorizedUsers (тільки ID, ім'я підтягнеться саме)
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budgets', currentUserId), { 
-            authorizedUsers: arrayUnion({ uid: req.requesterUid, name: req.name, email: req.email }) 
+            authorizedUsers: arrayUnion(req.requesterUid) 
         });
         
-        // 2. Ставимо печатку "approved". Юзер (req.requesterUid) побачить це через useEffect і оновить свій профіль сам.
+        // 2. Ставимо статус 'approved' у запиті
+        // Це тригерне слухача (useEffect №2) у Партнера, і його додаток зробить решту
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budget_requests', req.requesterUid), {
             status: 'approved'
         });
     };
 
-    // 🔥 ВИПРАВЛЕНО: Просто ставимо статус rejected
-    const declineRequest = async (req) => {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budget_requests', req.requesterUid), {
+    const declineRequest = async (reqId) => {
+        // Приймаємо ID або об'єкт
+        const uidToReject = typeof reqId === 'object' ? reqId.requesterUid : reqId;
+        
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budget_requests', uidToReject), {
             status: 'rejected'
         });
     };
 
-    const disconnectUser = async (userToKick) => {
-         // Тут поки залишаємо пустим або реалізуємо видалення з authorizedUsers
-         // Для коректного видалення треба буде отримати поточний список і відфільтрувати його,
-         // але це вимагає читання документа бюджету. 
-         // Поки що це не критично для процесу "Приєднання".
+    const disconnectUser = async () => {
+         // Placeholder
     };
 
     return { 

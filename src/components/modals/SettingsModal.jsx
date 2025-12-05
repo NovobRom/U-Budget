@@ -5,7 +5,7 @@ import RequestsManager from './settings/RequestsManager';
 import GeneralSettings from './settings/GeneralSettings';
 import LimitsManager from './settings/LimitsManager';
 import TeamManager from './settings/TeamManager';
-import ConfirmModal from './ConfirmModal'; // Імпорт модалки
+import ConfirmModal from './ConfirmModal'; 
 
 export default function SettingsModal({ 
     isOpen, onClose, 
@@ -15,21 +15,15 @@ export default function SettingsModal({
     incomingRequests, approveRequest, declineRequest,
     categories, limits, onSaveLimit, onDeleteCategory,
     onLogout, t, getCategoryName,
-    allowedUsers = [], removeUser, leaveBudget, // <-- leaveBudget
-    currentUserId, isOwner // <-- Додаткові дані, які треба передати з App
+    allowedUsers = [], removeUser, leaveBudget, 
+    currentUserId, isOwner,
+    activeBudgetId, switchBudget // <-- NEW PROPS
 }) {
-    // Стан для модалки підтвердження
-    const [confirmModal, setConfirmModal] = useState({ 
-        isOpen: false, 
-        type: null, // 'remove' | 'leave'
-        data: null 
-    });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, data: null });
 
     if (!isOpen) return null;
 
-    // Обробники дій
     const handleRemoveClick = (userItem) => {
-        // Якщо я не власник, я не можу видаляти (хоча кнопка і так буде прихована)
         if (!isOwner) return;
         setConfirmModal({ isOpen: true, type: 'remove', data: userItem });
     };
@@ -43,14 +37,13 @@ export default function SettingsModal({
             removeUser(confirmModal.data);
         } else if (confirmModal.type === 'leave') {
             leaveBudget();
-            onClose(); // Закриваємо налаштування після виходу
+            onClose(); 
         }
         setConfirmModal({ isOpen: false, type: null, data: null });
     };
 
     return (
         <>
-            {/* МОДАЛКА ПІДТВЕРДЖЕННЯ */}
             <ConfirmModal 
                 isOpen={confirmModal.isOpen}
                 onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
@@ -80,6 +73,11 @@ export default function SettingsModal({
                             lang={lang} setLang={setLang}
                             currency={currency} setCurrency={setCurrency}
                             darkMode={darkMode} setDarkMode={setDarkMode}
+                            
+                            currentUserId={currentUserId}
+                            activeBudgetId={activeBudgetId}
+                            switchBudget={switchBudget}
+                            
                             t={t}
                         />
 
@@ -93,10 +91,9 @@ export default function SettingsModal({
                             getCategoryName={getCategoryName}
                         />
 
-                        {/* TEAM MANAGER */}
                         <TeamManager 
                             allowedUsers={allowedUsers}
-                            removeUser={isOwner ? handleRemoveClick : null} // Передаємо функцію тільки якщо я власник
+                            removeUser={isOwner ? handleRemoveClick : null} 
                             onLeave={handleLeaveClick}
                             currentUserId={currentUserId}
                             t={t}

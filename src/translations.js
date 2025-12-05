@@ -91,6 +91,14 @@ export const TRANSLATIONS = {
         you_label: "Ви",
         remove_user_btn: "Видалити",
         leave_budget_btn: "Вийти з бюджету",
+
+        // --- Budget Connection (NEW) ---
+        budget_connection: "Підключення до Бюджету",
+        current_id_label: "ID цього бюджету (Ваш):",
+        switch_budget_label: "Перемикнутися на інший бюджет:",
+        switch_placeholder: "Введіть ID бюджету...",
+        switch_btn: "Перейти",
+        copied: "Скопійовано!",
         
         // --- Confirm Modal ---
         confirm_title: "Ви впевнені?",
@@ -302,6 +310,14 @@ export const TRANSLATIONS = {
         you_label: "You",
         remove_user_btn: "Remove",
         leave_budget_btn: "Leave Budget",
+
+        // --- Budget Connection (NEW) ---
+        budget_connection: "Budget Connection",
+        current_id_label: "Current Budget ID (Yours):",
+        switch_budget_label: "Switch to another budget:",
+        switch_placeholder: "Enter Budget ID...",
+        switch_btn: "Switch",
+        copied: "Copied!",
 
         // --- Confirm Modal ---
         confirm_title: "Are you sure?",

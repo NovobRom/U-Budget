@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { Coffee, Wallet, Loader2, Download, HelpCircle, AlertCircle, RefreshCw, LogOut, Mail } from 'lucide-react';
 
-// 🔥 ДОДАНО ІМПОРТИ ДЛЯ ОНОВЛЕННЯ ФОТО В БАЗІ
+// FIREBASE IMPORTS (для синхронізації фото)
 import { doc, setDoc } from 'firebase/firestore'; 
 import { db, appId } from './firebase';
 
@@ -74,12 +74,13 @@ export default function App() {
         addAsset, updateAsset, deleteAsset,
         saveLimit, addCategory, deleteCategory,
         removeUser,
-        budgetOwnerId, // <-- NEW: ID власника
-        leaveBudget    // <-- NEW: функція виходу
+        budgetOwnerId, 
+        leaveBudget,
+        switchBudget // <-- 🔥 ОТРИМУЄМО НОВУ ФУНКЦІЮ
     } = useBudget(activeBudgetId, isPendingApproval, user, lang, currency);
 
     const { 
-        incomingRequests, sendJoinRequest, cancelSentRequest, approveRequest, declineRequest, disconnectUser 
+        incomingRequests, sendJoinRequest, cancelSentRequest, approveRequest, declineRequest 
     } = useFamilySync(user?.uid, user?.email, user?.displayName);
 
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ua'];
@@ -88,12 +89,11 @@ export default function App() {
     useEffect(() => { localStorage.setItem('lang', lang); }, [lang]);
     useEffect(() => { localStorage.setItem('currency', currency); }, [currency]);
 
-    // 🔥 АВТОМАТИЧНА СИНХРОНІЗАЦІЯ ФОТО В БАЗУ ДАНИХ
+    // АВТОМАТИЧНА СИНХРОНІЗАЦІЯ ФОТО В БАЗУ ДАНИХ
     useEffect(() => {
         const syncPhoto = async () => {
             if (user && user.photoURL) {
                 try {
-                    // Оновлюємо тільки поле photoURL в профілі користувача
                     const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile');
                     await setDoc(profileRef, { photoURL: user.photoURL }, { merge: true });
                 } catch (error) {
@@ -102,7 +102,7 @@ export default function App() {
             }
         };
         syncPhoto();
-    }, [user]); // Спрацьовує при вході користувача
+    }, [user]);
 
     const handleSaveTransaction = async (data) => {
         try {
@@ -398,12 +398,16 @@ export default function App() {
                 onLogout={logout}
                 t={t} getCategoryName={getCategoryName}
                 
-                // 🔥 НОВІ ПРОПСИ ДЛЯ КОМАНДИ І МОДАЛКИ
+                // 🔥 ВСІ ВАЖЛИВІ ПРОПСИ
                 allowedUsers={budgetMembers} 
                 removeUser={removeUser}
-                leaveBudget={leaveBudget} // <-- Передаємо функцію виходу
-                currentUserId={user?.uid} // <-- Передаємо ID поточного юзера
-                isOwner={user?.uid === budgetOwnerId} // <-- Перевірка, чи ми власник
+                leaveBudget={leaveBudget}
+                currentUserId={user?.uid}
+                isOwner={user?.uid === budgetOwnerId}
+                
+                // 🔥 NEW: Pass active ID and switch function
+                activeBudgetId={activeBudgetId}
+                switchBudget={switchBudget}
             />
 
             <InfoModal 
