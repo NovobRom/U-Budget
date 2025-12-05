@@ -41,10 +41,10 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     const [allCategories, setAllCategories] = useState(DEFAULT_CATEGORIES);
     const [categoryLimits, setCategoryLimits] = useState({});
     
-    // Список ID учасників (сирі дані з бази)
-    const [allowedUsers, setAllowedUsers] = useState([]);
-    // Оброблені дані учасників (з іменами)
-    const [budgetMembers, setBudgetMembers] = useState([]);
+    // Auth & Team State
+    const [budgetOwnerId, setBudgetOwnerId] = useState(null);
+    const [allowedUsers, setAllowedUsers] = useState([]); // Raw IDs
+    const [budgetMembers, setBudgetMembers] = useState([]); // Processed Objects
 
     const [totalCreditDebt, setTotalCreditDebt] = useState(0);
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ua'];
@@ -82,6 +82,9 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return onSnapshot(budgetRef, async (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
+                
+                setBudgetOwnerId(data.ownerId);
+
                 const storedCats = data.categories || [];
                 const filteredStoredCats = storedCats.filter(c => c.name !== 'Rent & Utilities' && c.name !== 'Tech & Services');
                 
@@ -113,36 +116,37 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         });
     }, [activeBudgetId, getBudgetDocRef, user]);
 
-    // 2.1 NEW: Robust Member Fetching (Fixes Empty List)
+    // 2.1 Fetch Member Details (Fix: Merging Owner + Members)
     useEffect(() => {
         const fetchMembers = async () => {
-            if (!allowedUsers || allowedUsers.length === 0) {
+            const uniqueIds = new Set();
+            if (budgetOwnerId) uniqueIds.add(budgetOwnerId);
+            if (allowedUsers) allowedUsers.forEach(uid => uniqueIds.add(uid));
+            
+            const combinedList = Array.from(uniqueIds);
+
+            if (combinedList.length === 0) {
                 setBudgetMembers([]);
                 return;
             }
 
-            console.log("Raw allowedUsers from DB:", allowedUsers); // DEBUG
-
             const membersData = [];
             
-            for (const item of allowedUsers) {
+            for (const item of combinedList) {
                 let targetUid = null;
                 let fallbackName = "Unknown";
 
-                // 🔥 ВИТЯГУЄМО UID НЕЗАЛЕЖНО ВІД ФОРМАТУ ДАНИХ
                 if (typeof item === 'string') {
                     targetUid = item;
                     fallbackName = `User ${item.substring(0, 4)}...`;
                 } else if (item && typeof item === 'object' && item.uid) {
                     targetUid = item.uid;
                     fallbackName = item.displayName || item.email || "User (Obj)";
-                } else {
-                    console.warn("Skipping invalid user item:", item);
-                    continue;
                 }
 
+                if (!targetUid) continue;
+
                 try {
-                    // 1. Якщо це поточний юзер
                     if (user && user.uid === targetUid) {
                         membersData.push({
                             uid: targetUid,
@@ -150,12 +154,12 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
                             email: user.email,
                             photoURL: user.photoURL,
                             isCurrentUser: true,
-                            originalItem: item // Зберігаємо для видалення
+                            isOwner: targetUid === budgetOwnerId,
+                            originalItem: item
                         });
                         continue;
                     }
 
-                    // 2. Пробуємо завантажити профіль
                     const profileRef = doc(db, 'artifacts', appId, 'users', targetUid, 'metadata', 'profile');
                     const profileSnap = await getDoc(profileRef);
                     
@@ -167,40 +171,40 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
                             email: pData.email || 'No Email',
                             photoURL: pData.photoURL,
                             isCurrentUser: false,
+                            isOwner: targetUid === budgetOwnerId,
                             originalItem: item
                         });
                     } else {
-                        // 3. Якщо профіль недоступний (правила) або не існує - показуємо хоч щось
                         membersData.push({ 
                             uid: targetUid, 
                             displayName: fallbackName, 
                             email: targetUid,
                             isCurrentUser: false,
+                            isOwner: targetUid === budgetOwnerId,
                             originalItem: item
                         });
                     }
                 } catch (error) {
                     console.error(`Failed to fetch profile for ${targetUid}`, error);
-                    // 4. Навіть при помилці додаємо юзера, щоб його можна було видалити
                     membersData.push({ 
                         uid: targetUid, 
                         displayName: "Error loading user", 
                         email: targetUid,
                         isCurrentUser: false,
+                        isOwner: targetUid === budgetOwnerId,
                         originalItem: item
                     });
                 }
             }
             
-            console.log("Processed Budget Members:", membersData); // DEBUG
+            membersData.sort((a, b) => (b.isOwner ? 1 : 0) - (a.isOwner ? 1 : 0));
             setBudgetMembers(membersData);
         };
 
         fetchMembers();
-    }, [allowedUsers, user]);
+    }, [allowedUsers, budgetOwnerId, user]);
 
-
-    // 3. Loans Listener
+    // 3. Loans Listener (ВІДНОВЛЕНО)
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setLoans([]); return; }
         return onSnapshot(query(getLoansColRef()), (snap) => { 
@@ -208,7 +212,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         });
     }, [activeBudgetId, isPendingApproval, getLoansColRef]);
 
-    // 3.1 Calculate Total Debt (Async)
+    // 3.1 Calculate Total Debt (Async) (ВІДНОВЛЕНО)
     useEffect(() => {
         let isMounted = true;
         const calculateTotalDebt = async () => {
@@ -235,7 +239,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => { isMounted = false; };
     }, [loans, mainCurrency]);
 
-    // 4. Assets Listener & History
+    // 4. Assets Listener & History (ВІДНОВЛЕНО)
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setAssets([]); return; }
         
@@ -254,7 +258,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         };
     }, [activeBudgetId, isPendingApproval, getAssetsColRef, getHistoryColRef]);
 
-    // 4.1 Automatic Snapshot Logic
+    // 4.1 Automatic Snapshot Logic (ВІДНОВЛЕНО)
     useEffect(() => {
         const recordSnapshot = async () => {
             if (assets.length === 0 || !activeBudgetId) return;
@@ -299,7 +303,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => clearTimeout(timer);
     }, [assets, activeBudgetId, getHistoryColRef, mainCurrency]);
 
-    // Actions
+    // ACTIONS
     const addTransaction = async (data) => {
         const payload = { ...data, amount: parseFloat(data.amount), userName: user.displayName || user.email.split('@')[0], updatedAt: serverTimestamp() };
         await addDoc(getTransactionColRef(), { ...payload, createdAt: serverTimestamp() });
@@ -336,37 +340,48 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     };
 
     const removeUser = async (userToRemove) => {
-        // Ми видаляємо те, що прийшло з allowedUsers (оригінальний елемент)
-        // Якщо це був об'єкт - видаляємо об'єкт. Якщо рядок - рядок.
         let itemToRemove = userToRemove;
-        
-        // Якщо ми отримали оброблений об'єкт з budgetMembers, дістаємо оригінал
         if (userToRemove && userToRemove.originalItem) {
             itemToRemove = userToRemove.originalItem;
         }
+        const uid = typeof userToRemove === 'object' ? userToRemove.uid : userToRemove;
 
         const budgetRef = getBudgetDocRef();
-        if (budgetRef) {
+        if (budgetRef && uid) {
             await updateDoc(budgetRef, {
                 authorizedUsers: arrayRemove(itemToRemove)
             });
-            // Оновлюємо локальний стейт для швидкості
-            const uidToRemove = userToRemove.uid || userToRemove;
-            setBudgetMembers(prev => prev.filter(m => m.uid !== uidToRemove));
+            setBudgetMembers(prev => prev.filter(m => m.uid !== uid));
         }
+    };
+
+    const leaveBudget = async () => {
+        if (!user || !activeBudgetId) return;
+        
+        const budgetRef = getBudgetDocRef();
+        await updateDoc(budgetRef, {
+            authorizedUsers: arrayRemove(user.uid)
+        });
+        
+        const userProfileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile');
+        await updateDoc(userProfileRef, { activeBudgetId: null });
+        
+        window.location.reload(); 
     };
 
     return {
         transactions, loans, assets, netWorthHistory,
         allCategories, categoryLimits, 
         allowedUsers,  
-        budgetMembers, // <-- Цей масив тепер гарантовано заповнений
+        budgetMembers,
+        budgetOwnerId,
         totalCreditDebt,
         addTransaction, updateTransaction, deleteTransaction,
         addLoan, updateLoan, deleteLoan,
         addAsset, updateAsset, deleteAsset,
         saveLimit, deleteCategory, addCategory,
         removeUser,
+        leaveBudget,
         getBudgetDocRef
     };
 };

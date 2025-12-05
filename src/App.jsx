@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { Coffee, Wallet, Loader2, Download, HelpCircle, AlertCircle, RefreshCw, LogOut, Mail } from 'lucide-react';
 
+// 🔥 ДОДАНО ІМПОРТИ ДЛЯ ОНОВЛЕННЯ ФОТО В БАЗІ
+import { doc, setDoc } from 'firebase/firestore'; 
+import { db, appId } from './firebase';
+
 // UTILS & CONSTANTS
 import { CURRENCIES } from './constants';
 import { TRANSLATIONS } from './translations';
@@ -63,13 +67,15 @@ export default function App() {
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
-        budgetMembers, // <-- Правильний масив для UI
+        budgetMembers, 
         totalCreditDebt,
         addTransaction, updateTransaction, deleteTransaction,
         addLoan, updateLoan, deleteLoan,
         addAsset, updateAsset, deleteAsset,
         saveLimit, addCategory, deleteCategory,
-        removeUser
+        removeUser,
+        budgetOwnerId, // <-- NEW: ID власника
+        leaveBudget    // <-- NEW: функція виходу
     } = useBudget(activeBudgetId, isPendingApproval, user, lang, currency);
 
     const { 
@@ -81,6 +87,22 @@ export default function App() {
     useEffect(() => { localStorage.setItem('theme', darkMode ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', darkMode); }, [darkMode]);
     useEffect(() => { localStorage.setItem('lang', lang); }, [lang]);
     useEffect(() => { localStorage.setItem('currency', currency); }, [currency]);
+
+    // 🔥 АВТОМАТИЧНА СИНХРОНІЗАЦІЯ ФОТО В БАЗУ ДАНИХ
+    useEffect(() => {
+        const syncPhoto = async () => {
+            if (user && user.photoURL) {
+                try {
+                    // Оновлюємо тільки поле photoURL в профілі користувача
+                    const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile');
+                    await setDoc(profileRef, { photoURL: user.photoURL }, { merge: true });
+                } catch (error) {
+                    console.error("Error syncing photoURL:", error);
+                }
+            }
+        };
+        syncPhoto();
+    }, [user]); // Спрацьовує при вході користувача
 
     const handleSaveTransaction = async (data) => {
         try {
@@ -375,8 +397,13 @@ export default function App() {
                 onDeleteCategory={deleteCategory}
                 onLogout={logout}
                 t={t} getCategoryName={getCategoryName}
-                allowedUsers={budgetMembers} // <-- Тепер тут повноцінні об'єкти
+                
+                // 🔥 НОВІ ПРОПСИ ДЛЯ КОМАНДИ І МОДАЛКИ
+                allowedUsers={budgetMembers} 
                 removeUser={removeUser}
+                leaveBudget={leaveBudget} // <-- Передаємо функцію виходу
+                currentUserId={user?.uid} // <-- Передаємо ID поточного юзера
+                isOwner={user?.uid === budgetOwnerId} // <-- Перевірка, чи ми власник
             />
 
             <InfoModal 

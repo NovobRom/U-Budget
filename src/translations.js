@@ -87,8 +87,17 @@ export const TRANSLATIONS = {
         // --- Team Management (New) ---
         team_title: "Учасники бюджету",
         team_empty: "Поки що тільки ви",
-        remove_user_btn: "Видалити",
         owner_label: "Власник",
+        you_label: "Ви",
+        remove_user_btn: "Видалити",
+        leave_budget_btn: "Вийти з бюджету",
+        
+        // --- Confirm Modal ---
+        confirm_title: "Ви впевнені?",
+        confirm_remove_user_msg: "Цей користувач втратить доступ до бюджету. Його транзакції залишаться.",
+        confirm_leave_budget_msg: "Ви більше не зможете бачити цей бюджет. Ваші транзакції залишаться.",
+        btn_confirm: "Так, продовжити",
+        btn_cancel: "Скасувати",
         
         // --- Transaction Form ---
         add_transaction: "Додати транзакцію",
@@ -289,8 +298,17 @@ export const TRANSLATIONS = {
         // --- Team Management (New) ---
         team_title: "Budget Members",
         team_empty: "Just you for now",
-        remove_user_btn: "Remove",
         owner_label: "Owner",
+        you_label: "You",
+        remove_user_btn: "Remove",
+        leave_budget_btn: "Leave Budget",
+
+        // --- Confirm Modal ---
+        confirm_title: "Are you sure?",
+        confirm_remove_user_msg: "This user will lose access to the budget. Their transactions will remain.",
+        confirm_leave_budget_msg: "You will no longer have access to this budget. Your transactions will remain.",
+        btn_confirm: "Yes, continue",
+        btn_cancel: "Cancel",
         
         // --- Transaction Form ---
         add_transaction: "Add Transaction",
