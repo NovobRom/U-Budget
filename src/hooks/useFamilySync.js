@@ -55,7 +55,11 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
                         
                         await deleteDoc(myRequestRef);
                         toast.success("Ваш запит прийнято! Бюджет підключено.");
-                        window.location.reload();
+                        
+                        // window.location.reload() ВИДАЛЕНО
+                        // Тепер useAuth.js через onSnapshot побачить зміну activeBudgetId 
+                        // і автоматично оновить інтерфейс.
+                        
                     } catch (error) {
                         console.error("Auto-switch error:", error);
                         toast.error("Помилка перемикання бюджету.");

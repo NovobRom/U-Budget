@@ -5,7 +5,8 @@ import {
     GoogleAuthProvider, signInWithPopup, OAuthProvider, sendEmailVerification 
 } from 'firebase/auth';
 import { auth, db, appId } from '../firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+// Додаємо onSnapshot
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 export const useAuth = () => {
     const [user, setUser] = useState(null);
@@ -14,39 +15,55 @@ export const useAuth = () => {
     const [isPendingApproval, setIsPendingApproval] = useState(false);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        let profileUnsubscribe = null;
+
+        const authUnsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                // Перезавантажуємо юзера, щоб отримати актуальний статус emailVerified
+                // Перезавантажуємо юзера
                 await currentUser.reload();
-                // Важливо: створюємо копію об'єкта, щоб React побачив оновлення
                 setUser({ ...currentUser }); 
 
                 const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'metadata', 'profile');
-                const userSnap = await getDoc(userRef);
                 
-                if (userSnap.exists()) {
-                    const data = userSnap.data();
-                    setActiveBudgetId(data.activeBudgetId || currentUser.uid);
-                    setIsPendingApproval(data.isPendingApproval || false);
-                } else {
-                    await setDoc(userRef, { 
-                        email: currentUser.email, 
-                        createdAt: new Date(),
-                        activeBudgetId: currentUser.uid,
-                        isPendingApproval: false
-                    });
-                    setActiveBudgetId(currentUser.uid);
-                }
+                // 🔥 ЗМІНА: Використовуємо onSnapshot замість getDoc
+                profileUnsubscribe = onSnapshot(userRef, async (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        // Миттєве оновлення ID бюджету
+                        setActiveBudgetId(data.activeBudgetId || currentUser.uid);
+                        setIsPendingApproval(data.isPendingApproval || false);
+                    } else {
+                        // Якщо профілю немає - створюємо
+                        await setDoc(userRef, { 
+                            email: currentUser.email, 
+                            createdAt: new Date(),
+                            activeBudgetId: currentUser.uid,
+                            isPendingApproval: false
+                        });
+                        setActiveBudgetId(currentUser.uid);
+                    }
+                    setLoading(false); // Завантаження завершено після отримання даних
+                }, (error) => {
+                    console.error("Profile sync error:", error);
+                    setLoading(false);
+                });
+
             } else {
                 setUser(null);
                 setActiveBudgetId(null);
                 setIsPendingApproval(false);
+                setLoading(false);
+                if (profileUnsubscribe) profileUnsubscribe();
             }
-            setLoading(false);
         });
-        return () => unsubscribe();
+
+        return () => {
+            authUnsubscribe();
+            if (profileUnsubscribe) profileUnsubscribe();
+        };
     }, []);
 
+    // ... (решта функцій login, register залишаються без змін) ...
     const login = async (email, password) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
@@ -54,14 +71,12 @@ export const useAuth = () => {
     const register = async (email, password, name) => {
         const res = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(res.user, { displayName: name });
-        
-        // 🔥 ВАЖЛИВО: Відправка листа підтвердження
         try {
             await sendEmailVerification(res.user);
         } catch (e) {
             console.error("Error sending verification email:", e);
         }
-
+        // Створюємо документ, onSnapshot підхопить його автоматично
         await setDoc(doc(db, 'artifacts', appId, 'users', res.user.uid, 'metadata', 'profile'), {
             email, 
             displayName: name, 
