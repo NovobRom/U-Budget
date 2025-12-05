@@ -10,7 +10,9 @@ export default function BudgetView({
     transactions, categories, limits, currency, formatMoney, t,
     onOpenSettings, onOpenInvite, onOpenJoin, onOpenRecurring,
     onAddTransaction, onEditTransaction, onDeleteTransaction, onExport,
-    getCategoryStyles, getCategoryName, lang
+    getCategoryStyles, getCategoryName, lang,
+    // 🔥 NEW PROPS
+    currentBalance, loadMore, hasMore 
 }) {
     const [timeFilter, setTimeFilter] = useState('this_month');
     const [customStartDate, setCustomStartDate] = useState('');
@@ -73,11 +75,9 @@ export default function BudgetView({
         return data;
     }, [transactions, lang]);
 
-    const globalBalance = useMemo(() => {
-        const totalInc = transactions.filter(t => t.type === 'income').reduce((a, c) => a + c.amount, 0);
-        const totalExp = transactions.filter(t => t.type === 'expense').reduce((a, c) => a + c.amount, 0);
-        return totalInc - totalExp;
-    }, [transactions]);
+    // 🔥 REMOVED old globalBalance calculation
+    // Using prop currentBalance or 0 if not loaded
+    const displayBalance = currentBalance || 0;
 
     const handleCardClick = (filterType) => {
         setHistoryFilter(filterType);
@@ -133,7 +133,8 @@ export default function BudgetView({
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
                  <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-5 rounded-2xl shadow-sm border border-blue-700 flex flex-col justify-center cursor-pointer" onClick={() => handleCardClick('all')}>
                      <div className="flex justify-between items-center mb-2"><span className="text-sm opacity-80 font-medium">{t.total_balance}</span><Wallet className="opacity-80" size={18}/></div>
-                     <div className="text-2xl font-bold">{formatMoney(globalBalance, currency)}</div>
+                     {/* 🔥 USE UPDATED BALANCE */}
+                     <div className="text-2xl font-bold">{formatMoney(displayBalance, currency)}</div>
                   </div>
                   <div className="bg-gradient-to-br from-white to-rose-50 dark:from-slate-800 dark:to-rose-900/20 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => handleCardClick('expense')}>
                      <div className="flex justify-between items-center mb-2"><span className="text-sm text-slate-500 dark:text-slate-400 font-medium">{t.expense}</span><TrendingDown className="text-red-500" size={18}/></div>
@@ -157,7 +158,6 @@ export default function BudgetView({
                             <span>{t.history}</span>
                             {historyFilter !== 'all' && (<span className="px-2 py-0.5 text-[10px] uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg flex items-center gap-1">{t[historyFilter]} <button onClick={(e) => { e.stopPropagation(); setHistoryFilter('all'); }}><X size={10}/></button></span>)}
                         </div>
-                        {/* FIX: Removed text label from export button */}
                         <button onClick={() => onExport(filteredTransactions)} className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl hover:bg-slate-200 transition-colors"><Download size={16}/></button>
                     </div>
                     <div className="overflow-auto p-0">
@@ -174,13 +174,24 @@ export default function BudgetView({
                                         <div className={`font-bold ${tData.type==='income'?'text-green-600':'text-slate-900 dark:text-white'}`}>{tData.type==='income'?'+':'-'}{formatMoney(tData.amount, currency)}</div>
                                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity sm:opacity-100">
                                             <button onClick={(e) => { e.stopPropagation(); onEditTransaction(tData); }} className="text-slate-300 hover:text-blue-500"><Pencil size={14}/></button>
-                                            {/* FIX: Added e.stopPropagation() here */}
                                             <button onClick={(e) => { e.stopPropagation(); onDeleteTransaction(tData.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
                                         </div>
                                     </div>
                                 </div>
                             );
                         })}
+                        
+                        {/* 🔥 LOAD MORE BUTTON */}
+                        {hasMore && historyFilter === 'all' && !isCustomRange && (
+                            <div className="p-4 text-center">
+                                <button 
+                                    onClick={loadMore}
+                                    className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                    {lang === 'ua' ? 'Завантажити ще...' : 'Load more...'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="block lg:hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800"><h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} /> Trends</h3><SimpleBarChart data={trendsData} currency={currency} /></div>

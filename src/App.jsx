@@ -69,6 +69,10 @@ export default function App() {
         allCategories, categoryLimits, 
         budgetMembers, 
         totalCreditDebt,
+        // 🔥 GET NEW PARAMETERS
+        currentBalance, 
+        loadMore, hasMore,
+        
         addTransaction, updateTransaction, deleteTransaction,
         addLoan, updateLoan, deleteLoan,
         addAsset, updateAsset, deleteAsset,
@@ -218,7 +222,7 @@ export default function App() {
                     <a href="https://buymeacoffee.com/novobrom" target="_blank" rel="noreferrer" className="flex items-center justify-center w-9 h-9 bg-[#FFDD00] hover:bg-[#E6C800] text-slate-900 rounded-full"><Coffee size={18} /></a>
                     <button onClick={() => setShowSettingsModal(true)} className="relative w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center font-bold text-xs border border-slate-200 dark:border-slate-700">
                         {user.photoURL ? <img src={user.photoURL} alt="User" className="w-full h-full rounded-full" /> : (user.displayName?.[0] || 'U')}
-                        {/* 🔥 RED DOT: Показуємо, якщо є вхідні запити */}
+                        {/* 🔥 RED DOT: Show if there are incoming requests */}
                         {incomingRequests.length > 0 && <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>}
                     </button>
                 </div>
@@ -271,6 +275,10 @@ export default function App() {
                     }}
                     getCategoryStyles={getCategoryStyles}
                     getCategoryName={getCategoryName}
+                    // 🔥 PASS NEW PROPS
+                    currentBalance={currentBalance}
+                    loadMore={loadMore}
+                    hasMore={hasMore}
                 />
             )}
 
@@ -358,7 +366,7 @@ export default function App() {
             <LinkModal
                 isOpen={showLinkModal} onClose={() => setShowLinkModal(false)}
                 userUid={user.uid}
-                // 🔥 UPDATE: Повертаємо логіку запиту (Request Logic)
+                // 🔥 UPDATE: Request Logic Restored
                 onJoinRequest={async (targetId) => {
                     try {
                         await sendJoinRequest(targetId);
