@@ -43,8 +43,8 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     
     // Auth & Team State
     const [budgetOwnerId, setBudgetOwnerId] = useState(null);
-    const [allowedUsers, setAllowedUsers] = useState([]); // Raw IDs
-    const [budgetMembers, setBudgetMembers] = useState([]); // Processed Objects
+    const [allowedUsers, setAllowedUsers] = useState([]); 
+    const [budgetMembers, setBudgetMembers] = useState([]);
 
     const [totalCreditDebt, setTotalCreditDebt] = useState(0);
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ua'];
@@ -59,7 +59,8 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setTransactions([]); return; }
         const q = query(getTransactionColRef());
-        return onSnapshot(q, (snapshot) => {
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
             const list = snapshot.docs.map(d => ({ 
                 id: d.id, 
                 ...d.data(), 
@@ -72,17 +73,21 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
                 return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
             });
             setTransactions(list);
+        }, (error) => {
+            console.error("Error fetching transactions:", error);
         });
+        
+        return () => unsubscribe();
     }, [activeBudgetId, isPendingApproval, getTransactionColRef]);
 
     // 2. Budget Settings Listener
     useEffect(() => {
         if (!activeBudgetId) return;
         const budgetRef = getBudgetDocRef();
-        return onSnapshot(budgetRef, async (snap) => {
+        
+        const unsubscribe = onSnapshot(budgetRef, async (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
-                
                 setBudgetOwnerId(data.ownerId);
 
                 const storedCats = data.categories || [];
@@ -113,7 +118,11 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
                     });
                 }
             }
+        }, (error) => {
+            console.error("Error fetching budget settings:", error);
         });
+        
+        return () => unsubscribe();
     }, [activeBudgetId, getBudgetDocRef, user]);
 
     // 2.1 Fetch Member Details
@@ -207,9 +216,10 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     // 3. Loans Listener
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setLoans([]); return; }
-        return onSnapshot(query(getLoansColRef()), (snap) => { 
+        const unsubscribe = onSnapshot(query(getLoansColRef()), (snap) => { 
             setLoans(snap.docs.map(d => ({ id: d.id, ...d.data() }))); 
-        });
+        }, (error) => console.error("Loans fetch error", error));
+        return () => unsubscribe();
     }, [activeBudgetId, isPendingApproval, getLoansColRef]);
 
     // 3.1 Calculate Total Debt
@@ -245,12 +255,12 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         
         const unsubscribeAssets = onSnapshot(query(getAssetsColRef()), (snap) => { 
             setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() }))); 
-        });
+        }, (error) => console.error("Assets fetch error", error));
 
         const qHistory = query(getHistoryColRef(), orderBy('date', 'asc'));
         const unsubscribeHistory = onSnapshot(qHistory, (snap) => {
             setNetWorthHistory(snap.docs.map(d => d.data()));
-        });
+        }, (error) => console.error("History fetch error", error));
 
         return () => {
             unsubscribeAssets();
@@ -364,7 +374,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         window.location.reload(); 
     };
 
-    // 🔥 НОВА ФУНКЦІЯ ПРИМУСОВОГО ПЕРЕМИКАННЯ
     const switchBudget = async (newBudgetId) => {
         if (!user || !newBudgetId) return;
         const userProfileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile');
@@ -390,7 +399,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         saveLimit, deleteCategory, addCategory,
         removeUser,
         leaveBudget,
-        switchBudget, // <-- Експорт
+        switchBudget, 
         getBudgetDocRef
     };
 };

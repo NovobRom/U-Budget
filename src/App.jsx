@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { Coffee, Wallet, Loader2, Download, HelpCircle, AlertCircle, RefreshCw, LogOut, Mail } from 'lucide-react';
 
-// FIREBASE IMPORTS (для синхронізації фото)
+// FIREBASE IMPORTS
 import { doc, setDoc } from 'firebase/firestore'; 
 import { db, appId } from './firebase';
 
@@ -76,7 +76,7 @@ export default function App() {
         removeUser,
         budgetOwnerId, 
         leaveBudget,
-        switchBudget // <-- 🔥 ОТРИМУЄМО НОВУ ФУНКЦІЮ
+        switchBudget
     } = useBudget(activeBudgetId, isPendingApproval, user, lang, currency);
 
     const { 
@@ -89,7 +89,6 @@ export default function App() {
     useEffect(() => { localStorage.setItem('lang', lang); }, [lang]);
     useEffect(() => { localStorage.setItem('currency', currency); }, [currency]);
 
-    // АВТОМАТИЧНА СИНХРОНІЗАЦІЯ ФОТО В БАЗУ ДАНИХ
     useEffect(() => {
         const syncPhoto = async () => {
             if (user && user.photoURL) {
@@ -219,7 +218,8 @@ export default function App() {
                     <a href="https://buymeacoffee.com/novobrom" target="_blank" rel="noreferrer" className="flex items-center justify-center w-9 h-9 bg-[#FFDD00] hover:bg-[#E6C800] text-slate-900 rounded-full"><Coffee size={18} /></a>
                     <button onClick={() => setShowSettingsModal(true)} className="relative w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center font-bold text-xs border border-slate-200 dark:border-slate-700">
                         {user.photoURL ? <img src={user.photoURL} alt="User" className="w-full h-full rounded-full" /> : (user.displayName?.[0] || 'U')}
-                        {incomingRequests.length > 0 && <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></div>}
+                        {/* 🔥 RED DOT: Показуємо, якщо є вхідні запити */}
+                        {incomingRequests.length > 0 && <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>}
                     </button>
                 </div>
             </div>
@@ -358,11 +358,12 @@ export default function App() {
             <LinkModal
                 isOpen={showLinkModal} onClose={() => setShowLinkModal(false)}
                 userUid={user.uid}
-                onJoinRequest={async (id) => {
+                // 🔥 UPDATE: Повертаємо логіку запиту (Request Logic)
+                onJoinRequest={async (targetId) => {
                     try {
-                        await sendJoinRequest(id);
-                        setShowLinkModal(false); 
-                        toast.success(t.join_title);
+                        await sendJoinRequest(targetId);
+                        setShowLinkModal(false);
+                        toast.success("Request sent!");
                     } catch (error) {
                         const errorMsg = t[error.message] || "Error sending request";
                         toast.error(errorMsg);
@@ -398,14 +399,12 @@ export default function App() {
                 onLogout={logout}
                 t={t} getCategoryName={getCategoryName}
                 
-                // 🔥 ВСІ ВАЖЛИВІ ПРОПСИ
                 allowedUsers={budgetMembers} 
                 removeUser={removeUser}
                 leaveBudget={leaveBudget}
                 currentUserId={user?.uid}
                 isOwner={user?.uid === budgetOwnerId}
                 
-                // 🔥 NEW: Pass active ID and switch function
                 activeBudgetId={activeBudgetId}
                 switchBudget={switchBudget}
             />

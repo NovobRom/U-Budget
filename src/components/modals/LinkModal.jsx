@@ -1,10 +1,10 @@
-import React from 'react';
-import { X, Copy, Share2, Check } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { X, Copy, Share2, Check, Send } from 'lucide-react';
 
 export default function LinkModal({ isOpen, onClose, userUid, onJoinRequest, t }) {
     const [partnerId, setPartnerId] = useState('');
     const [copied, setCopied] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     if (!isOpen) return null;
 
@@ -12,6 +12,14 @@ export default function LinkModal({ isOpen, onClose, userUid, onJoinRequest, t }
         navigator.clipboard.writeText(userUid);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleSend = async () => {
+        if (!partnerId) return;
+        setIsSending(true);
+        // Викликаємо функцію створення запиту, яку передали з App.jsx
+        await onJoinRequest(partnerId);
+        setIsSending(false);
     };
 
     return (
@@ -34,7 +42,6 @@ export default function LinkModal({ isOpen, onClose, userUid, onJoinRequest, t }
                         onClick={handleCopy}
                         className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 relative group cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                     >
-                        {/* FIX: break-all дозволяє переносити довгий ID */}
                         <div className="font-mono text-sm font-bold text-slate-700 dark:text-slate-200 break-all text-center">
                             {userUid}
                         </div>
@@ -49,7 +56,7 @@ export default function LinkModal({ isOpen, onClose, userUid, onJoinRequest, t }
 
                 <div className="border-t border-slate-100 dark:border-slate-800 my-6"></div>
 
-                {/* TAB 2: JOIN PARTNER */}
+                {/* TAB 2: JOIN PARTNER (REQUEST FLOW) */}
                 <div>
                     <h4 className="font-bold text-slate-900 dark:text-white mb-3">{t.join_title}</h4>
                     <div className="flex gap-2">
@@ -58,13 +65,14 @@ export default function LinkModal({ isOpen, onClose, userUid, onJoinRequest, t }
                             value={partnerId}
                             onChange={(e) => setPartnerId(e.target.value)}
                             placeholder={t.partner_id_placeholder}
-                            className="flex-1 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm"
+                            className="flex-1 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm dark:text-white"
                         />
                         <button 
-                            disabled={!partnerId}
-                            onClick={() => onJoinRequest(partnerId)}
-                            className="bg-blue-600 text-white px-4 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            disabled={!partnerId || isSending}
+                            onClick={handleSend}
+                            className="bg-blue-600 text-white px-4 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                         >
+                            {isSending ? '...' : <Send size={16} />}
                             {t.send_request}
                         </button>
                     </div>
