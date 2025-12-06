@@ -2,13 +2,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Додали favicon.png у кеш
+      injectRegister: 'script-defer',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'U-Budget',
@@ -28,28 +27,70 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png'
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'firebase-data-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 86400
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
           },
           {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'google-fonts-cache'
+            }
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'gstatic-fonts-cache',
+              expiration: {
+                maxAgeSeconds: 31536000
+              }
+            }
           }
         ]
       }
     })
   ],
   
-  // КРИТИЧНО: ЗБЕРІГАЄМО ТВОЇ НАЛАШТУВАННЯ
   envPrefix: 'REACT_APP_', 
   
   server: {
     port: 5173,
-    // host: true, 
   },
   
   build: {
-    // Встановлення цільової збірки для забезпечення сумісності
-    target: 'es2020' 
+    target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // React залишаємо разом - це безпечно і корисно
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+          // Firebase теж можна залишити окремо
+          if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
+            return 'vendor-firebase';
+          }
+          // ⚠️ ПРИБРАНО: Recharts. Дозволяємо Vite самому розбити цей код через lazy() імпорт.
+        }
+      }
+    }
   }
 });

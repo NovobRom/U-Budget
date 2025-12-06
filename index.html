@@ -1,20 +1,67 @@
 <!doctype html>
-<html lang="en">
+<html lang="uk">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    
     <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="U-Budget: Family finance tracker" />
-    
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    
     <title>U-Budget</title>
+
+    <style>
+      body { margin: 0; background-color: #f9fafb; font-family: system-ui, -apple-system, sans-serif; }
+      @media (prefers-color-scheme: dark) { body { background-color: #020617; } }
+      
+      /* Скелетні стилі */
+      .sk-container { padding: 0.5rem; max-width: 600px; margin: 0 auto; }
+      .sk-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: white; border-radius: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
+      .sk-nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; }
+      .sk-nav-item { width: 80px; height: 40px; background: #e2e8f0; border-radius: 0.75rem; }
+      .sk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+      .sk-card { height: 100px; background: white; border-radius: 1rem; border: 1px solid #e2e8f0; }
+      .sk-card-large { grid-column: span 2; background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); border: none; }
+      
+      /* Темна тема */
+      @media (prefers-color-scheme: dark) {
+        .sk-header, .sk-card { background: #0f172a; border-color: #1e293b; }
+        .sk-nav-item { background: #1e293b; }
+      }
+
+      /* Анімація пульсації */
+      .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="sk-container">
+        <div class="sk-header">
+          <div style="width: 120px; height: 24px; background: #cbd5e1; border-radius: 6px;" class="animate-pulse"></div>
+          <div style="display: flex; gap: 10px;">
+             <div style="width: 36px; height: 36px; background: #cbd5e1; border-radius: 50%;" class="animate-pulse"></div>
+          </div>
+        </div>
+        
+        <div class="sk-nav">
+           <div class="sk-nav-item animate-pulse"></div>
+           <div class="sk-nav-item animate-pulse"></div>
+           <div class="sk-nav-item animate-pulse"></div>
+        </div>
+
+        <div class="sk-grid">
+           <div class="sk-card sk-card-large animate-pulse"></div>
+           <div class="sk-card animate-pulse"></div>
+           <div class="sk-card animate-pulse"></div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

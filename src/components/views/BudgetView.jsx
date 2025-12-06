@@ -1,17 +1,27 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, Suspense, lazy } from 'react';
 import { 
     Calendar, ChevronDown, Search, Share2, Users, Wallet, TrendingDown, TrendingUp,
     Download, RefreshCw, Pencil, Trash2, Plus, BarChart3, X, ArrowRight
 } from 'lucide-react';
 import { BudgetProgress } from '../BudgetProgress';
-import { SimpleDonutChart, SimpleBarChart } from '../Charts';
+
+// Lazy load charts
+const SimpleDonutChart = lazy(() => 
+    import('../Charts').then(module => ({ default: module.SimpleDonutChart }))
+);
+const SimpleBarChart = lazy(() => 
+    import('../Charts').then(module => ({ default: module.SimpleBarChart }))
+);
+
+const Skeleton = ({ className }) => (
+    <div className={`animate-pulse bg-slate-200 dark:bg-slate-800 rounded-xl ${className}`}></div>
+);
 
 export default function BudgetView({ 
     transactions, categories, limits, currency, formatMoney, t,
     onOpenSettings, onOpenInvite, onOpenJoin, onOpenRecurring,
     onAddTransaction, onEditTransaction, onDeleteTransaction, onExport,
     getCategoryStyles, getCategoryName, lang,
-    // 🔥 NEW PROPS
     currentBalance, loadMore, hasMore 
 }) {
     const [timeFilter, setTimeFilter] = useState('this_month');
@@ -75,8 +85,6 @@ export default function BudgetView({
         return data;
     }, [transactions, lang]);
 
-    // 🔥 REMOVED old globalBalance calculation
-    // Using prop currentBalance or 0 if not loaded
     const displayBalance = currentBalance || 0;
 
     const handleCardClick = (filterType) => {
@@ -86,7 +94,7 @@ export default function BudgetView({
 
     return (
         <>
-            <div className="flex flex-col gap-3 px-1 mb-4">
+            <div className="flex flex-col gap-3 px-1 mb-4 min-h-[50px]">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
                     <div className="grid grid-cols-2 sm:flex gap-3 w-full sm:w-auto flex-1">
                         <div className="relative flex-1 min-w-[140px]">
@@ -128,19 +136,21 @@ export default function BudgetView({
                 )}
             </div>
 
-            <BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} />
+            {/* 🔥 CLS FIX: Added min-h container for BudgetProgress to prevent shifting */}
+            <div className="min-h-[100px]">
+                <BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} />
+            </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-                 <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-5 rounded-2xl shadow-sm border border-blue-700 flex flex-col justify-center cursor-pointer" onClick={() => handleCardClick('all')}>
+                 <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-5 rounded-2xl shadow-sm border border-blue-700 flex flex-col justify-center cursor-pointer min-h-[120px]" onClick={() => handleCardClick('all')}>
                      <div className="flex justify-between items-center mb-2"><span className="text-sm opacity-80 font-medium">{t.total_balance}</span><Wallet className="opacity-80" size={18}/></div>
-                     {/* 🔥 USE UPDATED BALANCE */}
                      <div className="text-2xl font-bold">{formatMoney(displayBalance, currency)}</div>
                   </div>
-                  <div className="bg-gradient-to-br from-white to-rose-50 dark:from-slate-800 dark:to-rose-900/20 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => handleCardClick('expense')}>
+                  <div className="bg-gradient-to-br from-white to-rose-50 dark:from-slate-800 dark:to-rose-900/20 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[120px]" onClick={() => handleCardClick('expense')}>
                      <div className="flex justify-between items-center mb-2"><span className="text-sm text-slate-500 dark:text-slate-400 font-medium">{t.expense}</span><TrendingDown className="text-red-500" size={18}/></div>
                      <div className="text-2xl font-bold text-slate-900 dark:text-white">{formatMoney(expense, currency)}</div>
                   </div>
-                  <div className="bg-gradient-to-br from-white to-green-50 dark:from-slate-800 dark:to-green-900/20 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => handleCardClick('income')}>
+                  <div className="bg-gradient-to-br from-white to-green-50 dark:from-slate-800 dark:to-green-900/20 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[120px]" onClick={() => handleCardClick('income')}>
                      <div className="flex justify-between items-center mb-2"><span className="text-sm text-slate-500 dark:text-slate-400 font-medium">{t.income}</span><TrendingUp className="text-green-500" size={18}/></div>
                      <div className="text-2xl font-bold text-slate-900 dark:text-white">{formatMoney(income, currency)}</div>
                   </div>
@@ -148,20 +158,46 @@ export default function BudgetView({
 
             <div className="grid lg:grid-cols-3 gap-4">
                 <div className="hidden lg:block space-y-4">
-                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center"><SimpleDonutChart data={expensesByCategory} total={expense} currencyCode={currency} formatMoney={formatMoney} label={t.expense} getCategoryName={getCategoryName} otherLabel={t.other} /></div>
-                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800"><h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} /> Trends</h3><SimpleBarChart data={trendsData} currency={currency} /></div>
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center h-[400px]">
+                        {expensesByCategory.length > 0 ? (
+                            <Suspense fallback={<Skeleton className="w-full h-full rounded-2xl" />}>
+                                <SimpleDonutChart data={expensesByCategory} total={expense} currencyCode={currency} formatMoney={formatMoney} label={t.expense} getCategoryName={getCategoryName} otherLabel={t.other} />
+                            </Suspense>
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No data for chart</div>
+                        )}
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 h-[350px]">
+                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} /> Trends</h3>
+                        <div className="h-[250px]">
+                            <Suspense fallback={<Skeleton className="w-full h-full rounded-2xl" />}>
+                                <SimpleBarChart data={trendsData} currency={currency} />
+                            </Suspense>
+                        </div>
+                    </div>
                 </div>
-                <div className="lg:hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center mx-auto w-full"><SimpleDonutChart data={expensesByCategory} total={expense} currencyCode={currency} formatMoney={formatMoney} label={t.expense} getCategoryName={getCategoryName} otherLabel={t.other} /></div>
-                <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col max-h-[600px] shadow-sm border border-slate-100 dark:border-slate-800" ref={historyRef}>
-                    <div className="p-4 border-b dark:border-slate-800 flex justify-between items-center font-bold">
+
+                <div className="lg:hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center mx-auto w-full min-h-[350px]">
+                    <Suspense fallback={<Skeleton className="w-64 h-64 rounded-full" />}>
+                        <SimpleDonutChart data={expensesByCategory} total={expense} currencyCode={currency} formatMoney={formatMoney} label={t.expense} getCategoryName={getCategoryName} otherLabel={t.other} />
+                    </Suspense>
+                </div>
+
+                <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[765px] shadow-sm border border-slate-100 dark:border-slate-800" ref={historyRef}>
+                    <div className="p-4 border-b dark:border-slate-800 flex justify-between items-center font-bold shrink-0">
                         <div className="flex items-center gap-2">
                             <span>{t.history}</span>
                             {historyFilter !== 'all' && (<span className="px-2 py-0.5 text-[10px] uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg flex items-center gap-1">{t[historyFilter]} <button onClick={(e) => { e.stopPropagation(); setHistoryFilter('all'); }}><X size={10}/></button></span>)}
                         </div>
                         <button onClick={() => onExport(filteredTransactions)} className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl hover:bg-slate-200 transition-colors"><Download size={16}/></button>
                     </div>
-                    <div className="overflow-auto p-0">
-                        {filteredTransactions.length === 0 && <div className="p-8 text-center text-slate-400">{t.no_trans}</div>}
+                    <div className="overflow-auto p-0 flex-1">
+                        {filteredTransactions.length === 0 && (
+                            <div className="p-8 text-center text-slate-400 flex flex-col items-center gap-2 h-full justify-center">
+                                <Wallet size={48} className="opacity-20 mb-2"/>
+                                {t.no_trans}
+                            </div>
+                        )}
                         {filteredTransactions.map(tData => {
                             const style = getCategoryStyles(tData.category);
                             return (
@@ -181,7 +217,6 @@ export default function BudgetView({
                             );
                         })}
                         
-                        {/* 🔥 LOAD MORE BUTTON */}
                         {hasMore && historyFilter === 'all' && !isCustomRange && (
                             <div className="p-4 text-center">
                                 <button 
@@ -194,7 +229,15 @@ export default function BudgetView({
                         )}
                     </div>
                 </div>
-                <div className="block lg:hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800"><h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} /> Trends</h3><SimpleBarChart data={trendsData} currency={currency} /></div>
+                
+                <div className="block lg:hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 min-h-[300px]">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} /> Trends</h3>
+                    <div className="h-[200px]">
+                        <Suspense fallback={<Skeleton className="w-full h-full rounded-2xl" />}>
+                            <SimpleBarChart data={trendsData} currency={currency} />
+                        </Suspense>
+                    </div>
+                </div>
             </div>
             <button onClick={onAddTransaction} className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-50"><Plus size={28}/></button>
         </>
