@@ -136,7 +136,7 @@ export default function BudgetView({
                 )}
             </div>
 
-            {/* 🔥 CLS FIX: Added min-h container for BudgetProgress to prevent shifting */}
+            {/* CLS FIX: Added min-h container for BudgetProgress to prevent shifting */}
             <div className="min-h-[100px]">
                 <BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} />
             </div>
@@ -158,13 +158,17 @@ export default function BudgetView({
 
             <div className="grid lg:grid-cols-3 gap-4">
                 <div className="hidden lg:block space-y-4">
-                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center h-[400px]">
+                    {/* FIX: Changed h-[400px] to min-h-[400px] h-auto.
+                       This prevents the chart legend (History list inside Donut chart) 
+                       from overflowing and covering the Trends chart below it on web version.
+                    */}
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center min-h-[400px] h-auto">
                         {expensesByCategory.length > 0 ? (
                             <Suspense fallback={<Skeleton className="w-full h-full rounded-2xl" />}>
                                 <SimpleDonutChart data={expensesByCategory} total={expense} currencyCode={currency} formatMoney={formatMoney} label={t.expense} getCategoryName={getCategoryName} otherLabel={t.other} />
                             </Suspense>
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No data for chart</div>
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm py-10">No data for chart</div>
                         )}
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 h-[350px]">

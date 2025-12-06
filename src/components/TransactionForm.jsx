@@ -202,7 +202,7 @@ export default function TransactionForm({
                                 + {t.add_category}
                             </button>
                         </div>
-                        {/* FIX: grid-cols-3 (замість 4) для мобільного, щоб текст влазив */}
+                        {/* FIX: grid-cols-3 (for mobile) and sm:grid-cols-5 (for desktop) */}
                         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
                             {categories
                                 .filter(c => c.type === type || (c.id === 'other'))
@@ -222,7 +222,11 @@ export default function TransactionForm({
                                             <div className={`w-8 h-8 min-w-[2rem] min-h-[2rem] rounded-full flex items-center justify-center text-white text-xs ${c.color || 'bg-slate-400'}`}>
                                                 <IconToRender size={14} />
                                             </div>
-                                            <span className={`text-[10px] leading-tight text-center whitespace-normal break-words w-full ${category === c.id ? 'font-bold text-slate-900 dark:text-white' : 'text-slate-500'}`}>
+                                            {/* FIX: Removed 'break-words' and added 'break-normal'.
+                                                This prevents breaking words by 1-2 letters unless absolutely necessary.
+                                                Also added 'whitespace-normal' to allow wrapping by whole words.
+                                            */}
+                                            <span className={`text-[10px] leading-tight text-center whitespace-normal break-normal w-full ${category === c.id ? 'font-bold text-slate-900 dark:text-white' : 'text-slate-500'}`}>
                                                 {getCategoryName(c)}
                                             </span>
                                         </button>
