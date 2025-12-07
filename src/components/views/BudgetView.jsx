@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import { BudgetProgress } from '../BudgetProgress';
 
-// Lazy load charts
 const SimpleDonutChart = lazy(() => 
     import('../Charts').then(module => ({ default: module.SimpleDonutChart }))
 );
@@ -22,13 +21,14 @@ export default function BudgetView({
     onOpenSettings, onOpenInvite, onOpenJoin, onOpenRecurring,
     onAddTransaction, onEditTransaction, onDeleteTransaction, onExport,
     getCategoryStyles, getCategoryName, lang,
-    currentBalance, loadMore, hasMore 
+    currentBalance, loadMore, hasMore, recalculateBalance 
 }) {
     const [timeFilter, setTimeFilter] = useState('this_month');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
+    const [isRecalculating, setIsRecalculating] = useState(false);
     const historyRef = useRef(null);
 
     const isCustomRange = timeFilter === 'custom';
@@ -92,6 +92,17 @@ export default function BudgetView({
         setTimeout(() => { historyRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 50);
     };
 
+    const handleRecalculate = async (e) => {
+        e.stopPropagation();
+        if (typeof recalculateBalance !== 'function') {
+            console.error("recalculateBalance is missing!");
+            return;
+        }
+        setIsRecalculating(true);
+        await recalculateBalance();
+        setIsRecalculating(false);
+    };
+
     return (
         <>
             <div className="flex flex-col gap-3 px-1 mb-4 min-h-[50px]">
@@ -136,14 +147,23 @@ export default function BudgetView({
                 )}
             </div>
 
-            {/* CLS FIX: Added min-h container for BudgetProgress to prevent shifting */}
             <div className="min-h-[100px]">
                 <BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} />
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
                  <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-5 rounded-2xl shadow-sm border border-blue-700 flex flex-col justify-center cursor-pointer min-h-[120px]" onClick={() => handleCardClick('all')}>
-                     <div className="flex justify-between items-center mb-2"><span className="text-sm opacity-80 font-medium">{t.total_balance}</span><Wallet className="opacity-80" size={18}/></div>
+                     <div className="flex justify-between items-center mb-2">
+                         <span className="text-sm opacity-80 font-medium">{t.total_balance}</span>
+                         {/* RECALCULATE BUTTON */}
+                         <button 
+                            onClick={handleRecalculate} 
+                            className="p-1.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                            title="Recalculate Balance"
+                         >
+                             <RefreshCw size={14} className={`text-white ${isRecalculating ? 'animate-spin' : ''}`} />
+                         </button>
+                     </div>
                      <div className="text-2xl font-bold">{formatMoney(displayBalance, currency)}</div>
                   </div>
                   <div className="bg-gradient-to-br from-white to-rose-50 dark:from-slate-800 dark:to-rose-900/20 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[120px]" onClick={() => handleCardClick('expense')}>
@@ -158,10 +178,6 @@ export default function BudgetView({
 
             <div className="grid lg:grid-cols-3 gap-4">
                 <div className="hidden lg:block space-y-4">
-                    {/* FIX: Changed h-[400px] to min-h-[400px] h-auto.
-                       This prevents the chart legend (History list inside Donut chart) 
-                       from overflowing and covering the Trends chart below it on web version.
-                    */}
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center min-h-[400px] h-auto">
                         {expensesByCategory.length > 0 ? (
                             <Suspense fallback={<Skeleton className="w-full h-full rounded-2xl" />}>

@@ -30,7 +30,8 @@ export default function TransactionForm({
         if (isOpen) {
             if (editingTransaction) {
                 const transOriginalCurrency = editingTransaction.originalCurrency || currencyCode || 'EUR';
-                const transOriginalAmount = editingTransaction.originalAmount || editingTransaction.amount;
+                // Always display positive amount for editing
+                const transOriginalAmount = Math.abs(editingTransaction.originalAmount || editingTransaction.amount);
                 
                 setAmount(transOriginalAmount.toString());
                 setSelectedCurrency(transOriginalCurrency);
@@ -52,7 +53,7 @@ export default function TransactionForm({
         }
     }, [isOpen, editingTransaction, currencyCode]);
 
-    // Ефект для перерахунку курсу
+    // Effect for rate recalculation
     useEffect(() => {
         let isMounted = true;
 
@@ -65,10 +66,15 @@ export default function TransactionForm({
             if (!amount) return;
 
             if(isMounted) setIsCalculating(true);
-            const rate = await fetchExchangeRate(selectedCurrency, currencyCode);
-            if(isMounted) {
-                setExchangeRate(rate);
-                setIsCalculating(false);
+            try {
+                const rate = await fetchExchangeRate(selectedCurrency, currencyCode);
+                if(isMounted) {
+                    setExchangeRate(rate);
+                }
+            } catch(e) {
+                console.error(e);
+            } finally {
+                if(isMounted) setIsCalculating(false);
             }
         };
 
@@ -86,23 +92,25 @@ export default function TransactionForm({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const finalAmountInMainCurrency = parseFloat(amount) * exchangeRate;
+        // Ensure strictly positive amount from input
+        const positiveAmount = Math.abs(parseFloat(amount));
+        const finalAmountInMainCurrency = positiveAmount * exchangeRate;
 
         onSave({
             amount: finalAmountInMainCurrency,
-            originalAmount: parseFloat(amount),
+            originalAmount: positiveAmount,
             originalCurrency: selectedCurrency,
             exchangeRate: exchangeRate,
             category: category || 'other',
             description,
-            type,
+            type, // 'income' or 'expense' logic handled in useBudget
             date,
             isRecurring
         });
         onClose();
     };
 
-    const convertedPreview = amount ? (parseFloat(amount) * exchangeRate).toFixed(2) : '0.00';
+    const convertedPreview = amount ? (Math.abs(parseFloat(amount)) * exchangeRate).toFixed(2) : '0.00';
     const currentInputSymbol = CURRENCIES[selectedCurrency]?.symbol || '$';
 
     return (
@@ -202,7 +210,7 @@ export default function TransactionForm({
                                 + {t.add_category}
                             </button>
                         </div>
-                        {/* FIX: grid-cols-3 (for mobile) and sm:grid-cols-5 (for desktop) */}
+                        
                         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
                             {categories
                                 .filter(c => c.type === type || (c.id === 'other'))
@@ -222,10 +230,6 @@ export default function TransactionForm({
                                             <div className={`w-8 h-8 min-w-[2rem] min-h-[2rem] rounded-full flex items-center justify-center text-white text-xs ${c.color || 'bg-slate-400'}`}>
                                                 <IconToRender size={14} />
                                             </div>
-                                            {/* FIX: Removed 'break-words' and added 'break-normal'.
-                                                This prevents breaking words by 1-2 letters unless absolutely necessary.
-                                                Also added 'whitespace-normal' to allow wrapping by whole words.
-                                            */}
                                             <span className={`text-[10px] leading-tight text-center whitespace-normal break-normal w-full ${category === c.id ? 'font-bold text-slate-900 dark:text-white' : 'text-slate-500'}`}>
                                                 {getCategoryName(c)}
                                             </span>

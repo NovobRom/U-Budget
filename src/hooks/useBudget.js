@@ -18,6 +18,7 @@ import {
     Bitcoin, Banknote, Landmark, PieChart, DollarSign 
 } from 'lucide-react';
 
+// Icon mapping
 const ICON_MAP = {
     'utensils': Utensils, 'pizza': Pizza, 'coffee': Coffee,
     'home': Home, 'car': Car, 'heart': Heart, 'health': Heart,
@@ -39,16 +40,13 @@ const cleanCategoriesForFirestore = (categories) => categories.map(({ icon, ...r
 const STORAGE_CURRENCY = 'EUR';
 
 export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', mainCurrency = 'EUR') => {
-    // --- Raw Data (Stored in EUR or Original Currency) ---
     const [rawTransactions, setRawTransactions] = useState([]);
     const [rawAssets, setRawAssets] = useState([]);
-    const [rawBalance, setRawBalance] = useState(0); // In EUR
-    const [rawLimits, setRawLimits] = useState({}); // In EUR
+    const [rawBalance, setRawBalance] = useState(0); 
+    const [rawLimits, setRawLimits] = useState({});
     
-    // Legacy base currency (read from DB to handle old transactions correctly)
     const [legacyBaseCurrency, setLegacyBaseCurrency] = useState('UAH');
 
-    // --- Processed Data (Converted to UI Main Currency) ---
     const [transactions, setTransactions] = useState([]);
     const [assets, setAssets] = useState([]);
     const [currentBalance, setCurrentBalance] = useState(0);
@@ -73,10 +71,9 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     const getHistoryColRef = useCallback(() => activeBudgetId ? collection(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId, 'history_snapshots') : null, [activeBudgetId]);
 
     // =========================================================
-    // 1. DATA LISTENERS
+    // LISTENERS
     // =========================================================
 
-    // 1.1 Transactions
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { 
             setRawTransactions([]); setTransactions([]); 
@@ -89,7 +86,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => unsubscribe();
     }, [activeBudgetId, isPendingApproval, getTransactionColRef, txLimit]);
 
-    // 1.2 Budget Settings
     useEffect(() => {
         if (!activeBudgetId) return;
         const unsubscribe = onSnapshot(getBudgetDocRef(), async (snap) => {
@@ -98,18 +94,10 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
                 setBudgetOwnerId(data.ownerId);
                 setAllowedUsers(data.authorizedUsers || []);
                 
-                // IMPORTANT: Read the legacy base currency if exists, else UAH
                 const dbBaseCurr = data.baseCurrency || 'UAH';
                 setLegacyBaseCurrency(dbBaseCurr);
 
-                // Store raw values (assumed EUR if migrated, or mixed if not)
-                if (data.currentBalance !== undefined) {
-                    setRawBalance(data.currentBalance);
-                } else {
-                    // Trigger migration if field missing
-                    recalculateBalance(dbBaseCurr);
-                }
-
+                setRawBalance(data.currentBalance || 0);
                 setRawLimits(data.limits || {});
 
                 const storedCats = data.categories || [];
@@ -138,7 +126,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => unsubscribe();
     }, [activeBudgetId, getBudgetDocRef, user]);
 
-    // 1.3 Assets
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setRawAssets([]); return; }
         const unsubscribe = onSnapshot(query(getAssetsColRef()), (snap) => { 
@@ -147,7 +134,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => unsubscribe();
     }, [activeBudgetId, isPendingApproval, getAssetsColRef]);
 
-    // 1.4 Loans
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setLoans([]); return; }
         const unsubscribe = onSnapshot(query(getLoansColRef()), (snap) => { 
@@ -158,17 +144,16 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
 
 
     // =========================================================
-    // 2. CONVERSION LOGIC (To UI Main Currency)
+    // CONVERSION LOGIC
     // =========================================================
 
-    // 2.1 Convert Transactions History
     useEffect(() => {
         let isMounted = true;
         const convertTx = async () => {
             if (rawTransactions.length === 0) { if(isMounted) setTransactions([]); return; }
 
             const currenciesNeeded = new Set();
-            currenciesNeeded.add(legacyBaseCurrency); // Add legacy base for fallbacks
+            currenciesNeeded.add(legacyBaseCurrency); 
             
             rawTransactions.forEach(t => { 
                 if (t.originalCurrency) currenciesNeeded.add(t.originalCurrency);
@@ -185,12 +170,11 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
             if (!isMounted) return;
 
             const converted = rawTransactions.map(t => {
-                // If originalCurrency exists, use it. Else assume legacyBaseCurrency.
                 const sourceCurr = t.originalCurrency || legacyBaseCurrency;
                 const sourceAmt = t.originalAmount !== undefined ? t.originalAmount : t.amount;
-                
                 const rate = rates[sourceCurr] || 1;
-                return { ...t, amount: sourceAmt * rate };
+                // Always display ABSOLUTE amount in UI
+                return { ...t, amount: Math.abs(sourceAmt) * rate };
             });
             setTransactions(converted);
         };
@@ -198,7 +182,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => { isMounted = false; };
     }, [rawTransactions, mainCurrency, legacyBaseCurrency]);
 
-    // 2.2 Convert Balance & Limits (From STORAGE_CURRENCY [EUR] -> Main Currency)
     useEffect(() => {
         let isMounted = true;
         const convertGlobals = async () => {
@@ -209,7 +192,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
             
             if (isMounted) {
                 setCurrentBalance(rawBalance * rate);
-                
                 const newLimits = {};
                 Object.keys(rawLimits).forEach(catId => {
                     newLimits[catId] = rawLimits[catId] * rate;
@@ -221,30 +203,23 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => { isMounted = false; };
     }, [rawBalance, rawLimits, mainCurrency]);
 
-    // 2.3 Convert Assets
     useEffect(() => {
         let isMounted = true;
         const convertAssets = async () => {
             const converted = await Promise.all(rawAssets.map(async (a) => {
                 let valuePerUnit = a.valuePerUnit || 1;
-                
-                // Crypto: Fetch live rate
                 if (a.type === 'crypto' && a.cryptoId) {
                     try {
                         const rate = await fetchExchangeRate(a.cryptoId, mainCurrency, true);
                         if (rate) valuePerUnit = rate;
                     } catch(e) {}
-                } 
-                // Fiat/Stock: Convert Original
-                else if (a.originalCurrency) {
+                } else if (a.originalCurrency) {
                     if (a.originalCurrency !== mainCurrency) {
                         try {
                             const rate = await fetchExchangeRate(a.originalCurrency, mainCurrency);
                             if (rate) valuePerUnit = rate;
                         } catch(e) {}
-                    } else {
-                        valuePerUnit = 1;
-                    }
+                    } else { valuePerUnit = 1; }
                 }
                 return { ...a, valuePerUnit };
             }));
@@ -254,7 +229,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         return () => { isMounted = false; };
     }, [rawAssets, mainCurrency]);
 
-    // 2.4 Total Debt
     useEffect(() => {
         let isMounted = true;
         const calcDebt = async () => {
@@ -276,28 +250,28 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
 
 
     // =========================================================
-    // 3. ACTIONS
+    // ACTIONS
     // =========================================================
 
     const addTransaction = async (data) => {
         const batch = writeBatch(db);
         const newTxRef = doc(getTransactionColRef());
         
-        // Convert to STORAGE_CURRENCY (EUR) for DB Balance consistency
         const inputCurrency = data.originalCurrency || mainCurrency;
-        let amountInStorage = data.originalAmount;
+        let rateToStorage = 1;
 
         if (inputCurrency !== STORAGE_CURRENCY) {
             try {
-                const rateToStorage = await fetchExchangeRate(inputCurrency, STORAGE_CURRENCY);
-                amountInStorage = data.originalAmount * rateToStorage;
-            } catch (e) {
-                console.error("Rate error:", e);
-            }
+                rateToStorage = await fetchExchangeRate(inputCurrency, STORAGE_CURRENCY);
+            } catch (e) { console.error("Rate error:", e); }
         }
+
+        const absOriginal = Math.abs(data.originalAmount);
+        const amountInStorage = absOriginal * rateToStorage;
 
         const payload = { 
             ...data, 
+            originalAmount: absOriginal,
             amount: amountInStorage, 
             userName: user.displayName || user.email.split('@')[0], 
             updatedAt: serverTimestamp(),
@@ -306,7 +280,8 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
 
         batch.set(newTxRef, payload);
 
-        const adjustment = payload.type === 'income' ? payload.amount : -payload.amount;
+        // Strict logic: Income adds, Expense subtracts
+        const adjustment = payload.type === 'income' ? amountInStorage : -amountInStorage;
         batch.update(getBudgetDocRef(), { currentBalance: increment(adjustment) });
 
         await batch.commit();
@@ -321,27 +296,29 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
             if (!txDoc.exists()) throw new Error("Transaction does not exist!");
             
             const oldData = txDoc.data();
-            const oldStorageAmount = parseFloat(oldData.amount);
+            const oldStorageAmount = Math.abs(parseFloat(oldData.amount));
             const oldImpact = oldData.type === 'income' ? oldStorageAmount : -oldStorageAmount;
 
-            let newStorageAmount = newData.originalAmount;
             const inputCurrency = newData.originalCurrency || mainCurrency;
-            
+            let newRateToStorage = 1;
             if (inputCurrency !== STORAGE_CURRENCY) {
-                const rate = await fetchExchangeRate(inputCurrency, STORAGE_CURRENCY);
-                newStorageAmount = newData.originalAmount * rate;
+                newRateToStorage = await fetchExchangeRate(inputCurrency, STORAGE_CURRENCY);
             }
-
+            
+            const absNewOriginal = Math.abs(newData.originalAmount);
+            const newStorageAmount = absNewOriginal * newRateToStorage;
             const newImpact = newData.type === 'income' ? newStorageAmount : -newStorageAmount;
+
             const diff = newImpact - oldImpact;
 
             transaction.update(txRef, { 
                 ...newData, 
+                originalAmount: absNewOriginal,
                 amount: newStorageAmount, 
                 updatedAt: serverTimestamp() 
             });
             
-            if (Math.abs(diff) > 0.001) {
+            if (Math.abs(diff) > 0.0001) {
                 transaction.update(budgetRef, { currentBalance: increment(diff) });
             }
         });
@@ -356,7 +333,8 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
             if (!txDoc.exists()) throw new Error("Transaction not found");
             
             const oldData = txDoc.data();
-            const oldStorageAmount = parseFloat(oldData.amount);
+            const oldStorageAmount = Math.abs(parseFloat(oldData.amount));
+            // Reverse impact
             const adjustment = oldData.type === 'income' ? -oldStorageAmount : oldStorageAmount;
 
             transaction.delete(txRef);
@@ -365,122 +343,81 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     };
 
     const saveLimit = async (catId, limitValue) => {
-        // limitValue is in Main Currency. Convert to STORAGE_CURRENCY (EUR)
         let limitInStorage = parseFloat(limitValue);
         if (mainCurrency !== STORAGE_CURRENCY) {
             const rate = await fetchExchangeRate(mainCurrency, STORAGE_CURRENCY);
             limitInStorage = limitInStorage * rate;
         }
-        
         const newRawLimits = { ...rawLimits, [catId]: limitInStorage };
         await updateDoc(getBudgetDocRef(), { limits: newRawLimits });
     };
 
     // =========================================================
-    // 4. UTILS & REPAIR
+    // RECALCULATION (Repair Tool)
     // =========================================================
 
-    // Recalculates total balance from scratch in EUR
-    // Handles legacy data by assuming it is in `legacyBaseCurrency` (default UAH)
-    const recalculateBalance = async (baseCurr = legacyBaseCurrency) => {
+    const recalculateBalance = async () => {
         if (!activeBudgetId) return;
         
+        const toastId = toast.loading("Recalculating absolute balance...");
+        
         try {
-            console.log("Recalculating Balance in EUR. Assuming legacy data is:", baseCurr);
+            console.log("Starting REPAIR in EUR...");
             const allTxSnap = await getDocs(collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions'));
             const txs = allTxSnap.docs.map(d => d.data());
             
             const currenciesToFetch = new Set();
-            currenciesToFetch.add(baseCurr);
+            currenciesToFetch.add(legacyBaseCurrency);
             txs.forEach(t => { 
                 if(t.originalCurrency) currenciesToFetch.add(t.originalCurrency);
             });
 
             const rates = {};
             await Promise.all(Array.from(currenciesToFetch).map(async (code) => {
-                if (code === STORAGE_CURRENCY) rates[code] = 1;
-                else try {
-                    rates[code] = await fetchExchangeRate(code, STORAGE_CURRENCY);
-                } catch(e) { rates[code] = 1; }
+                if (code === STORAGE_CURRENCY) {
+                    rates[code] = 1;
+                } else {
+                    try {
+                        rates[code] = await fetchExchangeRate(code, STORAGE_CURRENCY);
+                    } catch(e) { rates[code] = 1; }
+                }
             }));
 
-            let total = 0;
+            let totalEUR = 0;
+
             txs.forEach(t => {
                 let amtEUR = 0;
                 
-                // If NEW transaction (has originalCurrency)
                 if (t.originalAmount !== undefined && t.originalCurrency) {
                     const rate = rates[t.originalCurrency] || 1;
-                    amtEUR = t.originalAmount * rate;
-                } 
-                // If LEGACY transaction (no originalCurrency)
-                else {
-                    const legacyAmount = parseFloat(t.amount) || 0;
-                    const rate = rates[baseCurr] || 1; // Convert from Legacy Base to EUR
+                    amtEUR = Math.abs(t.originalAmount) * rate;
+                } else {
+                    const legacyAmount = Math.abs(parseFloat(t.amount) || 0);
+                    const rate = rates[legacyBaseCurrency] || 1; 
                     amtEUR = legacyAmount * rate;
                 }
 
-                if (t.type === 'income') total += amtEUR;
-                else total -= amtEUR;
+                // STRICT LOGIC: Income (+), Expense (-)
+                if (t.type === 'income') {
+                    totalEUR += amtEUR;
+                } else {
+                    totalEUR -= amtEUR;
+                }
             });
 
-            await updateDoc(getBudgetDocRef(), { currentBalance: total, storageCurrency: STORAGE_CURRENCY });
-            setRawBalance(total);
-            console.log("Recalculated Balance (EUR):", total);
-            toast.success("Balance recalculated!");
+            await updateDoc(getBudgetDocRef(), { 
+                currentBalance: totalEUR, 
+                storageCurrency: STORAGE_CURRENCY 
+            });
+            
+            setRawBalance(totalEUR);
+            toast.success("Balance fixed!", { id: toastId });
             
         } catch (e) {
             console.error("Recalculation failed", e);
+            toast.error("Failed to repair balance", { id: toastId });
         }
     };
-
-    // 4.2 Snapshot (Unchanged)
-    useEffect(() => { 
-        const recordSnapshot = async () => {
-            if (assets.length === 0 || !activeBudgetId) return;
-            // Calculate total net worth in Main Currency for snapshot
-            let total = 0;
-            for (const asset of assets) { 
-                total += asset.amount * asset.valuePerUnit; 
-            }
-            if (isNaN(total)) return;
-            
-            const today = new Date();
-            const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-            const q = query(getHistoryColRef(), orderBy('date', 'desc'), limit(1));
-            const snapshot = await getDocs(q);
-            
-            let needsSnapshot = false;
-            if (snapshot.empty) { needsSnapshot = true; } 
-            else { 
-                const lastData = snapshot.docs[0].data(); 
-                const lastDate = lastData.date.substring(0, 7); 
-                if (lastDate !== currentMonthKey) needsSnapshot = true; 
-            }
-            
-            if (needsSnapshot) { 
-                await addDoc(getHistoryColRef(), { 
-                    date: new Date().toISOString().split('T')[0], 
-                    total: total, 
-                    currency: mainCurrency, // Snapshot in display currency of that time
-                    createdAt: serverTimestamp() 
-                }); 
-            }
-        };
-        const timer = setTimeout(recordSnapshot, 3000);
-        return () => clearTimeout(timer);
-    }, [assets, activeBudgetId, getHistoryColRef, mainCurrency]);
-
-    // 5. Auto-eject (Unchanged)
-    useEffect(() => {
-        if (!user || !activeBudgetId || !budgetOwnerId) return;
-        if (activeBudgetId === user.uid) return;
-        if (user.uid === budgetOwnerId) return;
-        const isAuthorized = allowedUsers.some(u => { const uid = typeof u === 'object' ? u.uid : u; return uid === user.uid; });
-        if (!isAuthorized) {
-            updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { activeBudgetId: user.uid });
-        }
-    }, [user, activeBudgetId, budgetOwnerId, allowedUsers]);
 
     // Helpers
     const addLoan = async (data) => addDoc(getLoansColRef(), { ...data, createdAt: serverTimestamp() });
@@ -512,6 +449,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         saveLimit, deleteCategory, addCategory,
         removeUser, leaveBudget, switchBudget, 
         getBudgetDocRef, loadMore, hasMore: transactions.length >= txLimit, 
-        recalculateBalance 
+        recalculateBalance // <--- THIS WAS MISSING FROM RETURN
     };
 };

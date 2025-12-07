@@ -106,7 +106,8 @@ export default function App() {
         removeUser,
         budgetOwnerId, 
         leaveBudget,
-        switchBudget
+        switchBudget,
+        recalculateBalance // <--- FIX: Destructured recalculateBalance from hook
     } = useBudget(activeBudgetId, isPendingApproval, user, lang, currency);
 
     const { 
@@ -332,6 +333,7 @@ export default function App() {
                         currentBalance={currentBalance}
                         loadMore={loadMore}
                         hasMore={hasMore}
+                        recalculateBalance={recalculateBalance} // <--- FIX: Passing it down
                     />
                 )}
 
