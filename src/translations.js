@@ -45,10 +45,13 @@ export const TRANSLATIONS = {
         asset_type_cash: "Готівка",
         asset_type_crypto: "Крипто",
         asset_type_stock: "Акції/Фонди",
-        holdings: "Кількість",
-        current_rate: "Курс",
-        total_value: "Загальна сума",
+        holdings: "Кількість / Сума",
+        current_rate: "Курс / Ціна за одиницю",
+        total_value: "Загальна оцінка (в основній валюті)",
         select_coin: "Оберіть монету",
+        asset_currency: "Валюта активу",
+        exchange_rate: "Курс обміну",
+        auto_rate_fetching: "Оновлення курсу...",
         
         // --- Credits ---
         total_credit_debt: "Загальний борг",
@@ -264,10 +267,13 @@ export const TRANSLATIONS = {
         asset_type_cash: "Cash",
         asset_type_crypto: "Crypto",
         asset_type_stock: "Stocks/Funds",
-        holdings: "Holdings",
-        current_rate: "Rate",
-        total_value: "Total Value",
+        holdings: "Holdings / Amount",
+        current_rate: "Rate / Price per unit",
+        total_value: "Total Value (Main Currency)",
         select_coin: "Select Coin",
+        asset_currency: "Asset Currency",
+        exchange_rate: "Exchange Rate",
+        auto_rate_fetching: "Fetching rate...",
         
         // --- Credits ---
         total_credit_debt: "Total Debt",
