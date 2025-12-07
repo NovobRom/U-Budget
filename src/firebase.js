@@ -4,6 +4,9 @@ import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: "AIzaSyB387FzPy9hsgoFnoreLSPw8w4Az6PuICM",
+    // FIXED: Use the default firebaseapp domain for authDomain.
+    // Using a custom domain here (like ubudget.app) causes popup redirect loops
+    // because the auth handler (/__/auth/handler) might not be correctly routed.
     authDomain: "smartbudget-7b00a.firebaseapp.com",
     projectId: "smartbudget-7b00a",
     storageBucket: "smartbudget-7b00a.firebasestorage.app",
@@ -14,4 +17,5 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const appId = "smartbudget-7b00a"; // Використовуємо ID як константу
+// Exporting projectId as appId to maintain compatibility with other files
+export const appId = "smartbudget-7b00a";
