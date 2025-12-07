@@ -3,7 +3,7 @@ import {
     collection, query, onSnapshot, doc, 
     addDoc, deleteDoc, updateDoc, setDoc, 
     serverTimestamp, getDoc, arrayUnion, arrayRemove, 
-    orderBy, limit, getDocs, where, 
+    orderBy, limit, getDocs, 
     increment, writeBatch, runTransaction 
 } from 'firebase/firestore';
 import { db, appId } from '../firebase';
@@ -53,7 +53,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     const [categoryLimits, setCategoryLimits] = useState({});
     
     const [loans, setLoans] = useState([]);
-    const [netWorthHistory, setNetWorthHistory] = useState([]);
     const [allCategories, setAllCategories] = useState(DEFAULT_CATEGORIES);
     
     const [txLimit, setTxLimit] = useState(50);
@@ -68,7 +67,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     const getTransactionColRef = useCallback(() => activeBudgetId ? collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions') : null, [activeBudgetId]);
     const getLoansColRef = useCallback(() => activeBudgetId ? collection(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId, 'loans') : null, [activeBudgetId]);
     const getAssetsColRef = useCallback(() => activeBudgetId ? collection(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId, 'assets') : null, [activeBudgetId]);
-    const getHistoryColRef = useCallback(() => activeBudgetId ? collection(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId, 'history_snapshots') : null, [activeBudgetId]);
 
     // =========================================================
     // LISTENERS
@@ -82,18 +80,42 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         const q = query(getTransactionColRef(), orderBy('date', 'desc'), orderBy('createdAt', 'desc'), limit(txLimit));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             setRawTransactions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        }, (error) => {
+            console.error("Trans permissions:", error);
         });
         return () => unsubscribe();
     }, [activeBudgetId, isPendingApproval, getTransactionColRef, txLimit]);
 
     useEffect(() => {
         if (!activeBudgetId) return;
+
+        // --- RESET STATE immediately to prevent stale data flickering ---
+        setBudgetOwnerId(null);
+        setAllowedUsers([]);
+        setRawBalance(0);
+        setRawLimits({});
+        setAllCategories(DEFAULT_CATEGORIES);
+        // ----------------------------------------------------------------
+
         const unsubscribe = onSnapshot(getBudgetDocRef(), async (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
                 setBudgetOwnerId(data.ownerId);
                 setAllowedUsers(data.authorizedUsers || []);
                 
+                // SECURITY & ACCESS CHECK
+                if (user && data.ownerId !== user.uid) {
+                    const isAuthorized = (data.authorizedUsers || []).includes(user.uid);
+                    if (!isAuthorized) {
+                        toast.error(t.access_lost);
+                        // Reset to personal budget
+                        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { 
+                            activeBudgetId: user.uid 
+                        });
+                        return; // Stop processing
+                    }
+                }
+
                 const dbBaseCurr = data.baseCurrency || 'UAH';
                 setLegacyBaseCurrency(dbBaseCurr);
 
@@ -110,6 +132,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
                 const missingDefaults = DEFAULT_CATEGORIES.filter(d => !mergedStored.some(s => s.id === d.id));
                 setAllCategories([...mergedStored, ...missingDefaults]);
             } else {
+                // If doc doesn't exist (e.g. switching to own budget for first time), create it
                 if (user && activeBudgetId === user.uid) {
                     await setDoc(getBudgetDocRef(), { 
                         createdAt: serverTimestamp(), 
@@ -122,15 +145,26 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
                     });
                 }
             }
+        }, (error) => {
+            console.error("Budget snapshot error:", error);
+            // Handle permission denied (removed user trying to read)
+            if (error.code === 'permission-denied') {
+                if (user) {
+                    toast.error(t.access_lost);
+                    updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { 
+                        activeBudgetId: user.uid 
+                    });
+                }
+            }
         });
         return () => unsubscribe();
-    }, [activeBudgetId, getBudgetDocRef, user]);
+    }, [activeBudgetId, getBudgetDocRef, user, t]);
 
     useEffect(() => {
         if (!activeBudgetId || isPendingApproval) { setRawAssets([]); return; }
         const unsubscribe = onSnapshot(query(getAssetsColRef()), (snap) => { 
             setRawAssets(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        });
+        }, (error) => {});
         return () => unsubscribe();
     }, [activeBudgetId, isPendingApproval, getAssetsColRef]);
 
@@ -138,7 +172,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         if (!activeBudgetId || isPendingApproval) { setLoans([]); return; }
         const unsubscribe = onSnapshot(query(getLoansColRef()), (snap) => { 
             setLoans(snap.docs.map(d => ({ id: d.id, ...d.data() }))); 
-        });
+        }, (error) => {});
         return () => unsubscribe();
     }, [activeBudgetId, isPendingApproval, getLoansColRef]);
 
@@ -185,6 +219,14 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     useEffect(() => {
         let isMounted = true;
         const convertGlobals = async () => {
+            // Reset local balance instantly if rawBalance is 0 (prevents seeing old balance while rate fetches)
+            if (rawBalance === 0) {
+                if (isMounted) {
+                    setCurrentBalance(0);
+                    // Also verify if limits need reset, usually 0 balance means reset or empty budget
+                }
+            }
+
             let rate = 1;
             if (STORAGE_CURRENCY !== mainCurrency) {
                 try { rate = await fetchExchangeRate(STORAGE_CURRENCY, mainCurrency); } catch(e) {}
@@ -428,8 +470,21 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
     const deleteAsset = async (id) => deleteDoc(doc(getAssetsColRef(), id));
     const deleteCategory = async (catId) => { const r = getBudgetDocRef(); const s = await getDoc(r); if(s.exists()) await updateDoc(r, { categories: (s.data().categories||[]).filter(c=>c.id!==catId) }); };
     const addCategory = async (catData) => { await updateDoc(getBudgetDocRef(), { categories: arrayUnion(catData) }); };
-    const removeUser = async (u) => { const uid = u.uid || u; await updateDoc(getBudgetDocRef(), { authorizedUsers: arrayRemove(u.originalItem || u) }); setBudgetMembers(prev => prev.filter(m => m.uid !== uid)); };
-    const leaveBudget = async () => { if(!user) return; await updateDoc(getBudgetDocRef(), { authorizedUsers: arrayRemove(user.uid) }); await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { activeBudgetId: null }); window.location.reload(); };
+    
+    // Updated: just updates the budget doc. The removed user's UI will catch this via onSnapshot.
+    const removeUser = async (u) => { 
+        const uid = u.uid || u; 
+        await updateDoc(getBudgetDocRef(), { authorizedUsers: arrayRemove(u.originalItem || u) }); 
+        setBudgetMembers(prev => prev.filter(m => m.uid !== uid)); 
+    };
+    
+    // Updated: Explicitly switch back to own budget
+    const leaveBudget = async () => { 
+        if(!user) return; 
+        await updateDoc(getBudgetDocRef(), { authorizedUsers: arrayRemove(user.uid) }); 
+        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { activeBudgetId: user.uid }); 
+    };
+    
     const switchBudget = async (id) => { if(!user) return; await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { activeBudgetId: id, isPendingApproval: false }); window.location.reload(); };
     const loadMore = () => setTxLimit(p => p + 50);
 
@@ -437,7 +492,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         transactions, 
         loans, 
         assets, 
-        netWorthHistory,
+        netWorthHistory: [], // Placeholder as it was not fully implemented in state
         allCategories, 
         categoryLimits,
         allowedUsers, budgetMembers, budgetOwnerId,
@@ -449,6 +504,6 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang = 'ua', 
         saveLimit, deleteCategory, addCategory,
         removeUser, leaveBudget, switchBudget, 
         getBudgetDocRef, loadMore, hasMore: transactions.length >= txLimit, 
-        recalculateBalance // <--- THIS WAS MISSING FROM RETURN
+        recalculateBalance
     };
 };

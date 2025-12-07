@@ -142,6 +142,7 @@ export const TRANSLATIONS = {
         cannot_join_self: "Ви не можете приєднатися до власного бюджету",
         pending_approval: "Очікування підтвердження...",
         cancel_request: "Скасувати запит",
+        access_lost: "Доступ до бюджету втрачено",
 
         // --- Footer & Legal ---
         privacy_title: "Політика конфіденційності",
@@ -364,6 +365,7 @@ export const TRANSLATIONS = {
         cannot_join_self: "You cannot join your own budget",
         pending_approval: "Pending Approval...",
         cancel_request: "Cancel Request",
+        access_lost: "Access to budget lost",
 
         // --- Footer & Legal ---
         privacy_title: "Privacy Policy",

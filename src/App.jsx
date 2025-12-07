@@ -10,6 +10,7 @@ import { fetchExchangeRate } from './utils/currency';
 import { useAuth } from './hooks/useAuth';
 import { useBudget } from './hooks/useBudget';
 import { useFamilySync } from './hooks/useFamilySync';
+import { useTeamMembers } from './hooks/useTeamMembers'; // <--- NEW IMPORT
 
 // Main components
 import AuthScreen from './components/AuthScreen';
@@ -94,7 +95,7 @@ export default function App() {
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
-        budgetMembers, 
+        allowedUsers, // <--- We use raw UIDs from here
         totalCreditDebt,
         currentBalance, 
         loadMore, hasMore,
@@ -107,12 +108,16 @@ export default function App() {
         budgetOwnerId, 
         leaveBudget,
         switchBudget,
-        recalculateBalance // <--- FIX: Destructured recalculateBalance from hook
+        recalculateBalance 
     } = useBudget(activeBudgetId, isPendingApproval, user, lang, currency);
 
     const { 
         incomingRequests, sendJoinRequest, cancelSentRequest, approveRequest, declineRequest 
     } = useFamilySync(user?.uid, user?.email, user?.displayName);
+
+    // --- HYDRATE TEAM MEMBERS ---
+    // Use the new separate hook to fetch user details based on UIDs
+    const { members: hydratedMembers } = useTeamMembers(allowedUsers, budgetOwnerId, user?.uid);
 
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ua'];
 
@@ -333,7 +338,7 @@ export default function App() {
                         currentBalance={currentBalance}
                         loadMore={loadMore}
                         hasMore={hasMore}
-                        recalculateBalance={recalculateBalance} // <--- FIX: Passing it down
+                        recalculateBalance={recalculateBalance}
                     />
                 )}
 
@@ -476,7 +481,7 @@ export default function App() {
                         onLogout={logout}
                         t={t} getCategoryName={getCategoryName}
                         
-                        allowedUsers={budgetMembers} 
+                        allowedUsers={hydratedMembers} // <--- PASSING HYDRATED MEMBERS HERE
                         removeUser={removeUser}
                         leaveBudget={leaveBudget}
                         currentUserId={user?.uid}
