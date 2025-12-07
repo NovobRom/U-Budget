@@ -75,6 +75,10 @@ export const TRANSLATIONS = {
         
         // --- Settings & Categories ---
         settings: "Налаштування",
+        profile_settings_title: "Налаштування профілю",
+        name_placeholder: "Ваше ім'я",
+        profile_hint: "Це ім'я буде видно іншим учасникам бюджету.",
+        profile_updated: "Профіль оновлено!",
         language: "Мова",
         currency: "Валюта",
         appearance: "Зовнішній вигляд",
@@ -298,6 +302,10 @@ export const TRANSLATIONS = {
         
         // --- Settings & Categories ---
         settings: "Settings",
+        profile_settings_title: "Profile Settings",
+        name_placeholder: "Your Name",
+        profile_hint: "This name will be visible to other budget members.",
+        profile_updated: "Profile updated!",
         language: "Language",
         currency: "Currency",
         appearance: "Appearance",

@@ -10,7 +10,7 @@ import { fetchExchangeRate } from './utils/currency';
 import { useAuth } from './hooks/useAuth';
 import { useBudget } from './hooks/useBudget';
 import { useFamilySync } from './hooks/useFamilySync';
-import { useTeamMembers } from './hooks/useTeamMembers'; // <--- NEW IMPORT
+import { useTeamMembers } from './hooks/useTeamMembers'; // <--- Ensure this is imported
 
 // Main components
 import AuthScreen from './components/AuthScreen';
@@ -338,7 +338,7 @@ export default function App() {
                         currentBalance={currentBalance}
                         loadMore={loadMore}
                         hasMore={hasMore}
-                        recalculateBalance={recalculateBalance}
+                        recalculateBalance={recalculateBalance} // <--- FIX: Passing it down
                     />
                 )}
 
@@ -489,6 +489,7 @@ export default function App() {
                         
                         activeBudgetId={activeBudgetId}
                         switchBudget={switchBudget}
+                        user={user} // <--- PASSING USER HERE
                     />
                 )}
 

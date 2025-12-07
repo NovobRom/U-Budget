@@ -5,6 +5,7 @@ import RequestsManager from './settings/RequestsManager';
 import GeneralSettings from './settings/GeneralSettings';
 import LimitsManager from './settings/LimitsManager';
 import TeamManager from './settings/TeamManager';
+import ProfileSettings from './settings/ProfileSettings'; // <--- IMPORT
 import ConfirmModal from './ConfirmModal'; 
 
 export default function SettingsModal({ 
@@ -17,7 +18,8 @@ export default function SettingsModal({
     onLogout, t, getCategoryName,
     allowedUsers = [], removeUser, leaveBudget, 
     currentUserId, isOwner,
-    activeBudgetId, switchBudget // <-- NEW PROPS
+    activeBudgetId, switchBudget,
+    user // <--- NEW PROP
 }) {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, data: null });
 
@@ -62,6 +64,9 @@ export default function SettingsModal({
                     </div>
 
                     <div className="space-y-6">
+                        {/* PROFILE SETTINGS BLOCK */}
+                        <ProfileSettings user={user} t={t} />
+
                         <RequestsManager 
                             incomingRequests={incomingRequests}
                             approveRequest={approveRequest}
