@@ -1,10 +1,10 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { Coffee, Wallet, AlertCircle, Download, HelpCircle, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore'; 
 import { db, appId } from './firebase';
 import { CURRENCIES } from './constants';
-// import { TRANSLATIONS } from './translations'; // <--- REMOVED (Moved to Context)
 import { fetchExchangeRate } from './utils/currency';
 import { useAuth } from './hooks/useAuth';
 import { useBudget } from './hooks/useBudget';
@@ -15,7 +15,8 @@ import { useTeamMembers } from './hooks/useTeamMembers';
 import { useLanguage } from './context/LanguageContext';
 import { useCurrency } from './context/CurrencyContext';
 
-// Main components
+// COMPONENTS
+import Layout from './components/Layout';
 import AuthScreen from './components/AuthScreen';
 import BudgetView from './components/views/BudgetView';
 
@@ -33,8 +34,6 @@ const LinkModal = lazy(() => import('./components/modals/LinkModal'));
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
 const InfoModal = lazy(() => import('./components/modals/InfoModal'));
 const RecurringModal = lazy(() => import('./components/modals/RecurringModal'));
-
-// formatMoney removed from here (Moved to Context)
 
 // LCP OPTIMIZATION: App Shell Skeleton
 const AppShell = () => (
@@ -66,15 +65,12 @@ const AppShell = () => (
 );
 
 export default function App() {
-    // --- CONTEXT INTEGRATION ---
     const { lang, setLang, t } = useLanguage();
     const { currency, setCurrency, formatMoney } = useCurrency();
 
-    const [activeTab, setActiveTab] = useState('budget');
-    // const [lang, setLang] ... REMOVED (using context)
-    // const [currency, setCurrency] ... REMOVED (using context)
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
+    // Modal States
     const [showTransactionModal, setShowTransactionModal] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [showLoanModal, setShowLoanModal] = useState(false);
@@ -95,7 +91,6 @@ export default function App() {
         login, register, logout, resetPassword, googleLogin, appleLogin 
     } = useAuth();
 
-    // Pass lang and currency to useBudget as before
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
@@ -121,10 +116,10 @@ export default function App() {
 
     const { members: hydratedMembers } = useTeamMembers(allowedUsers, budgetOwnerId, user?.uid);
 
-    // const t = TRANSLATIONS[lang] ... REMOVED (using context)
-
-    useEffect(() => { localStorage.setItem('theme', darkMode ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', darkMode); }, [darkMode]);
-    // useEffect for localStorage lang/currency ... REMOVED (handled in context providers)
+    useEffect(() => { 
+        localStorage.setItem('theme', darkMode ? 'dark' : 'light'); 
+        document.documentElement.classList.toggle('dark', darkMode); 
+    }, [darkMode]);
 
     useEffect(() => {
         const syncPhoto = async () => {
@@ -140,6 +135,7 @@ export default function App() {
         syncPhoto();
     }, [user]);
 
+    // --- HANDLERS ---
     const handleSaveTransaction = async (data) => {
         try {
             if (editingTransaction) await updateTransaction(editingTransaction.id, data);
@@ -213,6 +209,15 @@ export default function App() {
 
     const getCategoryName = (cat) => cat.isCustom ? cat.name : (t[cat.id] || t[cat.id.toLowerCase()] || cat.name);
 
+    const handleCancelRequest = async () => {
+        try {
+            await cancelSentRequest();
+            toast.success("Request cancelled");
+        } catch (e) { toast.error("Error cancelling request"); }
+    };
+
+    // --- RENDER LOGIC ---
+
     if (authLoading) return <AppShell />;
 
     if (!user) return (
@@ -249,133 +254,78 @@ export default function App() {
         <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-2 sm:p-4 pb-24 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300">
             <Toaster position="top-right" />
 
-            <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm mb-4 border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2 font-bold text-xl"><Wallet className="text-blue-500"/> U-Budget</div>
-                <div className="flex gap-3 items-center">
-                    
-                    <a 
-                        href="https://www.buymeacoffee.com/novobrom" 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="sm:hidden flex items-center justify-center w-9 h-9 bg-[#FFDD00] hover:bg-[#E6C800] text-slate-900 rounded-full transition-colors shadow-sm"
-                    >
-                        <Coffee size={18} />
-                    </a>
-
-                    <a 
-                        href="https://www.buymeacoffee.com/novobrom" 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="hidden sm:block hover:opacity-90 transition-opacity"
-                    >
-                        <img 
-                            src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=novobrom&button_colour=FFDD00&font_colour=000000&font_family=Poppins&outline_colour=000000&coffee_colour=ffffff" 
-                            alt="Buy me a coffee" 
-                            className="h-9" 
-                        />
-                    </a>
-                    
-                    <button onClick={() => setShowSettingsModal(true)} className="relative w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center font-bold text-xs border border-slate-200 dark:border-slate-700">
-                        {user.photoURL ? <img src={user.photoURL} alt="User" width="36" height="36" className="w-full h-full rounded-full" /> : (user.displayName?.[0] || 'U')}
-                        {incomingRequests.length > 0 && <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>}
-                    </button>
-                </div>
-            </div>
-
-            {isPendingApproval && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 p-4 rounded-2xl mb-4 flex justify-between items-center animate-in fade-in">
-                    <div className="flex items-center gap-3">
-                        <AlertCircle className="text-yellow-600 dark:text-yellow-400" />
-                        <span className="font-bold text-sm text-yellow-800 dark:text-yellow-200">{t.pending_approval}</span>
-                    </div>
-                    <button 
-                        onClick={async () => {
-                            try {
-                                await cancelSentRequest();
-                                toast.success("Request cancelled");
-                            } catch (e) { toast.error("Error cancelling request"); }
-                        }}
-                        className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50"
-                    >
-                        {t.cancel_request}
-                    </button>
-                </div>
-            )}
-
-            {!isPendingApproval && (
-                <div className="flex justify-center gap-4 mb-4">
-                    {['budget', 'assets', 'credits'].map(tab => (
-                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-2 rounded-xl font-bold ${activeTab === tab ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
-                            {t[`${tab}${tab === 'assets' ? '' : '_tab'}`] || t[tab]}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            <Suspense fallback={<AppShell />}>
-                {activeTab === 'budget' && !isPendingApproval && (
-                    <BudgetView 
-                        transactions={transactions} categories={allCategories} limits={categoryLimits} 
-                        currency={currency} formatMoney={formatMoney} t={t} lang={lang}
+            <Routes>
+                <Route element={
+                    <Layout 
+                        user={user} 
+                        t={t} 
+                        isPendingApproval={isPendingApproval}
+                        incomingRequestsCount={incomingRequests.length}
                         onOpenSettings={() => setShowSettingsModal(true)}
-                        onOpenInvite={() => setShowLinkModal(true)}
-                        onOpenJoin={() => setShowLinkModal(true)}
-                        onOpenRecurring={() => setShowRecurringModal(true)}
-                        onAddTransaction={() => { setEditingTransaction(null); setShowTransactionModal(true); }}
-                        onEditTransaction={(tx) => { setEditingTransaction(tx); setShowTransactionModal(true); }}
-                        onDeleteTransaction={deleteTransaction}
-                        onExport={(data) => {
-                            const html = `<thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Type</th><th>Amount</th><th>User</th></tr></thead><tbody>${data.map(tr => `<tr><td>${tr.date}</td><td>${getCategoryStyles(tr.category).name}</td><td>${tr.description}</td><td>${tr.type}</td><td>${Number(tr.amount).toFixed(2)}</td><td>${tr.userName || ''}</td></tr>`).join('')}</tbody>`;
-                            handleExport(html, 'transactions');
-                        }}
-                        getCategoryStyles={getCategoryStyles}
-                        getCategoryName={getCategoryName}
-                        currentBalance={currentBalance}
-                        loadMore={loadMore}
-                        hasMore={hasMore}
-                        recalculateBalance={recalculateBalance}
+                        onCancelRequest={handleCancelRequest}
+                        onOpenInfo={(type) => setShowInfoModal(type)}
                     />
-                )}
+                }>
+                    <Route index element={
+                        <Suspense fallback={<AppShell />}>
+                            <BudgetView 
+                                transactions={transactions} categories={allCategories} limits={categoryLimits} 
+                                currency={currency} formatMoney={formatMoney} t={t} lang={lang}
+                                onOpenSettings={() => setShowSettingsModal(true)}
+                                onOpenInvite={() => setShowLinkModal(true)}
+                                onOpenJoin={() => setShowLinkModal(true)}
+                                onOpenRecurring={() => setShowRecurringModal(true)}
+                                onAddTransaction={() => { setEditingTransaction(null); setShowTransactionModal(true); }}
+                                onEditTransaction={(tx) => { setEditingTransaction(tx); setShowTransactionModal(true); }}
+                                onDeleteTransaction={deleteTransaction}
+                                onExport={(data) => {
+                                    const html = `<thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Type</th><th>Amount</th><th>User</th></tr></thead><tbody>${data.map(tr => `<tr><td>${tr.date}</td><td>${getCategoryStyles(tr.category).name}</td><td>${tr.description}</td><td>${tr.type}</td><td>${Number(tr.amount).toFixed(2)}</td><td>${tr.userName || ''}</td></tr>`).join('')}</tbody>`;
+                                    handleExport(html, 'transactions');
+                                }}
+                                getCategoryStyles={getCategoryStyles}
+                                getCategoryName={getCategoryName}
+                                currentBalance={currentBalance}
+                                loadMore={loadMore}
+                                hasMore={hasMore}
+                                recalculateBalance={recalculateBalance}
+                            />
+                        </Suspense>
+                    } />
+                    <Route path="assets" element={
+                        <Suspense fallback={<AppShell />}>
+                            <AssetsView 
+                                assets={assets} 
+                                currency={currency} formatMoney={formatMoney} t={t}
+                                onAddAsset={() => { setEditingAsset(null); setShowAssetModal(true); }}
+                                onEditAsset={(a) => { setEditingAsset(a); setShowAssetModal(true); }}
+                                onDeleteAsset={deleteAsset}
+                                onExport={() => {
+                                    const html = `<thead><tr><th>Name</th><th>Type</th><th>Amount</th><th>Value Per Unit</th><th>Currency</th><th>Total</th></tr></thead><tbody>${assets.map(a => `<tr><td>${a.name}</td><td>${a.type}</td><td>${a.amount}</td><td>${a.valuePerUnit}</td><td>${a.currency}</td><td>${a.amount * a.valuePerUnit}</td></tr>`).join('')}</tbody>`;
+                                    handleExport(html, 'assets');
+                                }}
+                            />
+                        </Suspense>
+                    } />
+                    <Route path="credits" element={
+                        <Suspense fallback={<AppShell />}>
+                            <CreditsView 
+                                loans={loans} totalCreditDebt={totalCreditDebt} currency={currency} formatMoney={formatMoney} t={t}
+                                onAddLoan={() => { setEditingLoan(null); setShowLoanModal(true); }}
+                                onEditLoan={(l) => { setEditingLoan(l); setShowLoanModal(true); }}
+                                onDeleteLoan={deleteLoan}
+                                onPayLoan={(l) => { setActiveLoanForPayment(l); setShowLoanPaymentModal(true); }}
+                                onExport={() => {
+                                    const html = `<thead><tr><th>Name</th><th>Total Debt</th><th>Current Balance</th><th>Interest</th><th>Currency</th></tr></thead><tbody>${loans.map(l => `<tr><td>${l.name}</td><td>${l.totalAmount}</td><td>${l.currentBalance}</td><td>${l.interestRate}</td><td>${l.currency}</td></tr>`).join('')}</tbody>`;
+                                    handleExport(html, 'loans');
+                                }}
+                            />
+                        </Suspense>
+                    } />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
+            </Routes>
 
-                {activeTab === 'assets' && !isPendingApproval && (
-                    <AssetsView 
-                        assets={assets} 
-                        currency={currency} formatMoney={formatMoney} t={t}
-                        onAddAsset={() => { setEditingAsset(null); setShowAssetModal(true); }}
-                        onEditAsset={(a) => { setEditingAsset(a); setShowAssetModal(true); }}
-                        onDeleteAsset={deleteAsset}
-                        onExport={() => {
-                            const html = `<thead><tr><th>Name</th><th>Type</th><th>Amount</th><th>Value Per Unit</th><th>Currency</th><th>Total</th></tr></thead><tbody>${assets.map(a => `<tr><td>${a.name}</td><td>${a.type}</td><td>${a.amount}</td><td>${a.valuePerUnit}</td><td>${a.currency}</td><td>${a.amount * a.valuePerUnit}</td></tr>`).join('')}</tbody>`;
-                            handleExport(html, 'assets');
-                        }}
-                    />
-                )}
-
-                {activeTab === 'credits' && !isPendingApproval && (
-                    <CreditsView 
-                        loans={loans} totalCreditDebt={totalCreditDebt} currency={currency} formatMoney={formatMoney} t={t}
-                        onAddLoan={() => { setEditingLoan(null); setShowLoanModal(true); }}
-                        onEditLoan={(l) => { setEditingLoan(l); setShowLoanModal(true); }}
-                        onDeleteLoan={deleteLoan}
-                        onPayLoan={(l) => { setActiveLoanForPayment(l); setShowLoanPaymentModal(true); }}
-                        onExport={() => {
-                            const html = `<thead><tr><th>Name</th><th>Total Debt</th><th>Current Balance</th><th>Interest</th><th>Currency</th></tr></thead><tbody>${loans.map(l => `<tr><td>${l.name}</td><td>${l.totalAmount}</td><td>${l.currentBalance}</td><td>${l.interestRate}</td><td>${l.currency}</td></tr>`).join('')}</tbody>`;
-                            handleExport(html, 'loans');
-                        }}
-                    />
-                )}
-            </Suspense>
-
-            <footer className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800 text-center pb-8">
-                <div className="flex justify-center flex-wrap gap-4 sm:gap-6 text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
-                     <button onClick={() => setShowInfoModal('privacy')} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">{t.privacy_title}</button>
-                     <button onClick={() => setShowInfoModal('terms')} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">{t.terms_title}</button>
-                     <button onClick={() => setShowInfoModal('support')} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center gap-1"><HelpCircle size={12}/> {t.support_title}</button>
-                     <button onClick={() => setShowInfoModal('install')} className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center gap-1"><Download size={12}/> {t.install_app}</button>
-                </div>
-                <p className="text-[10px] text-slate-300">{t.copyright}</p>
-            </footer>
-
+            {/* MODALS RENDERED AT ROOT LEVEL */}
             <Suspense fallback={null}>
                 {showTransactionModal && (
                     <TransactionForm
@@ -391,14 +341,13 @@ export default function App() {
                         onAddCategory={() => setShowCategoryModal(true)}
                     />
                 )}
-
+                {/* Other modals unchanged, just ensuring they are rendered */}
                 {showLoanModal && (
                     <LoanModal 
                         isOpen={showLoanModal} onClose={() => setShowLoanModal(false)}
                         onSave={handleSaveLoan} editingLoan={editingLoan} t={t}
                     />
                 )}
-
                 {showLoanPaymentModal && (
                     <LoanPaymentModal
                         isOpen={showLoanPaymentModal} onClose={() => setShowLoanPaymentModal(false)}
@@ -408,7 +357,6 @@ export default function App() {
                         t={t}
                     />
                 )}
-
                 {showAssetModal && (
                     <AssetModal
                         isOpen={showAssetModal} onClose={() => setShowAssetModal(false)}
@@ -416,7 +364,6 @@ export default function App() {
                         editingAsset={editingAsset} t={t} currency={currency}
                     />
                 )}
-
                 {showCategoryModal && (
                     <CategoryModal
                         isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)}
@@ -427,7 +374,6 @@ export default function App() {
                         t={t}
                     />
                 )}
-
                 {showLinkModal && (
                     <LinkModal
                         isOpen={showLinkModal} onClose={() => setShowLinkModal(false)}
@@ -445,7 +391,6 @@ export default function App() {
                         t={t}
                     />
                 )}
-
                 {showRecurringModal && (
                     <RecurringModal
                         isOpen={showRecurringModal}
@@ -460,7 +405,6 @@ export default function App() {
                         t={t}
                     />
                 )}
-
                 {showSettingsModal && (
                     <SettingsModal
                         isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)}
@@ -485,7 +429,6 @@ export default function App() {
                         user={user}
                     />
                 )}
-
                 {showInfoModal && (
                     <InfoModal 
                         type={showInfoModal} onClose={() => setShowInfoModal(null)} t={t} 
