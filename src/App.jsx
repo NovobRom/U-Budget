@@ -1,15 +1,19 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { Coffee, Wallet, Loader2, Download, HelpCircle, AlertCircle, RefreshCw, LogOut, Mail } from 'lucide-react';
+import { Coffee, Wallet, AlertCircle, Download, HelpCircle, Mail } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore'; 
 import { db, appId } from './firebase';
 import { CURRENCIES } from './constants';
-import { TRANSLATIONS } from './translations';
+// import { TRANSLATIONS } from './translations'; // <--- REMOVED (Moved to Context)
 import { fetchExchangeRate } from './utils/currency';
 import { useAuth } from './hooks/useAuth';
 import { useBudget } from './hooks/useBudget';
 import { useFamilySync } from './hooks/useFamilySync';
 import { useTeamMembers } from './hooks/useTeamMembers';
+
+// CONTEXT HOOKS
+import { useLanguage } from './context/LanguageContext';
+import { useCurrency } from './context/CurrencyContext';
 
 // Main components
 import AuthScreen from './components/AuthScreen';
@@ -30,12 +34,7 @@ const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
 const InfoModal = lazy(() => import('./components/modals/InfoModal'));
 const RecurringModal = lazy(() => import('./components/modals/RecurringModal'));
 
-// NOTE: App.css import removed. Styles moved to index.css
-
-const formatMoney = (amount, currencyCode) => {
-    const symbol = CURRENCIES[currencyCode]?.symbol || '$';
-    return `${symbol}${Math.abs(amount).toFixed(2)}`;
-};
+// formatMoney removed from here (Moved to Context)
 
 // LCP OPTIMIZATION: App Shell Skeleton
 const AppShell = () => (
@@ -67,9 +66,13 @@ const AppShell = () => (
 );
 
 export default function App() {
+    // --- CONTEXT INTEGRATION ---
+    const { lang, setLang, t } = useLanguage();
+    const { currency, setCurrency, formatMoney } = useCurrency();
+
     const [activeTab, setActiveTab] = useState('budget');
-    const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'ua');
-    const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || 'EUR');
+    // const [lang, setLang] ... REMOVED (using context)
+    // const [currency, setCurrency] ... REMOVED (using context)
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
     const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -92,6 +95,7 @@ export default function App() {
         login, register, logout, resetPassword, googleLogin, appleLogin 
     } = useAuth();
 
+    // Pass lang and currency to useBudget as before
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
@@ -117,11 +121,10 @@ export default function App() {
 
     const { members: hydratedMembers } = useTeamMembers(allowedUsers, budgetOwnerId, user?.uid);
 
-    const t = TRANSLATIONS[lang] || TRANSLATIONS['ua'];
+    // const t = TRANSLATIONS[lang] ... REMOVED (using context)
 
     useEffect(() => { localStorage.setItem('theme', darkMode ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', darkMode); }, [darkMode]);
-    useEffect(() => { localStorage.setItem('lang', lang); }, [lang]);
-    useEffect(() => { localStorage.setItem('currency', currency); }, [currency]);
+    // useEffect for localStorage lang/currency ... REMOVED (handled in context providers)
 
     useEffect(() => {
         const syncPhoto = async () => {
