@@ -1,6 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-// Added Coffee icon back for the mobile version
 import { Coffee, Wallet, Loader2, Download, HelpCircle, AlertCircle, RefreshCw, LogOut, Mail } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore'; 
 import { db, appId } from './firebase';
@@ -10,7 +9,7 @@ import { fetchExchangeRate } from './utils/currency';
 import { useAuth } from './hooks/useAuth';
 import { useBudget } from './hooks/useBudget';
 import { useFamilySync } from './hooks/useFamilySync';
-import { useTeamMembers } from './hooks/useTeamMembers'; // <--- Ensure this is imported
+import { useTeamMembers } from './hooks/useTeamMembers';
 
 // Main components
 import AuthScreen from './components/AuthScreen';
@@ -31,13 +30,14 @@ const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
 const InfoModal = lazy(() => import('./components/modals/InfoModal'));
 const RecurringModal = lazy(() => import('./components/modals/RecurringModal'));
 
+// NOTE: App.css import removed. Styles moved to index.css
+
 const formatMoney = (amount, currencyCode) => {
     const symbol = CURRENCIES[currencyCode]?.symbol || '$';
     return `${symbol}${Math.abs(amount).toFixed(2)}`;
 };
 
 // LCP OPTIMIZATION: App Shell Skeleton
-// This shows immediately while auth/data is loading instead of a blank spinner
 const AppShell = () => (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-2 sm:p-4">
         {/* Header Skeleton */}
@@ -95,7 +95,7 @@ export default function App() {
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
-        allowedUsers, // <--- We use raw UIDs from here
+        allowedUsers, 
         totalCreditDebt,
         currentBalance, 
         loadMore, hasMore,
@@ -115,8 +115,6 @@ export default function App() {
         incomingRequests, sendJoinRequest, cancelSentRequest, approveRequest, declineRequest 
     } = useFamilySync(user?.uid, user?.email, user?.displayName);
 
-    // --- HYDRATE TEAM MEMBERS ---
-    // Use the new separate hook to fetch user details based on UIDs
     const { members: hydratedMembers } = useTeamMembers(allowedUsers, budgetOwnerId, user?.uid);
 
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ua'];
@@ -212,7 +210,6 @@ export default function App() {
 
     const getCategoryName = (cat) => cat.isCustom ? cat.name : (t[cat.id] || t[cat.id.toLowerCase()] || cat.name);
 
-    // USE APP SHELL INSTEAD OF SPINNER FOR FASTER LCP
     if (authLoading) return <AppShell />;
 
     if (!user) return (
@@ -253,9 +250,6 @@ export default function App() {
                 <div className="flex items-center gap-2 font-bold text-xl"><Wallet className="text-blue-500"/> U-Budget</div>
                 <div className="flex gap-3 items-center">
                     
-                    {/* ADAPTIVE BUY ME A COFFEE BUTTONS */}
-                    
-                    {/* Mobile version: Compact circular button with icon (visible only on small screens) */}
                     <a 
                         href="https://www.buymeacoffee.com/novobrom" 
                         target="_blank" 
@@ -265,7 +259,6 @@ export default function App() {
                         <Coffee size={18} />
                     </a>
 
-                    {/* Desktop version: Full image button (visible only on screens sm and larger) */}
                     <a 
                         href="https://www.buymeacoffee.com/novobrom" 
                         target="_blank" 
@@ -280,7 +273,6 @@ export default function App() {
                     </a>
                     
                     <button onClick={() => setShowSettingsModal(true)} className="relative w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center font-bold text-xs border border-slate-200 dark:border-slate-700">
-                        {/* Added explicit width/height to prevent layout shift */}
                         {user.photoURL ? <img src={user.photoURL} alt="User" width="36" height="36" className="w-full h-full rounded-full" /> : (user.displayName?.[0] || 'U')}
                         {incomingRequests.length > 0 && <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>}
                     </button>
@@ -338,7 +330,7 @@ export default function App() {
                         currentBalance={currentBalance}
                         loadMore={loadMore}
                         hasMore={hasMore}
-                        recalculateBalance={recalculateBalance} // <--- FIX: Passing it down
+                        recalculateBalance={recalculateBalance}
                     />
                 )}
 
@@ -480,16 +472,14 @@ export default function App() {
                         onDeleteCategory={deleteCategory}
                         onLogout={logout}
                         t={t} getCategoryName={getCategoryName}
-                        
-                        allowedUsers={hydratedMembers} // <--- PASSING HYDRATED MEMBERS HERE
+                        allowedUsers={hydratedMembers}
                         removeUser={removeUser}
                         leaveBudget={leaveBudget}
                         currentUserId={user?.uid}
                         isOwner={user?.uid === budgetOwnerId}
-                        
                         activeBudgetId={activeBudgetId}
                         switchBudget={switchBudget}
-                        user={user} // <--- PASSING USER HERE
+                        user={user}
                     />
                 )}
 
