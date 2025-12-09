@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Перевірка, чи є користувач власником (за userId в шляху або в документі)
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Отримання даних бюджету (викликає читання - коштує грошей!)
+    function getBudgetData(appId, budgetId) {
+      return get(/databases/$(database)/documents/artifacts/$(appId)/public/data/budgets/$(budgetId)).data;
+    }
+
+    function budgetExists(appId, budgetId) {
+      return exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/budgets/$(budgetId));
+    }
+
+    // Перевірка прав на основі ВЖЕ отриманих даних (економить читання)
+    function hasAccessToData(data) {
+      return isOwner(data) || isMember(data);
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && (
+        (data.ownerId == request.auth.uid) || 
+        (data.ownerId == null && request.auth.uid == data.id) // Legacy support
+      );
+    }
+
+    function isMember(data) {
+      return isSignedIn() && 
+             data.get('authorizedUsers', []) is list && 
+             request.auth.uid in data.authorizedUsers;
+    }
+
+    // Для доступу до підколекцій, де немає даних батьківського документа в ресурсі
+    function hasRemoteAccess(appId, budgetId) {
+      let data = getBudgetData(appId, budgetId);
+      return hasAccessToData(data);
+    }
+
+    // --- MATCH RULES ---
+
+    match /artifacts/{appId} {
+      
+      // 1. USER PROFILES
+      match /users/{userId}/metadata/profile {
+        allow read: if isSignedIn();
+        allow write: if isUser(userId);
+      }
+
+      // 2. USER TRANSACTIONS (Data Split)
+      match /users/{budgetId}/transactions/{transactionId} {
+        allow read, write: if budgetExists(appId, budgetId) && hasRemoteAccess(appId, budgetId);
+      }
+
+      // 3. PUBLIC DATA & SHARED BUDGETS
+      match /public/data {
+        
+        match /budgets/{budgetId} {
+          
+          // READ: Тільки учасники або власник
+          allow get: if hasAccessToData(resource.data);
+          allow list: if hasAccessToData(resource.data);
+
+          // CREATE: Тільки авторизовані
+          allow create: if isSignedIn() && 
+                        request.resource.data.ownerId == request.auth.uid;
+
+          // UPDATE: Власник - все; Учасник - все, крім критичних полів
+          allow update: if isOwner(resource.data) || 
+                        (isMember(resource.data) && 
+                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorizedUsers', 'ownerId']));
+
+          // DELETE: Тільки власник
+          allow delete: if isOwner(resource.data);
+          
+          // --- SUBCOLLECTIONS ---
+          match /{subcollection}/{document=**} {
+            allow read, write: if hasRemoteAccess(appId, budgetId);
+          }
+        }
+
+        // JOIN REQUESTS
+        match /budget_requests/{requesterUid} {
+          allow create: if isUser(requesterUid);
+          allow read, update, delete: if isUser(requesterUid) || 
+                                     (resource.data.targetBudgetId != null && 
+                                      isOwner(getBudgetData(appId, resource.data.targetBudgetId)));
+        }
+      }
+    }
+  }
+}

@@ -1,22 +1,19 @@
 import { useState, useEffect } from 'react';
 import { 
     collection, query, where, onSnapshot, 
-    doc, updateDoc, deleteDoc, setDoc, getDoc, 
+    doc, updateDoc, deleteDoc, setDoc, 
     arrayUnion, serverTimestamp 
-} from 'firebase/firestore';
+} from 'firebase/firestore'; // [FIX] Прибрав getDoc з імпортів, бо він більше не потрібен тут
 import { db, appId } from '../firebase';
 import { toast } from 'react-hot-toast';
 
 export const useFamilySync = (currentUserId, userEmail, userName) => {
     const [incomingRequests, setIncomingRequests] = useState([]);
 
-    // 1. Слухаємо ВХІДНІ запити (хто хоче до нас)
+    // 1. Слухаємо ВХІДНІ запити
     useEffect(() => {
         if (!currentUserId) return;
         
-        // Логування для дебагу
-        console.log("Listening for requests to budget:", currentUserId);
-
         const q = query(
             collection(db, 'artifacts', appId, 'public', 'data', 'budget_requests'), 
             where("targetBudgetId", "==", currentUserId),
@@ -25,7 +22,6 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         
         const unsubscribe = onSnapshot(q, (snap) => { 
             const reqs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            console.log("Incoming requests updated:", reqs);
             setIncomingRequests(reqs); 
         }, (error) => {
             console.error("Error listening to budget_requests:", error);
@@ -34,7 +30,7 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         return () => unsubscribe();
     }, [currentUserId]);
 
-    // 2. Слухаємо МІЙ ВИХІДНИЙ запит (чи прийняли мене?)
+    // 2. Слухаємо МІЙ ВИХІДНИЙ запит
     useEffect(() => {
         if (!currentUserId) return;
         
@@ -43,36 +39,26 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         const unsubscribe = onSnapshot(myRequestRef, async (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
-                console.log("My request status update:", data);
                 
-                // СЦЕНАРІЙ А: Мене прийняли (Approved)
                 if (data.status === 'approved') {
                     try {
                         await updateDoc(doc(db, 'artifacts', appId, 'users', currentUserId, 'metadata', 'profile'), { 
                             activeBudgetId: data.targetBudgetId, 
                             isPendingApproval: false 
                         });
-                        
                         await deleteDoc(myRequestRef);
                         toast.success("Ваш запит прийнято! Бюджет підключено.");
-                        
-                        // window.location.reload() ВИДАЛЕНО
-                        // Тепер useAuth.js через onSnapshot побачить зміну activeBudgetId 
-                        // і автоматично оновить інтерфейс.
-                        
                     } catch (error) {
                         console.error("Auto-switch error:", error);
                         toast.error("Помилка перемикання бюджету.");
                     }
                 }
                 
-                // СЦЕНАРІЙ Б: Мене відхилили (Rejected)
                 if (data.status === 'rejected') {
                     await updateDoc(doc(db, 'artifacts', appId, 'users', currentUserId, 'metadata', 'profile'), { 
                         isPendingApproval: false,
                         activeBudgetId: currentUserId 
                     });
-                    
                     await deleteDoc(myRequestRef);
                     toast.error("Запит на приєднання відхилено.");
                 }
@@ -89,13 +75,10 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         
         if (targetBudgetId === currentUserId) throw new Error("cannot_join_self");
 
-        const targetBudgetRef = doc(db, 'artifacts', appId, 'public', 'data', 'budgets', targetBudgetId);
-        const targetSnap = await getDoc(targetBudgetRef);
-
-        if (!targetSnap.exists()) {
-            console.error("Budget not found:", targetBudgetId);
-            throw new Error("budget_not_found");
-        }
+        // [SECURE FIX]
+        // Ми видалили перевірку targetSnap = await getDoc(targetBudgetRef).
+        // Це дозволяє відправити запит "наосліп". Якщо ID невірний, запит просто висітиме,
+        // але це краще, ніж відкривати читання бюджетів для всіх.
 
         // Створюємо запит
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budget_requests', currentUserId), { 
