@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
-// --- HELPER: Групування дрібних витрат + Переклад ---
+// --- HELPER: Logic to group small expenses ---
 const processData = (data, total, getCategoryName, otherLabel) => {
     if (!data || total === 0) return [];
 
@@ -15,7 +15,6 @@ const processData = (data, total, getCategoryName, otherLabel) => {
             otherTotal += item.total;
         } else {
             const displayName = getCategoryName ? getCategoryName(item) : item.name;
-            
             mainSegments.push({
                 name: displayName, 
                 value: item.total,
@@ -40,10 +39,8 @@ const processData = (data, total, getCategoryName, otherLabel) => {
     return mainSegments.sort((a, b) => b.value - a.value);
 };
 
-// --- COLOR MAP ---
 const getColorHex = (tailwindClass) => {
     if (!tailwindClass) return '#94a3b8';
-    
     const colors = {
         'bg-slate-400': '#94a3b8', 'bg-slate-500': '#64748b', 'bg-slate-600': '#475569',
         'bg-red-400': '#f87171', 'bg-red-500': '#ef4444', 'bg-red-600': '#dc2626',
@@ -67,45 +64,36 @@ const getColorHex = (tailwindClass) => {
     return colors[tailwindClass] || '#94a3b8'; 
 };
 
-export const SimpleDonutChart = ({ data, total, currencyCode, formatMoney, label, getCategoryName, otherLabel }) => {
+// Using memo to prevent re-renders if props are identical
+export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, label, getCategoryName, otherLabel }) => {
     const [activeIndex, setActiveIndex] = useState(null);
-
+    
     const chartData = useMemo(() => processData(data, total, getCategoryName, otherLabel), [data, total, getCategoryName, otherLabel]);
 
-    const onPieEnter = (_, index) => {
-        setActiveIndex(index);
-    };
+    const onPieEnter = (_, index) => setActiveIndex(index);
+    const onPieLeave = () => setActiveIndex(null);
 
-    const onPieLeave = () => {
-        setActiveIndex(null);
-    };
-
-    // Визначаємо, що показувати в центрі: або загальну суму, або вибрану категорію
     const centerLabel = activeIndex !== null ? chartData[activeIndex].name : label; 
     const centerValue = activeIndex !== null 
         ? formatMoney(chartData[activeIndex].value, currencyCode) 
         : formatMoney(total, currencyCode);
 
-    if (total === 0) {
-        return <div className="text-center text-slate-400 py-10">No data to display</div>;
-    }
+    if (total === 0) return <div className="text-center text-slate-400 py-10">No data</div>;
 
     return (
-        <div className="w-full flex flex-col items-center">
+        <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
             <div className="relative w-full h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
                             data={chartData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={80}
+                            cx="50%" cy="50%"
+                            innerRadius={60} outerRadius={80}
                             paddingAngle={5}
                             dataKey="value"
                             onMouseEnter={onPieEnter}
                             onMouseLeave={onPieLeave}
-                            onClick={onPieEnter} // Додаємо клік для мобільних
+                            onClick={onPieEnter}
                             cornerRadius={6}
                             stroke="none"
                             cursor="pointer"
@@ -114,7 +102,7 @@ export const SimpleDonutChart = ({ data, total, currencyCode, formatMoney, label
                                 <Cell 
                                     key={`cell-${index}`} 
                                     fill={getColorHex(entry.originalColor)} 
-                                    className="transition-all duration-300 focus:outline-none cursor-pointer"
+                                    className="transition-all duration-300 focus:outline-none"
                                     style={{
                                         filter: activeIndex === index ? 'drop-shadow(0px 0px 8px rgba(0,0,0,0.2))' : 'none',
                                         opacity: activeIndex !== null && activeIndex !== index ? 0.6 : 1,
@@ -124,16 +112,14 @@ export const SimpleDonutChart = ({ data, total, currencyCode, formatMoney, label
                                 />
                             ))}
                         </Pie>
-                        {/* FIX: Прибрали Tooltip, щоб він не перекривав текст по центру */}
                     </PieChart>
                 </ResponsiveContainer>
                 
-                {/* Цей блок показує текст по центру (Загальне або Категорію) */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1 text-center px-4 truncate w-full transition-all">
+                    <span className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1 text-center px-4 truncate w-full">
                         {centerLabel}
                     </span>
-                    <span className="text-2xl font-bold text-slate-800 dark:text-white transition-all">
+                    <span className="text-2xl font-bold text-slate-800 dark:text-white">
                         {centerValue}
                     </span>
                 </div>
@@ -148,37 +134,33 @@ export const SimpleDonutChart = ({ data, total, currencyCode, formatMoney, label
                         onMouseLeave={() => setActiveIndex(null)}
                     >
                         <div className="flex items-center gap-3">
-                            <div 
-                                className={`w-3 h-3 rounded-full shadow-sm`} 
-                                style={{ backgroundColor: getColorHex(item.originalColor) }}
-                            ></div>
+                            <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: getColorHex(item.originalColor) }}></div>
                             <span className={`text-sm font-medium ${activeIndex === index ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
                                 {item.name}
                             </span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
-                            <span className="font-bold dark:text-white">
-                                {formatMoney(item.value, currencyCode)}
-                            </span>
-                            <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded-lg min-w-[45px] text-center">
-                                {item.percentage}%
-                            </span>
+                            <span className="font-bold dark:text-white">{formatMoney(item.value, currencyCode)}</span>
+                            <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded-lg min-w-[45px] text-center">{item.percentage}%</span>
                         </div>
                     </div>
                 ))}
             </div>
         </div>
     );
-};
+});
 
-export const SimpleBarChart = ({ data, currency }) => {
+export const SimpleBarChart = memo(({ data, currency }) => {
     if (!data || data.length === 0) return null;
 
+    // Use a copy to avoid mutating props if data is frozen
+    const chartData = [...data].reverse();
+
     return (
-        <div className="w-full h-[200px] mt-4">
+        <div className="w-full h-[200px] mt-4 animate-in fade-in duration-500">
             <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[...data].reverse()}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
                     <XAxis 
                         dataKey="label" 
                         axisLine={false} 
@@ -187,13 +169,19 @@ export const SimpleBarChart = ({ data, currency }) => {
                         dy={10}
                     />
                     <Tooltip 
-                        cursor={{fill: 'transparent'}}
-                        contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                        cursor={{fill: 'rgba(0,0,0,0.05)'}}
+                        contentStyle={{
+                            borderRadius: '12px', 
+                            border: 'none', 
+                            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                            backgroundColor: 'var(--tw-bg-opacity, 1) rgb(255 255 255)',
+                            color: '#1e293b'
+                        }}
                     />
-                    <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} barSize={20} name="Income" />
-                    <Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} name="Expense" />
+                    <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} barSize={20} name="Income" animationDuration={1000} />
+                    <Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} name="Expense" animationDuration={1000} />
                 </BarChart>
             </ResponsiveContainer>
         </div>
     );
-};
+});

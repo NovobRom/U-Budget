@@ -80,15 +80,18 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // React залишаємо разом - це безпечно і корисно
+          // React core separate
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
             return 'vendor-react';
           }
-          // Firebase теж можна залишити окремо
+          // Firebase SDK separate
           if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
             return 'vendor-firebase';
           }
-          // ⚠️ ПРИБРАНО: Recharts. Дозволяємо Vite самому розбити цей код через lazy() імпорт.
+          // Recharts (heavy charting library) separate
+          if (id.includes('node_modules/recharts')) {
+            return 'vendor-recharts';
+          }
         }
       }
     }

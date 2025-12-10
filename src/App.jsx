@@ -14,77 +14,26 @@ import { useTeamMembers } from './hooks/useTeamMembers';
 // CONTEXT HOOKS
 import { useLanguage } from './context/LanguageContext';
 import { useCurrency } from './context/CurrencyContext';
+import { useModal } from './context/ModalContext';
 
 // COMPONENTS
 import Layout from './components/Layout';
 import AuthScreen from './components/AuthScreen';
-import BudgetView from './components/views/BudgetView';
+import AppShell from './components/AppShell';
+import ModalManager from './components/modals/ModalManager';
 
 // Lazy loaded views
+const BudgetView = lazy(() => import('./components/views/BudgetView'));
 const AssetsView = lazy(() => import('./components/views/AssetsView'));
 const CreditsView = lazy(() => import('./components/views/CreditsView'));
-const TransactionForm = lazy(() => import('./components/TransactionForm'));
-
-// MODALS
-const LoanModal = lazy(() => import('./components/modals/LoanModal'));
-const LoanPaymentModal = lazy(() => import('./components/modals/LoanPaymentModal'));
-const AssetModal = lazy(() => import('./components/modals/AssetModal'));
-const CategoryModal = lazy(() => import('./components/modals/CategoryModal'));
-const LinkModal = lazy(() => import('./components/modals/LinkModal'));
-const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
-const InfoModal = lazy(() => import('./components/modals/InfoModal'));
-const RecurringModal = lazy(() => import('./components/modals/RecurringModal'));
-
-// LCP OPTIMIZATION: App Shell Skeleton
-const AppShell = () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-2 sm:p-4">
-        {/* Header Skeleton */}
-        <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm mb-4 border border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2 font-bold text-xl text-slate-200 dark:text-slate-800">
-                <div className="w-8 h-8 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
-                <div className="w-24 h-6 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
-            </div>
-            <div className="flex gap-3">
-                <div className="w-9 h-9 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
-                <div className="w-9 h-9 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
-            </div>
-        </div>
-        {/* Tabs Skeleton */}
-        <div className="flex justify-center gap-4 mb-4">
-            <div className="w-24 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>
-            <div className="w-24 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>
-            <div className="w-24 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>
-        </div>
-        {/* Content Skeleton */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-             <div className="col-span-2 lg:col-span-1 h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
-             <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
-             <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
-        </div>
-    </div>
-);
 
 export default function App() {
     const { lang, setLang, t } = useLanguage();
     const { currency, setCurrency, formatMoney } = useCurrency();
+    const { openModal, closeModal } = useModal();
 
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-
-    // Modal States
-    const [showTransactionModal, setShowTransactionModal] = useState(false);
-    const [editingTransaction, setEditingTransaction] = useState(null);
-    const [showLoanModal, setShowLoanModal] = useState(false);
-    const [editingLoan, setEditingLoan] = useState(null);
-    const [showLoanPaymentModal, setShowLoanPaymentModal] = useState(false);
-    const [activeLoanForPayment, setActiveLoanForPayment] = useState(null);
-    const [showAssetModal, setShowAssetModal] = useState(false);
-    const [editingAsset, setEditingAsset] = useState(null);
-    const [isFetchingRate, setIsFetchingRate] = useState(false);
-    const [showCategoryModal, setShowCategoryModal] = useState(false);
-    const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [showLinkModal, setShowLinkModal] = useState(false);
-    const [showRecurringModal, setShowRecurringModal] = useState(false);
-    const [showInfoModal, setShowInfoModal] = useState(null);
+    // Note: Modal states removed!
 
     const { 
         user, loading: authLoading, activeBudgetId, isPendingApproval,
@@ -135,21 +84,22 @@ export default function App() {
         syncPhoto();
     }, [user]);
 
-    // --- HANDLERS ---
-    const handleSaveTransaction = async (data) => {
+    // --- HANDLERS (Refactored to use closures/args instead of state) ---
+    
+    const handleSaveTransaction = async (data, editingTx) => {
         try {
-            if (editingTransaction) await updateTransaction(editingTransaction.id, data);
+            if (editingTx) await updateTransaction(editingTx.id, data);
             else await addTransaction(data);
-            setShowTransactionModal(false); setEditingTransaction(null);
+            closeModal();
             toast.success(t.success_save);
         } catch (e) { toast.error(t.error_save); }
     };
 
-    const handleSaveLoan = async (data) => {
+    const handleSaveLoan = async (data, editingLoan) => {
         try {
             if (editingLoan) await updateLoan(editingLoan.id, data);
             else await addLoan(data);
-            setShowLoanModal(false); setEditingLoan(null);
+            closeModal();
             toast.success(t.success_save);
         } catch (e) { toast.error("Error saving credit"); }
     };
@@ -160,13 +110,13 @@ export default function App() {
             if (numAmount <= 0) return;
             const newBalance = loan.currentBalance - numAmount;
             await updateLoan(loan.id, { currentBalance: newBalance });
-            setShowLoanPaymentModal(false); setActiveLoanForPayment(null);
+            closeModal();
             toast.success(t.payment_recorded);
         } catch (e) { toast.error("Payment failed"); }
     };
 
     const handleFetchCryptoRate = async (coinId, setValCb) => {
-        setIsFetchingRate(true);
+        // This remains client-side for now, can be moved to context later
         try {
             const rate = await fetchExchangeRate(coinId, currency, true);
             if (rate && rate !== 1) {
@@ -176,14 +126,13 @@ export default function App() {
                 toast.error("Could not fetch rate.");
             }
         } catch(e) { toast.error("Fetch failed"); }
-        setIsFetchingRate(false);
     };
 
-    const handleSaveAsset = async (data) => {
+    const handleSaveAsset = async (data, editingAsset) => {
         try {
             if (editingAsset) await updateAsset(editingAsset.id, { ...data, currency });
             else await addAsset({ ...data, currency });
-            setShowAssetModal(false); setEditingAsset(null);
+            closeModal();
             toast.success(t.success_save);
         } catch (e) { toast.error(t.error_save); }
     };
@@ -198,9 +147,8 @@ export default function App() {
 
     const getCategoryStyles = (categoryId) => {
         const cat = allCategories.find(c => c.id === categoryId);
-        const lowerId = categoryId.toLowerCase().replace(/ & /g, '_').replace(/ /g, '_');
         return { 
-            name: cat?.isCustom ? cat.name : (t[cat?.id] || t[lowerId] || cat?.name || categoryId),
+            name: cat?.isCustom ? cat.name : (t[cat?.id] || t[categoryId?.toLowerCase()?.replace(/ & /g, '_')?.replace(/ /g, '_')] || cat?.name || categoryId),
             icon: cat?.icon,
             color: cat?.color || 'bg-slate-100',
             textColor: cat?.textColor || 'text-slate-600'
@@ -214,6 +162,68 @@ export default function App() {
             await cancelSentRequest();
             toast.success("Request cancelled");
         } catch (e) { toast.error("Error cancelling request"); }
+    };
+
+    // --- MODAL OPENERS ---
+
+    const openTransactionModal = (tx = null) => {
+        openModal('transaction', {
+            editingTransaction: tx,
+            onSave: (data) => handleSaveTransaction(data, tx),
+            onDelete: deleteTransaction,
+            categories: allCategories,
+            currencyCode: currency,
+            t,
+            getCategoryName,
+            onAddCategory: () => openModal('category', {
+                onSave: async (data) => {
+                    await addCategory({ ...data, id: `custom_${Date.now()}`, isCustom: true });
+                    closeModal(); // Close category modal
+                    // Re-open transaction modal (basic implementation, ideally category modal stacks)
+                    // For now, we assume user adds category then goes back manually or we just close.
+                    // Given the simple stack, we just close category modal.
+                    toast.success(t.success_save);
+                },
+                t
+            })
+        });
+    };
+
+    const openLoanModal = (loan = null) => {
+        openModal('loan', {
+            editingLoan: loan,
+            onSave: (data) => handleSaveLoan(data, loan),
+            t
+        });
+    };
+
+    const openAssetModal = (asset = null) => {
+        openModal('asset', {
+            editingAsset: asset,
+            onSave: (data) => handleSaveAsset(data, asset),
+            onFetchRate: handleFetchCryptoRate,
+            isFetchingRate: false, // State managed inside modal or local hook if needed
+            t,
+            currency
+        });
+    };
+
+    const openSettings = () => {
+        openModal('settings', {
+            lang, setLang,
+            currency, setCurrency,
+            darkMode, setDarkMode,
+            incomingRequests, approveRequest, declineRequest,
+            categories: allCategories, limits: categoryLimits,
+            onSaveLimit: saveLimit, onDeleteCategory: deleteCategory,
+            onLogout: logout,
+            t, getCategoryName,
+            allowedUsers: hydratedMembers,
+            removeUser, leaveBudget, switchBudget,
+            currentUserId: user?.uid,
+            isOwner: user?.uid === budgetOwnerId,
+            activeBudgetId, user
+        });
     };
 
     // --- RENDER LOGIC ---
@@ -261,9 +271,9 @@ export default function App() {
                         t={t} 
                         isPendingApproval={isPendingApproval}
                         incomingRequestsCount={incomingRequests.length}
-                        onOpenSettings={() => setShowSettingsModal(true)}
+                        onOpenSettings={openSettings}
                         onCancelRequest={handleCancelRequest}
-                        onOpenInfo={(type) => setShowInfoModal(type)}
+                        onOpenInfo={(type) => openModal('info', { type, t })}
                     />
                 }>
                     <Route index element={
@@ -271,12 +281,30 @@ export default function App() {
                             <BudgetView 
                                 transactions={transactions} categories={allCategories} limits={categoryLimits} 
                                 currency={currency} formatMoney={formatMoney} t={t} lang={lang}
-                                onOpenSettings={() => setShowSettingsModal(true)}
-                                onOpenInvite={() => setShowLinkModal(true)}
-                                onOpenJoin={() => setShowLinkModal(true)}
-                                onOpenRecurring={() => setShowRecurringModal(true)}
-                                onAddTransaction={() => { setEditingTransaction(null); setShowTransactionModal(true); }}
-                                onEditTransaction={(tx) => { setEditingTransaction(tx); setShowTransactionModal(true); }}
+                                onOpenSettings={openSettings}
+                                onOpenInvite={() => openModal('link', { 
+                                    userUid: user.uid, 
+                                    onJoinRequest: async (targetId) => {
+                                        try { await sendJoinRequest(targetId); closeModal(); toast.success("Request sent!"); } 
+                                        catch (e) { toast.error(t[e.message] || "Error"); }
+                                    }, 
+                                    t 
+                                })}
+                                onOpenJoin={() => openModal('link', { /* same props as invite for now per old code */
+                                    userUid: user.uid, 
+                                    onJoinRequest: async (targetId) => {
+                                        try { await sendJoinRequest(targetId); closeModal(); toast.success("Request sent!"); } 
+                                        catch (e) { toast.error(t[e.message] || "Error"); }
+                                    }, 
+                                    t 
+                                })}
+                                onOpenRecurring={() => openModal('recurring', {
+                                    transactions,
+                                    onAdd: async (tx) => { await addTransaction(tx); toast.success(t.success_save); },
+                                    formatMoney, currency, t
+                                })}
+                                onAddTransaction={() => openTransactionModal(null)}
+                                onEditTransaction={(tx) => openTransactionModal(tx)}
                                 onDeleteTransaction={deleteTransaction}
                                 onExport={(data) => {
                                     const html = `<thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Type</th><th>Amount</th><th>User</th></tr></thead><tbody>${data.map(tr => `<tr><td>${tr.date}</td><td>${getCategoryStyles(tr.category).name}</td><td>${tr.description}</td><td>${tr.type}</td><td>${Number(tr.amount).toFixed(2)}</td><td>${tr.userName || ''}</td></tr>`).join('')}</tbody>`;
@@ -296,8 +324,8 @@ export default function App() {
                             <AssetsView 
                                 assets={assets} 
                                 currency={currency} formatMoney={formatMoney} t={t}
-                                onAddAsset={() => { setEditingAsset(null); setShowAssetModal(true); }}
-                                onEditAsset={(a) => { setEditingAsset(a); setShowAssetModal(true); }}
+                                onAddAsset={() => openAssetModal(null)}
+                                onEditAsset={(a) => openAssetModal(a)}
                                 onDeleteAsset={deleteAsset}
                                 onExport={() => {
                                     const html = `<thead><tr><th>Name</th><th>Type</th><th>Amount</th><th>Value Per Unit</th><th>Currency</th><th>Total</th></tr></thead><tbody>${assets.map(a => `<tr><td>${a.name}</td><td>${a.type}</td><td>${a.amount}</td><td>${a.valuePerUnit}</td><td>${a.currency}</td><td>${a.amount * a.valuePerUnit}</td></tr>`).join('')}</tbody>`;
@@ -310,10 +338,15 @@ export default function App() {
                         <Suspense fallback={<AppShell />}>
                             <CreditsView 
                                 loans={loans} totalCreditDebt={totalCreditDebt} currency={currency} formatMoney={formatMoney} t={t}
-                                onAddLoan={() => { setEditingLoan(null); setShowLoanModal(true); }}
-                                onEditLoan={(l) => { setEditingLoan(l); setShowLoanModal(true); }}
+                                onAddLoan={() => openLoanModal(null)}
+                                onEditLoan={(l) => openLoanModal(l)}
                                 onDeleteLoan={deleteLoan}
-                                onPayLoan={(l) => { setActiveLoanForPayment(l); setShowLoanPaymentModal(true); }}
+                                onPayLoan={(l) => openModal('loanPayment', {
+                                    loan: l,
+                                    onPayment: handleLoanPayment,
+                                    currencySymbol: CURRENCIES[l.currency]?.symbol || '$',
+                                    t
+                                })}
                                 onExport={() => {
                                     const html = `<thead><tr><th>Name</th><th>Total Debt</th><th>Current Balance</th><th>Interest</th><th>Currency</th></tr></thead><tbody>${loans.map(l => `<tr><td>${l.name}</td><td>${l.totalAmount}</td><td>${l.currentBalance}</td><td>${l.interestRate}</td><td>${l.currency}</td></tr>`).join('')}</tbody>`;
                                     handleExport(html, 'loans');
@@ -325,116 +358,8 @@ export default function App() {
                 </Route>
             </Routes>
 
-            {/* MODALS RENDERED AT ROOT LEVEL */}
-            <Suspense fallback={null}>
-                {showTransactionModal && (
-                    <TransactionForm
-                        isOpen={showTransactionModal}
-                        onClose={() => setShowTransactionModal(false)}
-                        onSave={handleSaveTransaction}
-                        onDelete={deleteTransaction}
-                        categories={allCategories}
-                        editingTransaction={editingTransaction}
-                        currencyCode={currency}
-                        t={t} 
-                        getCategoryName={getCategoryName}
-                        onAddCategory={() => setShowCategoryModal(true)}
-                    />
-                )}
-                {/* Other modals unchanged, just ensuring they are rendered */}
-                {showLoanModal && (
-                    <LoanModal 
-                        isOpen={showLoanModal} onClose={() => setShowLoanModal(false)}
-                        onSave={handleSaveLoan} editingLoan={editingLoan} t={t}
-                    />
-                )}
-                {showLoanPaymentModal && (
-                    <LoanPaymentModal
-                        isOpen={showLoanPaymentModal} onClose={() => setShowLoanPaymentModal(false)}
-                        onPayment={handleLoanPayment} 
-                        loan={activeLoanForPayment} 
-                        currencySymbol={activeLoanForPayment ? CURRENCIES[activeLoanForPayment.currency]?.symbol : '$'} 
-                        t={t}
-                    />
-                )}
-                {showAssetModal && (
-                    <AssetModal
-                        isOpen={showAssetModal} onClose={() => setShowAssetModal(false)}
-                        onSave={handleSaveAsset} onFetchRate={handleFetchCryptoRate} isFetchingRate={isFetchingRate}
-                        editingAsset={editingAsset} t={t} currency={currency}
-                    />
-                )}
-                {showCategoryModal && (
-                    <CategoryModal
-                        isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)}
-                        onSave={async (data) => {
-                            await addCategory({ ...data, id: `custom_${Date.now()}`, isCustom: true });
-                            setShowCategoryModal(false); toast.success(t.success_save);
-                        }}
-                        t={t}
-                    />
-                )}
-                {showLinkModal && (
-                    <LinkModal
-                        isOpen={showLinkModal} onClose={() => setShowLinkModal(false)}
-                        userUid={user.uid}
-                        onJoinRequest={async (targetId) => {
-                            try {
-                                await sendJoinRequest(targetId);
-                                setShowLinkModal(false);
-                                toast.success("Request sent!");
-                            } catch (error) {
-                                const errorMsg = t[error.message] || "Error sending request";
-                                toast.error(errorMsg);
-                            }
-                        }}
-                        t={t}
-                    />
-                )}
-                {showRecurringModal && (
-                    <RecurringModal
-                        isOpen={showRecurringModal}
-                        onClose={() => setShowRecurringModal(false)}
-                        transactions={transactions}
-                        onAdd={async (tx) => {
-                            await addTransaction(tx);
-                            toast.success(t.success_save);
-                        }}
-                        formatMoney={formatMoney}
-                        currency={currency}
-                        t={t}
-                    />
-                )}
-                {showSettingsModal && (
-                    <SettingsModal
-                        isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)}
-                        lang={lang} setLang={setLang}
-                        currency={currency} setCurrency={setCurrency}
-                        darkMode={darkMode} setDarkMode={setDarkMode}
-                        incomingRequests={incomingRequests}
-                        approveRequest={approveRequest} declineRequest={declineRequest}
-                        categories={allCategories}
-                        limits={categoryLimits}
-                        onSaveLimit={saveLimit}
-                        onDeleteCategory={deleteCategory}
-                        onLogout={logout}
-                        t={t} getCategoryName={getCategoryName}
-                        allowedUsers={hydratedMembers}
-                        removeUser={removeUser}
-                        leaveBudget={leaveBudget}
-                        currentUserId={user?.uid}
-                        isOwner={user?.uid === budgetOwnerId}
-                        activeBudgetId={activeBudgetId}
-                        switchBudget={switchBudget}
-                        user={user}
-                    />
-                )}
-                {showInfoModal && (
-                    <InfoModal 
-                        type={showInfoModal} onClose={() => setShowInfoModal(null)} t={t} 
-                    />
-                )}
-            </Suspense>
+            {/* Modal Manager handles all modal rendering now */}
+            <ModalManager />
         </div>
     );
 }

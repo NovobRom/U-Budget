@@ -1,15 +1,19 @@
 // src/utils/currency.js
 
-// Список ID криптовалют для CoinGecko
+// Crypto IDs for CoinGecko
 const CRYPTO_IDS = ['bitcoin', 'ethereum', 'tether'];
 
+// Simple in-memory cache: "BASE-TARGET" => { rate: 1.2, timestamp: 123456789 }
+const rateCache = new Map();
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
 export const fetchExchangeRate = async (base, target, isCrypto = false) => {
-    // 1. Якщо валюти однакові, курс 1
+    // 1. Same currency check
     if (!base || !target) return 1;
     if (base.toLowerCase() === target.toLowerCase()) return 1;
 
     try {
-        // --- ЛОГІКА ДЛЯ КРИПТОВАЛЮТ (CoinGecko) ---
+        // --- CRYPTO LOGIC (CoinGecko) ---
         if (isCrypto || CRYPTO_IDS.includes(base.toLowerCase())) {
             const coinId = base.toLowerCase();
             const vsCurrency = target.toLowerCase();
@@ -29,13 +33,12 @@ export const fetchExchangeRate = async (base, target, isCrypto = false) => {
             }
         } 
         
-        // --- ЛОГІКА ДЛЯ ЗВИЧАЙНИХ ВАЛЮТ (Open Exchange Rates) ---
-        // Ми замінили API на те, що підтримує UAH
+        // --- FIAT LOGIC (Open Exchange Rates) ---
         else {
             const from = base.toUpperCase();
             const to = target.toUpperCase();
 
-            // Використовуємо Open.er-api (безкоштовний, підтримує UAH)
+            // Using Open.er-api (supports UAH, free)
             const response = await fetch(
                 `https://open.er-api.com/v6/latest/${from}`
             );
@@ -48,12 +51,29 @@ export const fetchExchangeRate = async (base, target, isCrypto = false) => {
                 return data.rates[to];
             } else {
                 console.warn(`Rate for ${to} not found inside ${from} response`);
-                return 1; // Fallback, якщо валюта екзотична
+                return 1; // Fallback
             }
         }
 
     } catch (error) {
         console.error(`Error converting ${base} to ${target}:`, error);
-        return 1; // Повертаємо 1, щоб не ламати UI, але в консолі буде помилка
+        return 1; // Return 1 to avoid UI crash
     }
+};
+
+// Cached wrapper to prevent waterfall requests
+export const fetchExchangeRateCached = async (base, target, isCrypto = false) => {
+    const key = `${base}-${target}-${isCrypto}`;
+    const now = Date.now();
+
+    if (rateCache.has(key)) {
+        const cached = rateCache.get(key);
+        if (now - cached.timestamp < CACHE_TTL) {
+            return cached.rate;
+        }
+    }
+
+    const rate = await fetchExchangeRate(base, target, isCrypto);
+    rateCache.set(key, { rate, timestamp: now });
+    return rate;
 };

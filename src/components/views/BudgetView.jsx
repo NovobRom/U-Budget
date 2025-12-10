@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { BudgetProgress } from '../BudgetProgress';
 
+// Lazy load charts to keep initial bundle small
 const SimpleDonutChart = lazy(() => 
     import('../Charts').then(module => ({ default: module.SimpleDonutChart }))
 );
@@ -33,56 +34,113 @@ export default function BudgetView({
 
     const isCustomRange = timeFilter === 'custom';
 
+    // 1. Efficient Filtering
     const filteredTransactions = useMemo(() => {
         const now = new Date(); 
-        const m = now.getMonth(); 
-        const y = now.getFullYear();
+        const currentMonth = now.getMonth(); 
+        const currentYear = now.getFullYear();
         
+        // Helper to normalize date comparison
+        const getStartOfDay = (dateStr) => {
+            const d = new Date(dateStr);
+            d.setHours(0,0,0,0);
+            return d;
+        };
+
         let list = transactions.filter(t => { 
             const d = new Date(t.date); 
-            if (timeFilter === 'this_month') return d.getMonth() === m && d.getFullYear() === y; 
+            
+            if (timeFilter === 'this_month') {
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYear; 
+            }
             if (timeFilter === 'last_month') { 
-                const last = new Date(y, m - 1, 1); 
+                const last = new Date(currentYear, currentMonth - 1, 1); 
                 return d.getMonth() === last.getMonth() && d.getFullYear() === last.getFullYear(); 
             } 
-            if (timeFilter === 'this_year') return d.getFullYear() === y; 
+            if (timeFilter === 'this_year') {
+                return d.getFullYear() === currentYear; 
+            }
             if (timeFilter === 'custom') {
                 if (!customStartDate && !customEndDate) return true;
-                const start = customStartDate ? new Date(customStartDate) : new Date('1970-01-01');
-                const end = customEndDate ? new Date(customEndDate) : new Date('9999-12-31');
-                end.setHours(23, 59, 59, 999);
-                return d >= start && d <= end;
+                const txDate = getStartOfDay(t.date);
+                const start = customStartDate ? getStartOfDay(customStartDate) : new Date('1970-01-01');
+                const end = customEndDate ? getStartOfDay(customEndDate) : new Date('9999-12-31');
+                return txDate >= start && txDate <= end;
             }
             return true; 
         });
 
-        if (historyFilter !== 'all') { list = list.filter(t => t.type === historyFilter); }
-        return list.filter(t => !searchTerm || t.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        if (historyFilter !== 'all') { 
+            list = list.filter(t => t.type === historyFilter); 
+        }
+        
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            list = list.filter(t => t.description.toLowerCase().includes(lowerTerm));
+        }
+        
+        return list;
     }, [transactions, timeFilter, searchTerm, historyFilter, customStartDate, customEndDate]);
 
+    // 2. Summary Calculation
     const { income, expense, expensesByCategory } = useMemo(() => {
-        const inc = filteredTransactions.filter(t => t.type === 'income').reduce((a, c) => a + c.amount, 0);
-        const exp = filteredTransactions.filter(t => t.type === 'expense').reduce((a, c) => a + c.amount, 0);
+        let inc = 0;
+        let exp = 0;
         
-        const byCat = categories.filter(c => c.type === 'expense').map(c => ({ 
-            ...c, 
-            total: filteredTransactions.filter(t => t.type === 'expense' && t.category === c.id).reduce((a, x) => a + x.amount, 0) 
-        })).filter(x => x.total > 0).sort((a,b) => b.total - a.total);
+        // Single pass for totals
+        filteredTransactions.forEach(t => {
+            if (t.type === 'income') inc += t.amount;
+            else if (t.type === 'expense') exp += t.amount;
+        });
         
-        return { income: inc, expense: exp, balance: inc - exp, expensesByCategory: byCat };
+        // Calculate categories only if needed
+        const byCat = categories
+            .filter(c => c.type === 'expense')
+            .map(c => {
+                const catTotal = filteredTransactions
+                    .filter(t => t.type === 'expense' && t.category === c.id)
+                    .reduce((sum, t) => sum + t.amount, 0);
+                return { ...c, total: catTotal };
+            })
+            .filter(x => x.total > 0)
+            .sort((a,b) => b.total - a.total);
+        
+        return { income: inc, expense: exp, expensesByCategory: byCat };
     }, [filteredTransactions, categories]);
 
+    // 3. Optimized Trends Calculation (O(N) instead of O(6N))
     const trendsData = useMemo(() => {
-        const data = []; const now = new Date();
+        const today = new Date();
+        const buckets = [];
+        
+        // Create 6 buckets
         for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1); 
-            const label = d.toLocaleString(lang === 'en' ? 'en-US' : lang === 'ua' ? 'uk-UA' : 'pl-PL', { month: 'short' });
-            const monthTrans = transactions.filter(t => { const td = new Date(t.date); return !isNaN(td) && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear(); });
-            const inc = monthTrans.filter(t => t.type === 'income').reduce((acc, c) => acc + (Number(c.amount)||0), 0); 
-            const exp = monthTrans.filter(t => t.type === 'expense').reduce((acc, c) => acc + (Number(c.amount)||0), 0);
-            data.push({ label, income: inc, expense: exp });
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const key = `${d.getFullYear()}-${d.getMonth()}`; // Unique key YYYY-M
+            buckets.push({
+                key,
+                label: d.toLocaleString(lang === 'en' ? 'en-US' : lang === 'ua' ? 'uk-UA' : 'pl-PL', { month: 'short' }),
+                income: 0,
+                expense: 0
+            });
         }
-        return data;
+
+        // Single pass over ALL transactions to fill buckets
+        transactions.forEach(t => {
+            if (!t.date) return;
+            const d = new Date(t.date);
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            
+            // Find bucket (array is tiny, find is fast)
+            const bucket = buckets.find(b => b.key === key);
+            if (bucket) {
+                const val = Number(t.amount) || 0;
+                if (t.type === 'income') bucket.income += val;
+                else if (t.type === 'expense') bucket.expense += val;
+            }
+        });
+
+        return buckets;
     }, [transactions, lang]);
 
     const displayBalance = currentBalance || 0;
@@ -94,10 +152,7 @@ export default function BudgetView({
 
     const handleRecalculate = async (e) => {
         e.stopPropagation();
-        if (typeof recalculateBalance !== 'function') {
-            console.error("recalculateBalance is missing!");
-            return;
-        }
+        if (typeof recalculateBalance !== 'function') return;
         setIsRecalculating(true);
         await recalculateBalance();
         setIsRecalculating(false);
@@ -105,6 +160,7 @@ export default function BudgetView({
 
     return (
         <>
+            {/* --- CONTROLS SECTION --- */}
             <div className="flex flex-col gap-3 px-1 mb-4 min-h-[50px]">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
                     <div className="grid grid-cols-2 sm:flex gap-3 w-full sm:w-auto flex-1">
@@ -135,32 +191,27 @@ export default function BudgetView({
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Calendar size={16} className="text-blue-500 group-hover:text-blue-600 transition-colors" /></div>
                             <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm cursor-pointer" />
-                            {!customStartDate && <span className="absolute left-10 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">{lang === 'ua' ? 'З дати...' : 'From...'}</span>}
                         </div>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><ArrowRight size={16} className="text-indigo-500 group-hover:text-indigo-600 transition-colors" /></div>
                             <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm cursor-pointer" />
-                             {!customEndDate && <span className="absolute left-10 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">{lang === 'ua' ? 'До дати...' : 'To...'}</span>}
                             {(customStartDate || customEndDate) && (<button onClick={() => { setCustomStartDate(''); setCustomEndDate(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all z-10"><X size={12}/></button>)}
                         </div>
                     </div>
                 )}
             </div>
 
+            {/* --- PROGRESS --- */}
             <div className="min-h-[100px]">
                 <BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} />
             </div>
 
+            {/* --- CARDS --- */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
                  <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-5 rounded-2xl shadow-sm border border-blue-700 flex flex-col justify-center cursor-pointer min-h-[120px]" onClick={() => handleCardClick('all')}>
                      <div className="flex justify-between items-center mb-2">
                          <span className="text-sm opacity-80 font-medium">{t.total_balance}</span>
-                         {/* RECALCULATE BUTTON */}
-                         <button 
-                            onClick={handleRecalculate} 
-                            className="p-1.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
-                            title="Recalculate Balance"
-                         >
+                         <button onClick={handleRecalculate} className="p-1.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
                              <RefreshCw size={14} className={`text-white ${isRecalculating ? 'animate-spin' : ''}`} />
                          </button>
                      </div>
@@ -176,6 +227,7 @@ export default function BudgetView({
                   </div>
             </div>
 
+            {/* --- CHARTS --- */}
             <div className="grid lg:grid-cols-3 gap-4">
                 <div className="hidden lg:block space-y-4">
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center min-h-[400px] h-auto">
@@ -184,7 +236,7 @@ export default function BudgetView({
                                 <SimpleDonutChart data={expensesByCategory} total={expense} currencyCode={currency} formatMoney={formatMoney} label={t.expense} getCategoryName={getCategoryName} otherLabel={t.other} />
                             </Suspense>
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm py-10">No data for chart</div>
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm py-10">{t.no_trans || "No data"}</div>
                         )}
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 h-[350px]">
@@ -203,6 +255,7 @@ export default function BudgetView({
                     </Suspense>
                 </div>
 
+                {/* --- HISTORY LIST --- */}
                 <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[765px] shadow-sm border border-slate-100 dark:border-slate-800" ref={historyRef}>
                     <div className="p-4 border-b dark:border-slate-800 flex justify-between items-center font-bold shrink-0">
                         <div className="flex items-center gap-2">
@@ -211,7 +264,7 @@ export default function BudgetView({
                         </div>
                         <button onClick={() => onExport(filteredTransactions)} className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl hover:bg-slate-200 transition-colors"><Download size={16}/></button>
                     </div>
-                    <div className="overflow-auto p-0 flex-1">
+                    <div className="overflow-auto p-0 flex-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
                         {filteredTransactions.length === 0 && (
                             <div className="p-8 text-center text-slate-400 flex flex-col items-center gap-2 h-full justify-center">
                                 <Wallet size={48} className="opacity-20 mb-2"/>
@@ -239,10 +292,7 @@ export default function BudgetView({
                         
                         {hasMore && historyFilter === 'all' && !isCustomRange && (
                             <div className="p-4 text-center">
-                                <button 
-                                    onClick={loadMore}
-                                    className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                                >
+                                <button onClick={loadMore} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
                                     {lang === 'ua' ? 'Завантажити ще...' : 'Load more...'}
                                 </button>
                             </div>

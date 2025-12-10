@@ -5,13 +5,16 @@ import './index.css';
 import { BrowserRouter } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
 import { CurrencyProvider } from './context/CurrencyContext';
+import { ModalProvider } from './context/ModalContext';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <LanguageProvider>
         <CurrencyProvider>
-          <App />
+          <ModalProvider>
+            <App />
+          </ModalProvider>
         </CurrencyProvider>
       </LanguageProvider>
     </BrowserRouter>

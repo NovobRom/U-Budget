@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
-    collection, query, orderBy, limit, startAfter, getDocs, 
-    addDoc, deleteDoc, doc, updateDoc, writeBatch, getDoc, 
+    collection, query, orderBy, limit, getDocs, 
+    doc, updateDoc, writeBatch, 
     serverTimestamp, increment, runTransaction 
 } from 'firebase/firestore';
 import { db, appId } from '../firebase';
 import { toast } from 'react-hot-toast';
 import { fetchExchangeRate } from '../utils/currency';
+import { useCurrencyRates } from './useCurrencyRates';
 
 const STORAGE_CURRENCY = 'EUR';
 
 export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', legacyBaseCurrency = 'UAH') => {
-    const [transactions, setTransactions] = useState([]);
     const [rawTransactions, setRawTransactions] = useState([]);
     const [lastDoc, setLastDoc] = useState(null);
     const [hasMore, setHasMore] = useState(true);
@@ -22,7 +22,7 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
     const getTxColRef = () => collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions');
     const getBudgetDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId);
 
-    // 1. Fetch RAW transactions
+    // 1. Fetch RAW transactions (Write-heavy optimization: we trust stored amount mostly)
     useEffect(() => {
         if (!activeBudgetId) {
             setRawTransactions([]);
@@ -45,7 +45,6 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
                 setHasMore(snapshot.docs.length === txLimit);
             } catch (error) {
                 console.error("Error fetching transactions:", error);
-                // Handle permission errors silently or via UI
             }
             setLoadingTx(false);
         };
@@ -53,44 +52,30 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
         fetchTransactions();
     }, [activeBudgetId, txLimit]);
 
-    // 2. Convert transactions based on currency
-    useEffect(() => {
-        let isMounted = true;
-        const convertTx = async () => {
-            if (rawTransactions.length === 0) { 
-                if(isMounted) setTransactions([]); 
-                return; 
-            }
+    // 2. Identify Currencies needed for View
+    const currenciesNeeded = useMemo(() => {
+        const set = new Set();
+        set.add(legacyBaseCurrency);
+        rawTransactions.forEach(t => { 
+            if (t.originalCurrency) set.add(t.originalCurrency);
+        });
+        return Array.from(set);
+    }, [rawTransactions, legacyBaseCurrency]);
 
-            const currenciesNeeded = new Set();
-            currenciesNeeded.add(legacyBaseCurrency); 
+    // 3. Fetch Rates Efficiently (Cached)
+    const rates = useCurrencyRates(currenciesNeeded, mainCurrency);
+
+    // 4. Memoized Display Conversion (No more double render)
+    const transactions = useMemo(() => {
+        return rawTransactions.map(t => {
+            const sourceCurr = t.originalCurrency || legacyBaseCurrency;
+            const sourceAmt = t.originalAmount !== undefined ? t.originalAmount : t.amount;
+            const rate = rates[sourceCurr] || 1; // Default to 1 if fetching
             
-            rawTransactions.forEach(t => { 
-                if (t.originalCurrency) currenciesNeeded.add(t.originalCurrency);
-            });
-
-            const rates = {};
-            await Promise.all(Array.from(currenciesNeeded).map(async (code) => {
-                try {
-                    if (code === mainCurrency) rates[code] = 1;
-                    else rates[code] = await fetchExchangeRate(code, mainCurrency);
-                } catch(e) { rates[code] = 1; }
-            }));
-
-            if (!isMounted) return;
-
-            const converted = rawTransactions.map(t => {
-                const sourceCurr = t.originalCurrency || legacyBaseCurrency;
-                const sourceAmt = t.originalAmount !== undefined ? t.originalAmount : t.amount;
-                const rate = rates[sourceCurr] || 1;
-                // Always display ABSOLUTE amount in UI
-                return { ...t, amount: Math.abs(sourceAmt) * rate };
-            });
-            setTransactions(converted);
-        };
-        convertTx();
-        return () => { isMounted = false; };
-    }, [rawTransactions, mainCurrency, legacyBaseCurrency]);
+            // Calculate display amount
+            return { ...t, amount: Math.abs(sourceAmt) * rate };
+        });
+    }, [rawTransactions, rates, legacyBaseCurrency]);
 
     const loadMore = () => {
         setTxLimit(prev => prev + 50);
@@ -130,9 +115,6 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
         batch.update(getBudgetDocRef(), { currentBalance: increment(adjustment) });
 
         await batch.commit();
-        
-        // Optimistic update for UI feel (optional, but good)
-        // We rely on the snapshot listener update mostly, but re-fetching happens
         setTxLimit(prev => prev); // Trigger refetch
     };
 
@@ -189,7 +171,6 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
                 
                 const oldData = txDoc.data();
                 const oldStorageAmount = Math.abs(parseFloat(oldData.amount));
-                // Reverse impact
                 const adjustment = oldData.type === 'income' ? -oldStorageAmount : oldStorageAmount;
 
                 transaction.delete(txRef);
@@ -248,7 +229,7 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
                 storageCurrency: STORAGE_CURRENCY 
             });
             toast.success("Balance fixed!", { id: toastId });
-            return totalEUR; // Optional return
+            return totalEUR;
         } catch (e) {
             console.error("Recalculation failed", e);
             toast.error("Failed to repair balance", { id: toastId });
