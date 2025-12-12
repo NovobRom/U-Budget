@@ -8,12 +8,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Перевірка, чи є користувач власником (за userId в шляху або в документі)
+    // Check if user is the owner (by userId in path or in document)
     function isUser(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Отримання даних бюджету (викликає читання - коштує грошей!)
+    // Get budget data (invokes a read - costs money!)
     function getBudgetData(appId, budgetId) {
       return get(/databases/$(database)/documents/artifacts/$(appId)/public/data/budgets/$(budgetId)).data;
     }
@@ -22,7 +22,7 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/budgets/$(budgetId));
     }
 
-    // Перевірка прав на основі ВЖЕ отриманих даних (економить читання)
+    // Check permissions based on ALREADY fetched data (saves reads)
     function hasAccessToData(data) {
       return isOwner(data) || isMember(data);
     }
@@ -40,7 +40,7 @@ service cloud.firestore {
              request.auth.uid in data.authorizedUsers;
     }
 
-    // Для доступу до підколекцій, де немає даних батьківського документа в ресурсі
+    // For access to subcollections where parent document data isn't in resource
     function hasRemoteAccess(appId, budgetId) {
       let data = getBudgetData(appId, budgetId);
       return hasAccessToData(data);
@@ -56,9 +56,13 @@ service cloud.firestore {
         allow write: if isUser(userId);
       }
 
-      // 2. USER TRANSACTIONS (Data Split)
-      match /users/{budgetId}/transactions/{transactionId} {
-        allow read, write: if budgetExists(appId, budgetId) && hasRemoteAccess(appId, budgetId);
+      // 2. BUDGET DATA COLLECTIONS (Transactions, Assets, Loans, Categories)
+      // Replaces the specific 'transactions' rule with a dynamic check for all data collections
+      match /users/{budgetId}/{collectionName}/{docId} {
+        allow read, write: if 
+          (collectionName in ['transactions', 'assets', 'loans', 'categories']) &&
+          budgetExists(appId, budgetId) && 
+          hasRemoteAccess(appId, budgetId);
       }
 
       // 3. PUBLIC DATA & SHARED BUDGETS
@@ -66,22 +70,22 @@ service cloud.firestore {
         
         match /budgets/{budgetId} {
           
-          // READ: Тільки учасники або власник
+          // READ: Only members or owner
           allow get: if hasAccessToData(resource.data);
           allow list: if hasAccessToData(resource.data);
 
-          // CREATE: Тільки авторизовані
+          // CREATE: Only authorized
           allow create: if isSignedIn() && 
                         request.resource.data.ownerId == request.auth.uid;
 
-          // UPDATE: Власник - все; Учасник - все, крім критичних полів
-          allow update: if isOwner(resource.data) || 
+          // UPDATE: Owner - all; Member - all except critical fields
+          allow update: if isOwner(resource.data) ||
                         (isMember(resource.data) && 
                          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorizedUsers', 'ownerId']));
 
-          // DELETE: Тільки власник
+          // DELETE: Only owner
           allow delete: if isOwner(resource.data);
-          
+
           // --- SUBCOLLECTIONS ---
           match /{subcollection}/{document=**} {
             allow read, write: if hasRemoteAccess(appId, budgetId);
