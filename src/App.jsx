@@ -6,15 +6,19 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db, appId } from './firebase';
 import { CURRENCIES } from './constants';
 import { fetchExchangeRate } from './utils/currency';
+
+// HOOKS
 import { useAuth } from './hooks/useAuth';
 import { useBudget } from './hooks/useBudget';
 import { useFamilySync } from './hooks/useFamilySync';
 import { useTeamMembers } from './hooks/useTeamMembers';
-
-// CONTEXT HOOKS
 import { useLanguage } from './context/LanguageContext';
 import { useCurrency } from './context/CurrencyContext';
 import { useModal } from './context/ModalContext';
+
+// STORE & PROVIDERS
+import { AppProviders } from './providers/AppProviders';
+import { useBudgetStore } from './store/useBudgetStore';
 
 // COMPONENTS
 import Layout from './components/Layout';
@@ -27,36 +31,42 @@ const BudgetView = lazy(() => import('./components/views/BudgetView'));
 const AssetsView = lazy(() => import('./components/views/AssetsView'));
 const CreditsView = lazy(() => import('./components/views/CreditsView'));
 
-export default function App() {
+/**
+ * AppContent
+ * Contains the main routing and logic that was previously in the God Object.
+ * This is an intermediate step to separate Context/Providers from Logic.
+ */
+const AppContent = () => {
     const { lang, setLang, t } = useLanguage();
     const { currency, setCurrency, formatMoney } = useCurrency();
     const { openModal, closeModal } = useModal();
-
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-    // Note: Modal states removed!
+
+    // Zustand Store Actions
+    const { 
+        addTransaction: storeAddTransaction, 
+        updateTransaction: storeUpdateTransaction,
+        deleteTransaction: storeDeleteTransaction 
+    } = useBudgetStore();
 
     const { 
         user, loading: authLoading, activeBudgetId, isPendingApproval,
         login, register, logout, resetPassword, googleLogin, appleLogin 
     } = useAuth();
 
+    // Legacy useBudget is still needed for Reading data and Loans/Assets logic
+    // until those are also moved to Services/Store.
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
-        allowedUsers, 
-        totalCreditDebt,
-        currentBalance, 
+        allowedUsers, totalCreditDebt, currentBalance, 
         loadMore, hasMore,
         
-        addTransaction, updateTransaction, deleteTransaction,
+        // We override these transaction handlers with Store actions below
         addLoan, updateLoan, deleteLoan,
         addAsset, updateAsset, deleteAsset,
         saveLimit, addCategory, deleteCategory,
-        removeUser,
-        budgetOwnerId, 
-        leaveBudget,
-        switchBudget,
-        recalculateBalance 
+        removeUser, budgetOwnerId, leaveBudget, switchBudget, recalculateBalance 
     } = useBudget(activeBudgetId, isPendingApproval, user, lang, currency);
 
     const { 
@@ -65,6 +75,7 @@ export default function App() {
 
     const { members: hydratedMembers } = useTeamMembers(allowedUsers, budgetOwnerId, user?.uid);
 
+    // --- EFFECTS ---
     useEffect(() => { 
         localStorage.setItem('theme', darkMode ? 'dark' : 'light'); 
         document.documentElement.classList.toggle('dark', darkMode); 
@@ -84,15 +95,25 @@ export default function App() {
         syncPhoto();
     }, [user]);
 
-    // --- HANDLERS (Refactored to use closures/args instead of state) ---
+    // --- HANDLERS (Delegating to Store where possible) ---
     
     const handleSaveTransaction = async (data, editingTx) => {
         try {
-            if (editingTx) await updateTransaction(editingTx.id, data);
-            else await addTransaction(data);
+            if (editingTx) {
+                await storeUpdateTransaction(activeBudgetId, editingTx.id, data, currency, t);
+            } else {
+                await storeAddTransaction(activeBudgetId, user, data, currency, t);
+            }
             closeModal();
-            toast.success(t.success_save);
-        } catch (e) { toast.error(t.error_save); }
+            // Note: useBudget hook listens to Firestore, so UI updates automatically
+        } catch (e) { 
+            // Error handled in store
+        }
+    };
+
+    const handleDeleteTransaction = async (id) => {
+        if (!confirm(t.confirm_delete || 'Delete?')) return;
+        await storeDeleteTransaction(activeBudgetId, id, t);
     };
 
     const handleSaveLoan = async (data, editingLoan) => {
@@ -116,7 +137,6 @@ export default function App() {
     };
 
     const handleFetchCryptoRate = async (coinId, setValCb) => {
-        // This remains client-side for now, can be moved to context later
         try {
             const rate = await fetchExchangeRate(coinId, currency, true);
             if (rate && rate !== 1) {
@@ -145,6 +165,7 @@ export default function App() {
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
     };
 
+    // Helpers
     const getCategoryStyles = (categoryId) => {
         const cat = allCategories.find(c => c.id === categoryId);
         return { 
@@ -154,7 +175,6 @@ export default function App() {
             textColor: cat?.textColor || 'text-slate-600'
         };
     };
-
     const getCategoryName = (cat) => cat.isCustom ? cat.name : (t[cat.id] || t[cat.id.toLowerCase()] || cat.name);
 
     const handleCancelRequest = async () => {
@@ -170,7 +190,7 @@ export default function App() {
         openModal('transaction', {
             editingTransaction: tx,
             onSave: (data) => handleSaveTransaction(data, tx),
-            onDelete: deleteTransaction,
+            onDelete: handleDeleteTransaction, // Use new store handler
             categories: allCategories,
             currencyCode: currency,
             t,
@@ -178,10 +198,7 @@ export default function App() {
             onAddCategory: () => openModal('category', {
                 onSave: async (data) => {
                     await addCategory({ ...data, id: `custom_${Date.now()}`, isCustom: true });
-                    closeModal(); // Close category modal
-                    // Re-open transaction modal (basic implementation, ideally category modal stacks)
-                    // For now, we assume user adds category then goes back manually or we just close.
-                    // Given the simple stack, we just close category modal.
+                    closeModal();
                     toast.success(t.success_save);
                 },
                 t
@@ -202,7 +219,7 @@ export default function App() {
             editingAsset: asset,
             onSave: (data) => handleSaveAsset(data, asset),
             onFetchRate: handleFetchCryptoRate,
-            isFetchingRate: false, // State managed inside modal or local hook if needed
+            isFetchingRate: false,
             t,
             currency
         });
@@ -226,7 +243,7 @@ export default function App() {
         });
     };
 
-    // --- RENDER LOGIC ---
+    // --- RENDERING ---
 
     if (authLoading) return <AppShell />;
 
@@ -290,7 +307,7 @@ export default function App() {
                                     }, 
                                     t 
                                 })}
-                                onOpenJoin={() => openModal('link', { /* same props as invite for now per old code */
+                                onOpenJoin={() => openModal('link', { 
                                     userUid: user.uid, 
                                     onJoinRequest: async (targetId) => {
                                         try { await sendJoinRequest(targetId); closeModal(); toast.success("Request sent!"); } 
@@ -300,12 +317,12 @@ export default function App() {
                                 })}
                                 onOpenRecurring={() => openModal('recurring', {
                                     transactions,
-                                    onAdd: async (tx) => { await addTransaction(tx); toast.success(t.success_save); },
+                                    onAdd: async (tx) => { await storeAddTransaction(activeBudgetId, user, tx, currency, t); },
                                     formatMoney, currency, t
                                 })}
                                 onAddTransaction={() => openTransactionModal(null)}
                                 onEditTransaction={(tx) => openTransactionModal(tx)}
-                                onDeleteTransaction={deleteTransaction}
+                                onDeleteTransaction={handleDeleteTransaction}
                                 onExport={(data) => {
                                     const html = `<thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Type</th><th>Amount</th><th>User</th></tr></thead><tbody>${data.map(tr => `<tr><td>${tr.date}</td><td>${getCategoryStyles(tr.category).name}</td><td>${tr.description}</td><td>${tr.type}</td><td>${Number(tr.amount).toFixed(2)}</td><td>${tr.userName || ''}</td></tr>`).join('')}</tbody>`;
                                     handleExport(html, 'transactions');
@@ -358,8 +375,20 @@ export default function App() {
                 </Route>
             </Routes>
 
-            {/* Modal Manager handles all modal rendering now */}
             <ModalManager />
         </div>
+    );
+};
+
+/**
+ * App
+ * The "Clean" Root component.
+ * Responsible only for Providers setup.
+ */
+export default function App() {
+    return (
+        <AppProviders>
+            <AppContent />
+        </AppProviders>
     );
 }
