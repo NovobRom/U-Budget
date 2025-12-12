@@ -57,12 +57,11 @@ service cloud.firestore {
       }
 
       // 2. BUDGET DATA COLLECTIONS (Transactions, Assets, Loans, Categories)
-      // Replaces the specific 'transactions' rule with a dynamic check for all data collections
+      // FIX applied: Direct access for Owner (isUser) OR Remote access for Members
       match /users/{budgetId}/{collectionName}/{docId} {
         allow read, write: if 
           (collectionName in ['transactions', 'assets', 'loans', 'categories']) &&
-          budgetExists(appId, budgetId) && 
-          hasRemoteAccess(appId, budgetId);
+          (isUser(budgetId) || (budgetExists(appId, budgetId) && hasRemoteAccess(appId, budgetId)));
       }
 
       // 3. PUBLIC DATA & SHARED BUDGETS
