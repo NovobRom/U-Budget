@@ -33,8 +33,10 @@ const CreditsView = lazy(() => import('./components/views/CreditsView'));
 
 /**
  * AppContent
- * Contains the main routing and logic.
- * Now integrated with Zustand Store for Transactions, Assets, and Loans actions.
+ * The core application logic.
+ * * REFACTOR STATUS:
+ * - Read Operations: Still utilizing legacy hooks (useBudget, useTeamMembers).
+ * - Write Operations: Fully migrated to 'useBudgetStore' (Service Layer).
  */
 const AppContent = () => {
     const { lang, setLang, t } = useLanguage();
@@ -56,7 +58,13 @@ const AppContent = () => {
         addLoan: storeAddLoan,
         updateLoan: storeUpdateLoan,
         deleteLoan: storeDeleteLoan,
-        payLoan: storePayLoan
+        payLoan: storePayLoan,
+        // Categories & Settings
+        addCategory: storeAddCategory,
+        deleteCategory: storeDeleteCategory,
+        saveCategoryLimit: storeSaveLimit,
+        removeUserFromBudget: storeRemoveUser,
+        leaveBudget: storeLeaveBudget
     } = useBudgetStore();
 
     const { 
@@ -64,16 +72,15 @@ const AppContent = () => {
         login, register, logout, resetPassword, googleLogin, appleLogin 
     } = useAuth();
 
-    // Legacy useBudget is still used for READING data (transactions, assets, loans, categories)
-    // The write functions returned by it are now ignored in favor of the Store actions.
+    // Legacy useBudget is used ONLY for subscriptions (reading data)
+    // All returned 'write' functions are ignored/not destructured
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
         allowedUsers, totalCreditDebt, currentBalance, 
         loadMore, hasMore,
         
-        saveLimit, addCategory, deleteCategory,
-        removeUser, budgetOwnerId, leaveBudget, switchBudget, recalculateBalance 
+        switchBudget, recalculateBalance, budgetOwnerId 
     } = useBudget(activeBudgetId, isPendingApproval, user, lang, currency);
 
     const { 
@@ -102,7 +109,7 @@ const AppContent = () => {
         syncPhoto();
     }, [user]);
 
-    // --- HANDLERS (Delegating to Store) ---
+    // --- ACTION HANDLERS (Delegating to Store) ---
     
     // Transactions
     const handleSaveTransaction = async (data, editingTx) => {
@@ -162,6 +169,30 @@ const AppContent = () => {
         await storeDeleteAsset(activeBudgetId, id, t);
     };
 
+    // Settings / Categories
+    const handleAddCategory = async (data) => {
+        // Store expects just the data, id generation is handled by Firestore or Service
+        await storeAddCategory(activeBudgetId, data, t);
+        closeModal();
+    };
+
+    const handleDeleteCategory = async (catId) => {
+         await storeDeleteCategory(activeBudgetId, catId, t);
+    };
+
+    const handleSaveLimit = async (catId, amount) => {
+        await storeSaveLimit(activeBudgetId, catId, amount, t);
+    };
+
+    const handleRemoveUser = async (uid) => {
+        await storeRemoveUser(activeBudgetId, uid, t);
+    };
+
+    const handleLeaveBudget = async () => {
+        if (!confirm("Are you sure?")) return;
+        await storeLeaveBudget(activeBudgetId, user?.uid, t);
+    };
+
     // Misc
     const handleFetchCryptoRate = async (coinId, setValCb) => {
         try {
@@ -213,12 +244,9 @@ const AppContent = () => {
             currencyCode: currency,
             t,
             getCategoryName,
+            // Wired to Store Action
             onAddCategory: () => openModal('category', {
-                onSave: async (data) => {
-                    await addCategory({ ...data, id: `custom_${Date.now()}`, isCustom: true });
-                    closeModal();
-                    toast.success(t.success_save);
-                },
+                onSave: handleAddCategory,
                 t
             })
         });
@@ -250,11 +278,16 @@ const AppContent = () => {
             darkMode, setDarkMode,
             incomingRequests, approveRequest, declineRequest,
             categories: allCategories, limits: categoryLimits,
-            onSaveLimit: saveLimit, onDeleteCategory: deleteCategory,
+            // Wired to Store Actions
+            onSaveLimit: handleSaveLimit, 
+            onDeleteCategory: handleDeleteCategory,
             onLogout: logout,
             t, getCategoryName,
             allowedUsers: hydratedMembers,
-            removeUser, leaveBudget, switchBudget,
+            // Wired to Store Actions
+            removeUser: handleRemoveUser, 
+            leaveBudget: handleLeaveBudget, 
+            switchBudget,
             currentUserId: user?.uid,
             isOwner: user?.uid === budgetOwnerId,
             activeBudgetId, user
