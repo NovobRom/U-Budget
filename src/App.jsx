@@ -33,8 +33,8 @@ const CreditsView = lazy(() => import('./components/views/CreditsView'));
 
 /**
  * AppContent
- * Contains the main routing and logic that was previously in the God Object.
- * This is an intermediate step to separate Context/Providers from Logic.
+ * Contains the main routing and logic.
+ * Now integrated with Zustand Store for Transactions, Assets, and Loans actions.
  */
 const AppContent = () => {
     const { lang, setLang, t } = useLanguage();
@@ -42,11 +42,21 @@ const AppContent = () => {
     const { openModal, closeModal } = useModal();
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-    // Zustand Store Actions
+    // --- ZUSTAND STORE ACTIONS ---
     const { 
+        // Transactions
         addTransaction: storeAddTransaction, 
         updateTransaction: storeUpdateTransaction,
-        deleteTransaction: storeDeleteTransaction 
+        deleteTransaction: storeDeleteTransaction,
+        // Assets
+        addAsset: storeAddAsset,
+        updateAsset: storeUpdateAsset,
+        deleteAsset: storeDeleteAsset,
+        // Loans
+        addLoan: storeAddLoan,
+        updateLoan: storeUpdateLoan,
+        deleteLoan: storeDeleteLoan,
+        payLoan: storePayLoan
     } = useBudgetStore();
 
     const { 
@@ -54,17 +64,14 @@ const AppContent = () => {
         login, register, logout, resetPassword, googleLogin, appleLogin 
     } = useAuth();
 
-    // Legacy useBudget is still needed for Reading data and Loans/Assets logic
-    // until those are also moved to Services/Store.
+    // Legacy useBudget is still used for READING data (transactions, assets, loans, categories)
+    // The write functions returned by it are now ignored in favor of the Store actions.
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
         allowedUsers, totalCreditDebt, currentBalance, 
         loadMore, hasMore,
         
-        // We override these transaction handlers with Store actions below
-        addLoan, updateLoan, deleteLoan,
-        addAsset, updateAsset, deleteAsset,
         saveLimit, addCategory, deleteCategory,
         removeUser, budgetOwnerId, leaveBudget, switchBudget, recalculateBalance 
     } = useBudget(activeBudgetId, isPendingApproval, user, lang, currency);
@@ -95,8 +102,9 @@ const AppContent = () => {
         syncPhoto();
     }, [user]);
 
-    // --- HANDLERS (Delegating to Store where possible) ---
+    // --- HANDLERS (Delegating to Store) ---
     
+    // Transactions
     const handleSaveTransaction = async (data, editingTx) => {
         try {
             if (editingTx) {
@@ -105,10 +113,7 @@ const AppContent = () => {
                 await storeAddTransaction(activeBudgetId, user, data, currency, t);
             }
             closeModal();
-            // Note: useBudget hook listens to Firestore, so UI updates automatically
-        } catch (e) { 
-            // Error handled in store
-        }
+        } catch (e) { /* Error handled in store */ }
     };
 
     const handleDeleteTransaction = async (id) => {
@@ -116,26 +121,48 @@ const AppContent = () => {
         await storeDeleteTransaction(activeBudgetId, id, t);
     };
 
+    // Loans
     const handleSaveLoan = async (data, editingLoan) => {
         try {
-            if (editingLoan) await updateLoan(editingLoan.id, data);
-            else await addLoan(data);
+            if (editingLoan) {
+                await storeUpdateLoan(activeBudgetId, editingLoan.id, data, t);
+            } else {
+                await storeAddLoan(activeBudgetId, data, t);
+            }
             closeModal();
-            toast.success(t.success_save);
-        } catch (e) { toast.error("Error saving credit"); }
+        } catch (e) { /* Error handled in store */ }
+    };
+
+    const handleDeleteLoan = async (id) => {
+        if (!confirm(t.confirm_delete || 'Delete?')) return;
+        await storeDeleteLoan(activeBudgetId, id, t);
     };
 
     const handleLoanPayment = async (amount, loan) => {
         try {
-            const numAmount = parseFloat(amount);
-            if (numAmount <= 0) return;
-            const newBalance = loan.currentBalance - numAmount;
-            await updateLoan(loan.id, { currentBalance: newBalance });
+            await storePayLoan(activeBudgetId, loan, amount, t);
             closeModal();
-            toast.success(t.payment_recorded);
-        } catch (e) { toast.error("Payment failed"); }
+        } catch (e) { /* Error handled in store */ }
     };
 
+    // Assets
+    const handleSaveAsset = async (data, editingAsset) => {
+        try {
+            if (editingAsset) {
+                await storeUpdateAsset(activeBudgetId, editingAsset.id, data, currency, t);
+            } else {
+                await storeAddAsset(activeBudgetId, data, currency, t);
+            }
+            closeModal();
+        } catch (e) { /* Error handled in store */ }
+    };
+
+    const handleDeleteAsset = async (id) => {
+        if (!confirm(t.confirm_delete || 'Delete?')) return;
+        await storeDeleteAsset(activeBudgetId, id, t);
+    };
+
+    // Misc
     const handleFetchCryptoRate = async (coinId, setValCb) => {
         try {
             const rate = await fetchExchangeRate(coinId, currency, true);
@@ -146,15 +173,6 @@ const AppContent = () => {
                 toast.error("Could not fetch rate.");
             }
         } catch(e) { toast.error("Fetch failed"); }
-    };
-
-    const handleSaveAsset = async (data, editingAsset) => {
-        try {
-            if (editingAsset) await updateAsset(editingAsset.id, { ...data, currency });
-            else await addAsset({ ...data, currency });
-            closeModal();
-            toast.success(t.success_save);
-        } catch (e) { toast.error(t.error_save); }
     };
 
     const handleExport = (data, filename = 'export') => {
@@ -190,7 +208,7 @@ const AppContent = () => {
         openModal('transaction', {
             editingTransaction: tx,
             onSave: (data) => handleSaveTransaction(data, tx),
-            onDelete: handleDeleteTransaction, // Use new store handler
+            onDelete: handleDeleteTransaction,
             categories: allCategories,
             currencyCode: currency,
             t,
@@ -343,7 +361,7 @@ const AppContent = () => {
                                 currency={currency} formatMoney={formatMoney} t={t}
                                 onAddAsset={() => openAssetModal(null)}
                                 onEditAsset={(a) => openAssetModal(a)}
-                                onDeleteAsset={deleteAsset}
+                                onDeleteAsset={handleDeleteAsset}
                                 onExport={() => {
                                     const html = `<thead><tr><th>Name</th><th>Type</th><th>Amount</th><th>Value Per Unit</th><th>Currency</th><th>Total</th></tr></thead><tbody>${assets.map(a => `<tr><td>${a.name}</td><td>${a.type}</td><td>${a.amount}</td><td>${a.valuePerUnit}</td><td>${a.currency}</td><td>${a.amount * a.valuePerUnit}</td></tr>`).join('')}</tbody>`;
                                     handleExport(html, 'assets');
@@ -357,7 +375,7 @@ const AppContent = () => {
                                 loans={loans} totalCreditDebt={totalCreditDebt} currency={currency} formatMoney={formatMoney} t={t}
                                 onAddLoan={() => openLoanModal(null)}
                                 onEditLoan={(l) => openLoanModal(l)}
-                                onDeleteLoan={deleteLoan}
+                                onDeleteLoan={handleDeleteLoan}
                                 onPayLoan={(l) => openModal('loanPayment', {
                                     loan: l,
                                     onPayment: handleLoanPayment,
@@ -380,11 +398,6 @@ const AppContent = () => {
     );
 };
 
-/**
- * App
- * The "Clean" Root component.
- * Responsible only for Providers setup.
- */
 export default function App() {
     return (
         <AppProviders>
