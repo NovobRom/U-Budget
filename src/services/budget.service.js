@@ -25,9 +25,10 @@ class BudgetService {
 
         const budgetRef = this.getBudgetDocRef(budgetId);
         
-        // Atomically remove the UID from the allowedUsers array
+        // Atomically remove the UID from the authorizedUsers array
+        // FIXED: Changed 'allowedUsers' to 'authorizedUsers' to match firestore.rules
         await updateDoc(budgetRef, {
-            allowedUsers: arrayRemove(userIdToRemove)
+            authorizedUsers: arrayRemove(userIdToRemove)
         });
     }
 

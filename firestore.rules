@@ -40,6 +40,14 @@ service cloud.firestore {
              request.auth.uid in data.authorizedUsers;
     }
 
+    // New Helper: Check if the user is ONLY removing themselves from the authorizedUsers list
+    function isLeaving(data, prevData) {
+      let diff = prevData.authorizedUsers.toSet().difference(data.authorizedUsers.toSet());
+      let added = data.authorizedUsers.toSet().difference(prevData.authorizedUsers.toSet());
+      // No users added AND exactly one user removed AND that user is the requester
+      return added.size() == 0 && diff.hasOnly([request.auth.uid]);
+    }
+
     // For access to subcollections where parent document data isn't in resource
     function hasRemoteAccess(appId, budgetId) {
       let data = getBudgetData(appId, budgetId);
@@ -57,7 +65,6 @@ service cloud.firestore {
       }
 
       // 2. BUDGET DATA COLLECTIONS (Transactions, Assets, Loans, Categories)
-      // FIX applied: Direct access for Owner (isUser) OR Remote access for Members
       match /users/{budgetId}/{collectionName}/{docId} {
         allow read, write: if 
           (collectionName in ['transactions', 'assets', 'loans', 'categories']) &&
@@ -77,10 +84,16 @@ service cloud.firestore {
           allow create: if isSignedIn() && 
                         request.resource.data.ownerId == request.auth.uid;
 
-          // UPDATE: Owner - all; Member - all except critical fields
+          // UPDATE: Owner - all; Member - all except critical fields, UNLESS leaving
           allow update: if isOwner(resource.data) ||
                         (isMember(resource.data) && 
-                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorizedUsers', 'ownerId']));
+                         (
+                           // Standard member update (cannot touch authorizedUsers or ownerId)
+                           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorizedUsers', 'ownerId'])) ||
+                           // Exception: Leaving the budget (modifying authorizedUsers to remove self)
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorizedUsers']) && isLeaving(request.resource.data, resource.data))
+                         )
+                        );
 
           // DELETE: Only owner
           allow delete: if isOwner(resource.data);

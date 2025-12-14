@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react';
 import { 
     collection, query, where, onSnapshot, 
     doc, updateDoc, deleteDoc, setDoc, 
-    arrayUnion, serverTimestamp 
-} from 'firebase/firestore'; // [FIX] Прибрав getDoc з імпортів, бо він більше не потрібен тут
+    arrayUnion, arrayRemove, serverTimestamp 
+} from 'firebase/firestore'; 
 import { db, appId } from '../firebase';
 import { toast } from 'react-hot-toast';
 
 export const useFamilySync = (currentUserId, userEmail, userName) => {
     const [incomingRequests, setIncomingRequests] = useState([]);
 
-    // 1. Слухаємо ВХІДНІ запити
+    // 1. Listen for INCOMING requests (where I am the target)
     useEffect(() => {
         if (!currentUserId) return;
         
@@ -30,7 +30,7 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         return () => unsubscribe();
     }, [currentUserId]);
 
-    // 2. Слухаємо МІЙ ВИХІДНИЙ запит
+    // 2. Listen for MY OUTGOING request status
     useEffect(() => {
         if (!currentUserId) return;
         
@@ -68,19 +68,12 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         return () => unsubscribe();
     }, [currentUserId]);
 
-    // Дії (Actions)
+    // Actions
 
     const sendJoinRequest = async (targetBudgetId) => {
-        console.log(`Sending join request from ${currentUserId} to ${targetBudgetId}`);
-        
         if (targetBudgetId === currentUserId) throw new Error("cannot_join_self");
 
-        // [SECURE FIX]
-        // Ми видалили перевірку targetSnap = await getDoc(targetBudgetRef).
-        // Це дозволяє відправити запит "наосліп". Якщо ID невірний, запит просто висітиме,
-        // але це краще, ніж відкривати читання бюджетів для всіх.
-
-        // Створюємо запит
+        // Create request
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budget_requests', currentUserId), { 
             requesterUid: currentUserId, 
             targetBudgetId: targetBudgetId, 
@@ -90,7 +83,7 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
             email: userEmail 
         });
         
-        // Ставимо собі статус "Очікування"
+        // Update local profile status
         await updateDoc(doc(db, 'artifacts', appId, 'users', currentUserId, 'metadata', 'profile'), { 
             isPendingApproval: true, 
             activeBudgetId: targetBudgetId 
@@ -106,10 +99,12 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
     };
 
     const approveRequest = async (req) => {
+        // Add user to authorizedUsers in the Budget document
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budgets', currentUserId), { 
             authorizedUsers: arrayUnion(req.requesterUid) 
         });
         
+        // Update request status so the requester's listener triggers the switch
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budget_requests', req.requesterUid), {
             status: 'approved'
         });
@@ -123,8 +118,33 @@ export const useFamilySync = (currentUserId, userEmail, userName) => {
         });
     };
 
-    const disconnectUser = async () => {
-         // Placeholder
+    const disconnectUser = async (currentActiveBudgetId) => {
+        // FIXED: Ensure we have a valid string ID, not an Event object or null
+        if (!currentActiveBudgetId || typeof currentActiveBudgetId !== 'string') {
+            console.error("disconnectUser: Invalid budget ID", currentActiveBudgetId);
+            // Fallback: if user tries to disconnect without ID, assume they want to leave their current active budget
+            // But we cannot safely assume that without context. Better to return error.
+            return;
+        }
+
+        if (currentActiveBudgetId === currentUserId) return;
+
+         try {
+             // 1. Remove self from the remote budget's authorizedUsers
+             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'budgets', currentActiveBudgetId), {
+                 authorizedUsers: arrayRemove(currentUserId)
+             });
+
+             // 2. Reset local profile to point to own budget
+             await updateDoc(doc(db, 'artifacts', appId, 'users', currentUserId, 'metadata', 'profile'), {
+                 activeBudgetId: currentUserId
+             });
+             
+             toast.success("Ви успішно відключилися від бюджету");
+         } catch (error) {
+             console.error("Error disconnecting:", error);
+             toast.error("Помилка відключення");
+         }
     };
 
     return { 

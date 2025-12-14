@@ -126,14 +126,28 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang, currenc
 
     const removeUser = async (u) => {
         if (!activeBudgetId) return;
-        const uid = u.uid || u; // Handle both object and string
+        
+        // FIXED: Extract UID safely. Handle both direct string, User object, or prevent Event objects.
+        let uidToRemove = null;
+        if (typeof u === 'string') {
+            uidToRemove = u;
+        } else if (u && typeof u === 'object' && u.uid) {
+            uidToRemove = u.uid;
+        }
+
+        if (!uidToRemove) {
+            console.error("removeUser: Invalid user argument", u);
+            toast.error("Error: Invalid user ID");
+            return;
+        }
+        
         try {
             await updateDoc(getBudgetDocRef(), {
-                authorizedUsers: arrayRemove(u.originalItem || u) // Try to remove raw item
+                authorizedUsers: arrayRemove(uidToRemove) 
             });
-            // Original code didn't toast here but updated local state
+            toast.success("User removed successfully");
         } catch (e) {
-            console.error(e);
+            console.error("Error removing user:", e);
             toast.error("Error removing user");
         }
     };
@@ -143,7 +157,9 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang, currenc
         try {
             await updateDoc(getBudgetDocRef(), { authorizedUsers: arrayRemove(user.uid) });
             await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { activeBudgetId: user.uid });
+            toast.success("You have left the budget");
         } catch (e) {
+            console.error("Error leaving budget:", e);
             toast.error("Error leaving budget");
         }
     };
