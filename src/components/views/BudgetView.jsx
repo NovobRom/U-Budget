@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { BudgetProgress } from '../BudgetProgress';
 import TransactionList from './budget/TransactionList';
-import { useModalStore } from '../../store/useModalStore';
+// import { useModalStore } from '../../store/useModalStore'; // Більше не потрібен тут, бо ми використовуємо пропси з App.jsx
 
 // Lazy load charts to keep initial bundle small
 const SimpleDonutChart = lazy(() => 
@@ -21,10 +21,10 @@ const Skeleton = ({ className }) => (
 
 export default function BudgetView({ 
     transactions, categories, limits, currency, formatMoney, t,
-    // onOpenSettings, onOpenInvite, onOpenRecurring, onAddTransaction, onEditTransaction // REMOVED: Handled via store
-    onDeleteTransaction, // Keep: Might involve logic/confirmations external to modal store
-    onExport, // Keep: Logic for CSV export
-    onOpenJoin, // Keep: Unclear mapping, possibly complex logic
+    onOpenSettings, onOpenInvite, onOpenRecurring, onAddTransaction, onEditTransaction, // ВІДНОВЛЕНО: Використовуємо функції з App.jsx
+    onDeleteTransaction, 
+    onExport,
+    onOpenJoin,
     getCategoryStyles, getCategoryName, lang,
     currentBalance, loadMore, hasMore 
 }) {
@@ -35,8 +35,8 @@ export default function BudgetView({
     const [historyFilter, setHistoryFilter] = useState('all');
     const historyRef = useRef(null);
     
-    // Access Modal Store
-    const openModal = useModalStore((state) => state.openModal);
+    // Ми прибрали прямий доступ до стору тут, оскільки App.jsx вже передає налаштовані функції
+    // const openModal = useModalStore((state) => state.openModal);
 
     const isCustomRange = timeFilter === 'custom';
 
@@ -156,12 +156,12 @@ export default function BudgetView({
         setTimeout(() => { historyRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 50);
     };
 
-    // Modal Handlers
-    const handleAddTransaction = () => openModal('transaction');
-    const handleEditTransaction = (tData) => openModal('transaction', { ...tData });
-    const handleSettings = () => openModal('settings');
-    const handleInvite = () => openModal('link');
-    const handleRecurring = () => openModal('recurring');
+    // Modal Handlers (Тепер використовують пропси з App.jsx)
+    const handleAddTransaction = () => onAddTransaction();
+    const handleEditTransaction = (tData) => onEditTransaction(tData);
+    const handleSettings = () => onOpenSettings();
+    const handleInvite = () => onOpenInvite();
+    const handleRecurring = () => onOpenRecurring();
 
     return (
         <>

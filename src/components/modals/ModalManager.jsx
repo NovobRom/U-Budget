@@ -1,16 +1,34 @@
 import React, { Suspense, lazy } from 'react';
 import { useModalStore } from '../../store/useModalStore';
 
-// Lazy loaded modals
-const TransactionForm = lazy(() => import('../TransactionForm'));
-const LoanModal = lazy(() => import('./LoanModal'));
-const LoanPaymentModal = lazy(() => import('./LoanPaymentModal'));
-const AssetModal = lazy(() => import('./AssetModal'));
-const CategoryModal = lazy(() => import('./CategoryModal'));
-const LinkModal = lazy(() => import('./LinkModal'));
-const SettingsModal = lazy(() => import('./SettingsModal'));
-const InfoModal = lazy(() => import('./InfoModal'));
-const RecurringModal = lazy(() => import('./RecurringModal'));
+// Helper function to handle chunk load errors (version mismatch)
+// If a lazy load fails, it usually means a new version was deployed.
+// We force a page reload to get the latest assets.
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      console.error('Lazy load failed, reloading page:', error);
+      // Check if the error is related to missing chunks/modules
+      if (error.message.includes('Failed to fetch dynamically imported module') || 
+          error.message.includes('Importing a module script failed')) {
+        window.location.reload();
+      }
+      throw error;
+    }
+  });
+
+// Lazy loaded modals with retry logic
+const TransactionForm = lazyWithRetry(() => import('../TransactionForm'));
+const LoanModal = lazyWithRetry(() => import('./LoanModal'));
+const LoanPaymentModal = lazyWithRetry(() => import('./LoanPaymentModal'));
+const AssetModal = lazyWithRetry(() => import('./AssetModal'));
+const CategoryModal = lazyWithRetry(() => import('./CategoryModal'));
+const LinkModal = lazyWithRetry(() => import('./LinkModal'));
+const SettingsModal = lazyWithRetry(() => import('./SettingsModal'));
+const InfoModal = lazyWithRetry(() => import('./InfoModal'));
+const RecurringModal = lazyWithRetry(() => import('./RecurringModal'));
 
 export default function ModalManager() {
     // Select state slices to minimize re-renders
