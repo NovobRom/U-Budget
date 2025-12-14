@@ -12,14 +12,14 @@ export default function TeamManager({ allowedUsers = [], removeUser, onLeave, cu
                 {allowedUsers.map((userItem) => {
                     const { uid, displayName, email, photoURL, isCurrentUser, isOwner } = userItem;
 
-                    // Логіка відображення імені
+                    // Name display logic
                     const isGenericName = displayName?.startsWith("User ") || displayName === "Unknown User";
                     const displayLabel = isGenericName && !isCurrentUser ? "Partner" : displayName;
 
                     return (
                         <div key={uid} className={`flex items-center justify-between p-3 rounded-xl border ${isCurrentUser ? 'bg-blue-50 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800' : 'bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700'}`}>
                             <div className="flex items-center gap-3 overflow-hidden">
-                                {/* АВАТАРКА */}
+                                {/* AVATAR */}
                                 <div className="relative">
                                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold uppercase shrink-0 text-white overflow-hidden ${isOwner ? 'bg-amber-500 shadow-amber-500/30 shadow-md' : (isCurrentUser ? 'bg-blue-500' : 'bg-purple-500')}`}>
                                         {photoURL ? (
@@ -48,9 +48,9 @@ export default function TeamManager({ allowedUsers = [], removeUser, onLeave, cu
                                 </div>
                             </div>
 
-                            {/* ДІЇ (КНОПКИ) */}
+                            {/* ACTIONS (BUTTONS) */}
                             <div className="flex gap-2">
-                                {/* Якщо це я і я НЕ власник -> Можу вийти */}
+                                {/* If it's me and I'm NOT the owner -> Can leave */}
                                 {isCurrentUser && !isOwner && (
                                     <button 
                                         onClick={onLeave}
@@ -61,10 +61,10 @@ export default function TeamManager({ allowedUsers = [], removeUser, onLeave, cu
                                     </button>
                                 )}
 
-                                {/* Якщо я НЕ я, але Я власник (перевірка йде зовні, тут ми просто показуємо кнопку якщо дозволено removeUser) -> Можу видалити */}
+                                {/* If it's NOT me, but I AM the owner (check is external, here we just show button if removeUser is allowed) -> Can remove */}
                                 {!isCurrentUser && !isOwner && removeUser && (
                                     <button 
-                                        onClick={() => removeUser(userItem)}
+                                        onClick={() => removeUser(userItem.uid)}
                                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                         title={t.remove_user_btn}
                                     >
