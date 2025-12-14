@@ -1,7 +1,34 @@
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
-// --- HELPER: Logic to group small expenses ---
+// --- OPTIMIZATION: Moved helpers outside component to ensure stability ---
+
+const getColorHex = (tailwindClass) => {
+    if (!tailwindClass) return '#94a3b8';
+    const colors = {
+        'bg-slate-400': '#94a3b8', 'bg-slate-500': '#64748b', 'bg-slate-600': '#475569',
+        'bg-red-400': '#f87171', 'bg-red-500': '#ef4444', 'bg-red-600': '#dc2626',
+        'bg-orange-400': '#fb923c', 'bg-orange-500': '#f97316', 'bg-orange-600': '#ea580c',
+        'bg-amber-400': '#fbbf24', 'bg-amber-500': '#f59e0b', 'bg-amber-600': '#d97706',
+        'bg-yellow-400': '#facc15', 'bg-yellow-500': '#eab308', 'bg-yellow-600': '#ca8a04',
+        'bg-lime-400': '#a3e635', 'bg-lime-500': '#84cc16', 'bg-lime-600': '#65a30d',
+        'bg-green-400': '#4ade80', 'bg-green-500': '#22c55e', 'bg-green-600': '#16a34a',
+        'bg-emerald-400': '#34d399', 'bg-emerald-500': '#10b981', 'bg-emerald-600': '#059669',
+        'bg-teal-400': '#2dd4bf', 'bg-teal-500': '#14b8a6', 'bg-teal-600': '#0d9488',
+        'bg-cyan-400': '#22d3ee', 'bg-cyan-500': '#06b6d4', 'bg-cyan-600': '#0891b2',
+        'bg-sky-400': '#38bdf8', 'bg-sky-500': '#0ea5e9', 'bg-sky-600': '#0284c7',
+        'bg-blue-400': '#60a5fa', 'bg-blue-500': '#3b82f6', 'bg-blue-600': '#2563eb',
+        'bg-indigo-400': '#818cf8', 'bg-indigo-500': '#6366f1', 'bg-indigo-600': '#4f46e5',
+        'bg-violet-400': '#a78bfa', 'bg-violet-500': '#8b5cf6', 'bg-violet-600': '#7c3aed',
+        'bg-purple-400': '#c084fc', 'bg-purple-500': '#a855f7', 'bg-purple-600': '#9333ea',
+        'bg-fuchsia-400': '#e879f9', 'bg-fuchsia-500': '#d946ef', 'bg-fuchsia-600': '#c026d3',
+        'bg-pink-400': '#f472b6', 'bg-pink-500': '#ec4899', 'bg-pink-600': '#db2777',
+        'bg-rose-400': '#fb7185', 'bg-rose-500': '#f43f5e', 'bg-rose-600': '#e11d48',
+    };
+    return colors[tailwindClass] || '#94a3b8'; 
+};
+
+// Logic to group small expenses - decoupled from render
 const processData = (data, total, getCategoryName, otherLabel) => {
     if (!data || total === 0) return [];
 
@@ -39,39 +66,18 @@ const processData = (data, total, getCategoryName, otherLabel) => {
     return mainSegments.sort((a, b) => b.value - a.value);
 };
 
-const getColorHex = (tailwindClass) => {
-    if (!tailwindClass) return '#94a3b8';
-    const colors = {
-        'bg-slate-400': '#94a3b8', 'bg-slate-500': '#64748b', 'bg-slate-600': '#475569',
-        'bg-red-400': '#f87171', 'bg-red-500': '#ef4444', 'bg-red-600': '#dc2626',
-        'bg-orange-400': '#fb923c', 'bg-orange-500': '#f97316', 'bg-orange-600': '#ea580c',
-        'bg-amber-400': '#fbbf24', 'bg-amber-500': '#f59e0b', 'bg-amber-600': '#d97706',
-        'bg-yellow-400': '#facc15', 'bg-yellow-500': '#eab308', 'bg-yellow-600': '#ca8a04',
-        'bg-lime-400': '#a3e635', 'bg-lime-500': '#84cc16', 'bg-lime-600': '#65a30d',
-        'bg-green-400': '#4ade80', 'bg-green-500': '#22c55e', 'bg-green-600': '#16a34a',
-        'bg-emerald-400': '#34d399', 'bg-emerald-500': '#10b981', 'bg-emerald-600': '#059669',
-        'bg-teal-400': '#2dd4bf', 'bg-teal-500': '#14b8a6', 'bg-teal-600': '#0d9488',
-        'bg-cyan-400': '#22d3ee', 'bg-cyan-500': '#06b6d4', 'bg-cyan-600': '#0891b2',
-        'bg-sky-400': '#38bdf8', 'bg-sky-500': '#0ea5e9', 'bg-sky-600': '#0284c7',
-        'bg-blue-400': '#60a5fa', 'bg-blue-500': '#3b82f6', 'bg-blue-600': '#2563eb',
-        'bg-indigo-400': '#818cf8', 'bg-indigo-500': '#6366f1', 'bg-indigo-600': '#4f46e5',
-        'bg-violet-400': '#a78bfa', 'bg-violet-500': '#8b5cf6', 'bg-violet-600': '#7c3aed',
-        'bg-purple-400': '#c084fc', 'bg-purple-500': '#a855f7', 'bg-purple-600': '#9333ea',
-        'bg-fuchsia-400': '#e879f9', 'bg-fuchsia-500': '#d946ef', 'bg-fuchsia-600': '#c026d3',
-        'bg-pink-400': '#f472b6', 'bg-pink-500': '#ec4899', 'bg-pink-600': '#db2777',
-        'bg-rose-400': '#fb7185', 'bg-rose-500': '#f43f5e', 'bg-rose-600': '#e11d48',
-    };
-    return colors[tailwindClass] || '#94a3b8'; 
-};
-
 // Using memo to prevent re-renders if props are identical
 export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, label, getCategoryName, otherLabel }) => {
     const [activeIndex, setActiveIndex] = useState(null);
     
-    const chartData = useMemo(() => processData(data, total, getCategoryName, otherLabel), [data, total, getCategoryName, otherLabel]);
+    // Memoize the data processing to avoid recalculation on hover
+    const chartData = useMemo(() => 
+        processData(data, total, getCategoryName, otherLabel), 
+    [data, total, getCategoryName, otherLabel]);
 
-    const onPieEnter = (_, index) => setActiveIndex(index);
-    const onPieLeave = () => setActiveIndex(null);
+    // Optimize event handlers with useCallback
+    const onPieEnter = useCallback((_, index) => setActiveIndex(index), []);
+    const onPieLeave = useCallback(() => setActiveIndex(null), []);
 
     const centerLabel = activeIndex !== null ? chartData[activeIndex].name : label; 
     const centerValue = activeIndex !== null 
@@ -154,7 +160,7 @@ export const SimpleBarChart = memo(({ data, currency }) => {
     if (!data || data.length === 0) return null;
 
     // Use a copy to avoid mutating props if data is frozen
-    const chartData = [...data].reverse();
+    const chartData = useMemo(() => [...data].reverse(), [data]);
 
     return (
         <div className="w-full h-[200px] mt-4 animate-in fade-in duration-500">

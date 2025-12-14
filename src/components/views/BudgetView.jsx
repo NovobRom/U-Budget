@@ -81,25 +81,32 @@ export default function BudgetView({
         return list;
     }, [transactions, timeFilter, searchTerm, historyFilter, customStartDate, customEndDate]);
 
-    // 2. Summary Calculation
+    // 2. Summary Calculation - Optimized to O(N)
     const { income, expense, expensesByCategory } = useMemo(() => {
         let inc = 0;
         let exp = 0;
+        const expenseMap = {};
         
-        // Single pass for totals
+        // Single pass over transactions to calculate totals and aggregate expenses by category
         filteredTransactions.forEach(t => {
-            if (t.type === 'income') inc += t.amount;
-            else if (t.type === 'expense') exp += t.amount;
+            const amount = Number(t.amount) || 0;
+            if (t.type === 'income') {
+                inc += amount;
+            } else if (t.type === 'expense') {
+                exp += amount;
+                // Aggregate expense per category ID directly
+                if (t.category) {
+                    expenseMap[t.category] = (expenseMap[t.category] || 0) + amount;
+                }
+            }
         });
         
-        // Calculate categories only if needed
+        // Single pass over categories to merge with aggregated totals
         const byCat = categories
             .filter(c => c.type === 'expense')
             .map(c => {
-                const catTotal = filteredTransactions
-                    .filter(t => t.type === 'expense' && t.category === c.id)
-                    .reduce((sum, t) => sum + t.amount, 0);
-                return { ...c, total: catTotal };
+                const total = expenseMap[c.id] || 0;
+                return { ...c, total };
             })
             .filter(x => x.total > 0)
             .sort((a,b) => b.total - a.total);
@@ -107,7 +114,7 @@ export default function BudgetView({
         return { income: inc, expense: exp, expensesByCategory: byCat };
     }, [filteredTransactions, categories]);
 
-    // 3. Optimized Trends Calculation (O(N) instead of O(6N))
+    // 3. Optimized Trends Calculation
     const trendsData = useMemo(() => {
         const today = new Date();
         const buckets = [];
