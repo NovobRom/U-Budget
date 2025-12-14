@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
     collection, query, orderBy, limit, onSnapshot, 
-    doc, updateDoc, writeBatch, 
-    serverTimestamp, increment, runTransaction,
-    getDocs // Kept for recalculateBalance which is a one-off operation
+    doc, writeBatch, 
+    serverTimestamp, increment, runTransaction
 } from 'firebase/firestore';
 import { db, appId } from '../firebase';
 import { toast } from 'react-hot-toast';
@@ -14,7 +13,6 @@ const STORAGE_CURRENCY = 'EUR';
 
 export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', legacyBaseCurrency = 'UAH') => {
     const [rawTransactions, setRawTransactions] = useState([]);
-    // const [lastDoc, setLastDoc] = useState(null); // Not strictly needed for basic snapshot limit
     const [hasMore, setHasMore] = useState(true);
     const [loadingTx, setLoadingTx] = useState(false);
     const [txLimit, setTxLimit] = useState(50);
@@ -24,7 +22,6 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
     const getBudgetDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId);
 
     // 1. Real-time Transaction Listener
-    // Switched from getDocs to onSnapshot for instant UI updates
     useEffect(() => {
         if (!activeBudgetId) {
             setRawTransactions([]);
@@ -43,7 +40,6 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const txs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setRawTransactions(txs);
-            // setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
             setHasMore(snapshot.docs.length === txLimit);
             setLoadingTx(false);
         }, (error) => {
@@ -121,7 +117,6 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
         batch.update(getBudgetDocRef(), { currentBalance: increment(adjustment) });
 
         await batch.commit();
-        // No manual refetch needed due to onSnapshot
     };
 
     const updateTransaction = async (id, newData) => {
@@ -160,7 +155,6 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
                 transaction.update(budgetRef, { currentBalance: increment(diff) });
             }
         });
-        // No manual refetch needed due to onSnapshot
     };
 
     const deleteTransaction = async (id) => {
@@ -183,62 +177,9 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
                 transaction.update(budgetRef, { currentBalance: increment(adjustment) });
             });
             toast.success(t.success_delete || 'Deleted');
-            // List updates automatically via snapshot
         } catch (e) {
             console.error(e);
             toast.error("Error deleting transaction");
-        }
-    };
-
-    const recalculateBalance = async () => {
-        if (!activeBudgetId) return;
-        const toastId = toast.loading("Recalculating absolute balance...");
-        try {
-            const allTxSnap = await getDocs(getTxColRef());
-            const txs = allTxSnap.docs.map(d => d.data());
-            
-            const currenciesToFetch = new Set();
-            currenciesToFetch.add(legacyBaseCurrency);
-            txs.forEach(t => { 
-                if(t.originalCurrency) currenciesToFetch.add(t.originalCurrency);
-            });
-
-            const rates = {};
-            await Promise.all(Array.from(currenciesToFetch).map(async (code) => {
-                if (code === STORAGE_CURRENCY) {
-                    rates[code] = 1;
-                } else {
-                    try {
-                        rates[code] = await fetchExchangeRate(code, STORAGE_CURRENCY);
-                    } catch(e) { rates[code] = 1; }
-                }
-            }));
-
-            let totalEUR = 0;
-            txs.forEach(t => {
-                let amtEUR = 0;
-                if (t.originalAmount !== undefined && t.originalCurrency) {
-                    const rate = rates[t.originalCurrency] || 1;
-                    amtEUR = Math.abs(t.originalAmount) * rate;
-                } else {
-                    const legacyAmount = Math.abs(parseFloat(t.amount) || 0);
-                    const rate = rates[legacyBaseCurrency] || 1; 
-                    amtEUR = legacyAmount * rate;
-                }
-
-                if (t.type === 'income') totalEUR += amtEUR;
-                else totalEUR -= amtEUR;
-            });
-
-            await updateDoc(getBudgetDocRef(), { 
-                currentBalance: totalEUR, 
-                storageCurrency: STORAGE_CURRENCY 
-            });
-            toast.success("Balance fixed!", { id: toastId });
-            return totalEUR;
-        } catch (e) {
-            console.error("Recalculation failed", e);
-            toast.error("Failed to repair balance", { id: toastId });
         }
     };
 
@@ -249,7 +190,6 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
         addTransaction,
         updateTransaction,
         deleteTransaction,
-        recalculateBalance,
         loadingTx
     };
 };

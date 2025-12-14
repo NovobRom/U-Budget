@@ -22,14 +22,13 @@ export default function BudgetView({
     onOpenSettings, onOpenInvite, onOpenJoin, onOpenRecurring,
     onAddTransaction, onEditTransaction, onDeleteTransaction, onExport,
     getCategoryStyles, getCategoryName, lang,
-    currentBalance, loadMore, hasMore, recalculateBalance 
+    currentBalance, loadMore, hasMore 
 }) {
     const [timeFilter, setTimeFilter] = useState('this_month');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
-    const [isRecalculating, setIsRecalculating] = useState(false);
     const historyRef = useRef(null);
 
     const isCustomRange = timeFilter === 'custom';
@@ -150,14 +149,6 @@ export default function BudgetView({
         setTimeout(() => { historyRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 50);
     };
 
-    const handleRecalculate = async (e) => {
-        e.stopPropagation();
-        if (typeof recalculateBalance !== 'function') return;
-        setIsRecalculating(true);
-        await recalculateBalance();
-        setIsRecalculating(false);
-    };
-
     return (
         <>
             {/* --- CONTROLS SECTION --- */}
@@ -211,9 +202,6 @@ export default function BudgetView({
                  <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-5 rounded-2xl shadow-sm border border-blue-700 flex flex-col justify-center cursor-pointer min-h-[120px]" onClick={() => handleCardClick('all')}>
                      <div className="flex justify-between items-center mb-2">
                          <span className="text-sm opacity-80 font-medium">{t.total_balance}</span>
-                         <button onClick={handleRecalculate} className="p-1.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
-                             <RefreshCw size={14} className={`text-white ${isRecalculating ? 'animate-spin' : ''}`} />
-                         </button>
                      </div>
                      <div className="text-2xl font-bold">{formatMoney(displayBalance, currency)}</div>
                   </div>
