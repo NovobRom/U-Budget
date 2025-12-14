@@ -1,6 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { useModal } from '../../context/ModalContext';
-import { CURRENCIES } from '../../constants';
+import { useModalStore } from '../../store/useModalStore';
 
 // Lazy loaded modals
 const TransactionForm = lazy(() => import('../TransactionForm'));
@@ -14,7 +13,10 @@ const InfoModal = lazy(() => import('./InfoModal'));
 const RecurringModal = lazy(() => import('./RecurringModal'));
 
 export default function ModalManager() {
-    const { activeModal, modalProps, closeModal } = useModal();
+    // Select state slices to minimize re-renders
+    const activeModal = useModalStore((state) => state.activeModal);
+    const modalProps = useModalStore((state) => state.modalProps);
+    const closeModal = useModalStore((state) => state.closeModal);
 
     if (!activeModal) return null;
 
@@ -25,7 +27,6 @@ export default function ModalManager() {
             case 'loan':
                 return <LoanModal {...modalProps} isOpen={true} onClose={closeModal} />;
             case 'loanPayment':
-                // Special handling for currency symbol if not passed directly, mostly handled by props from App
                 return <LoanPaymentModal {...modalProps} isOpen={true} onClose={closeModal} />;
             case 'asset':
                 return <AssetModal {...modalProps} isOpen={true} onClose={closeModal} />;
@@ -45,7 +46,7 @@ export default function ModalManager() {
     };
 
     return (
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" />}>
             {renderModal()}
         </Suspense>
     );

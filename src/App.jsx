@@ -14,11 +14,12 @@ import { useFamilySync } from './hooks/useFamilySync';
 import { useTeamMembers } from './hooks/useTeamMembers';
 import { useLanguage } from './context/LanguageContext';
 import { useCurrency } from './context/CurrencyContext';
-import { useModal } from './context/ModalContext';
+// Removed: useModal from ModalContext (Context API Deprecated)
 
 // STORE & PROVIDERS
 import { AppProviders } from './providers/AppProviders';
 import { useBudgetStore } from './store/useBudgetStore';
+import { useModalStore } from './store/useModalStore'; // Added: Modal Store
 
 // COMPONENTS
 import Layout from './components/Layout';
@@ -38,7 +39,11 @@ const CreditsView = lazy(() => import('./components/views/CreditsView'));
 const AppContent = () => {
     const { lang, setLang, t } = useLanguage();
     const { currency, formatMoney } = useCurrency();
-    const { openModal, closeModal } = useModal();
+    
+    // --- MODAL STORE SELECTORS (Replaces Context) ---
+    const openModal = useModalStore((state) => state.openModal);
+    const closeModal = useModalStore((state) => state.closeModal);
+    
     // Removed local darkMode state; now handled by ThemeProvider
 
     // --- ZUSTAND STORE ACTIONS ---

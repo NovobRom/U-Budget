@@ -2,13 +2,13 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { LanguageProvider } from '../context/LanguageContext';
 import { CurrencyProvider } from '../context/CurrencyContext';
-import { ModalProvider } from '../context/ModalContext';
 import { ThemeProvider } from '../context/ThemeContext';
+// ModalProvider is removed as we switched to Zustand (useModalStore)
 
 /**
  * AppProviders
  * Centralizes all global application providers.
- * Order: Router -> Language -> Currency -> Theme -> Modal.
+ * Order: Router -> Language -> Currency -> Theme.
  */
 export const AppProviders = ({ children }) => {
     return (
@@ -16,9 +16,7 @@ export const AppProviders = ({ children }) => {
             <LanguageProvider>
                 <CurrencyProvider>
                     <ThemeProvider>
-                        <ModalProvider>
-                            {children}
-                        </ModalProvider>
+                        {children}
                     </ThemeProvider>
                 </CurrencyProvider>
             </LanguageProvider>
