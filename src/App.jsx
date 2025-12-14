@@ -34,15 +34,12 @@ const CreditsView = lazy(() => import('./components/views/CreditsView'));
 /**
  * AppContent
  * The core application logic.
- * * REFACTOR STATUS:
- * - Read Operations: Still utilizing legacy hooks (useBudget, useTeamMembers).
- * - Write Operations: Fully migrated to 'useBudgetStore' (Service Layer).
  */
 const AppContent = () => {
     const { lang, setLang, t } = useLanguage();
-    const { currency, setCurrency, formatMoney } = useCurrency();
+    const { currency, formatMoney } = useCurrency();
     const { openModal, closeModal } = useModal();
-    const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+    // Removed local darkMode state; now handled by ThemeProvider
 
     // --- ZUSTAND STORE ACTIONS ---
     const { 
@@ -73,7 +70,6 @@ const AppContent = () => {
     } = useAuth();
 
     // Legacy useBudget is used ONLY for subscriptions (reading data)
-    // All returned 'write' functions are ignored/not destructured
     const { 
         transactions, loans, assets, 
         allCategories, categoryLimits, 
@@ -90,10 +86,8 @@ const AppContent = () => {
     const { members: hydratedMembers } = useTeamMembers(allowedUsers, budgetOwnerId, user?.uid);
 
     // --- EFFECTS ---
-    useEffect(() => { 
-        localStorage.setItem('theme', darkMode ? 'dark' : 'light'); 
-        document.documentElement.classList.toggle('dark', darkMode); 
-    }, [darkMode]);
+    
+    // Theme effect removed (handled by ThemeContext)
 
     useEffect(() => {
         const syncPhoto = async () => {
@@ -171,7 +165,6 @@ const AppContent = () => {
 
     // Settings / Categories
     const handleAddCategory = async (data) => {
-        // Store expects just the data, id generation is handled by Firestore or Service
         await storeAddCategory(activeBudgetId, data, t);
         closeModal();
     };
@@ -244,7 +237,6 @@ const AppContent = () => {
             currencyCode: currency,
             t,
             getCategoryName,
-            // Wired to Store Action
             onAddCategory: () => openModal('category', {
                 onSave: handleAddCategory,
                 t
@@ -273,18 +265,14 @@ const AppContent = () => {
 
     const openSettings = () => {
         openModal('settings', {
-            lang, setLang,
-            currency, setCurrency,
-            darkMode, setDarkMode,
+            // Removed global state props (lang, currency, darkMode)
             incomingRequests, approveRequest, declineRequest,
             categories: allCategories, limits: categoryLimits,
-            // Wired to Store Actions
             onSaveLimit: handleSaveLimit, 
             onDeleteCategory: handleDeleteCategory,
             onLogout: logout,
             t, getCategoryName,
             allowedUsers: hydratedMembers,
-            // Wired to Store Actions
             removeUser: handleRemoveUser, 
             leaveBudget: handleLeaveBudget, 
             switchBudget,
