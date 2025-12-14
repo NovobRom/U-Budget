@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-    collection, query, orderBy, limit, getDocs, 
+    collection, query, orderBy, limit, onSnapshot, 
     doc, updateDoc, writeBatch, 
-    serverTimestamp, increment, runTransaction 
+    serverTimestamp, increment, runTransaction,
+    getDocs // Kept for recalculateBalance which is a one-off operation
 } from 'firebase/firestore';
 import { db, appId } from '../firebase';
 import { toast } from 'react-hot-toast';
@@ -13,7 +14,7 @@ const STORAGE_CURRENCY = 'EUR';
 
 export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', legacyBaseCurrency = 'UAH') => {
     const [rawTransactions, setRawTransactions] = useState([]);
-    const [lastDoc, setLastDoc] = useState(null);
+    // const [lastDoc, setLastDoc] = useState(null); // Not strictly needed for basic snapshot limit
     const [hasMore, setHasMore] = useState(true);
     const [loadingTx, setLoadingTx] = useState(false);
     const [txLimit, setTxLimit] = useState(50);
@@ -22,34 +23,36 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
     const getTxColRef = () => collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions');
     const getBudgetDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId);
 
-    // 1. Fetch RAW transactions (Write-heavy optimization: we trust stored amount mostly)
+    // 1. Real-time Transaction Listener
+    // Switched from getDocs to onSnapshot for instant UI updates
     useEffect(() => {
         if (!activeBudgetId) {
             setRawTransactions([]);
             return;
         }
 
-        const fetchTransactions = async () => {
-            setLoadingTx(true);
-            try {
-                const q = query(
-                    getTxColRef(),
-                    orderBy('date', 'desc'),
-                    orderBy('createdAt', 'desc'),
-                    limit(txLimit)
-                );
-                const snapshot = await getDocs(q);
-                const txs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setRawTransactions(txs);
-                setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-                setHasMore(snapshot.docs.length === txLimit);
-            } catch (error) {
-                console.error("Error fetching transactions:", error);
-            }
-            setLoadingTx(false);
-        };
+        setLoadingTx(true);
 
-        fetchTransactions();
+        const q = query(
+            getTxColRef(),
+            orderBy('date', 'desc'),
+            orderBy('createdAt', 'desc'),
+            limit(txLimit)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const txs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setRawTransactions(txs);
+            // setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+            setHasMore(snapshot.docs.length === txLimit);
+            setLoadingTx(false);
+        }, (error) => {
+            console.error("Error fetching transactions:", error);
+            setLoadingTx(false);
+        });
+
+        // Cleanup listener on unmount or dependency change
+        return () => unsubscribe();
     }, [activeBudgetId, txLimit]);
 
     // 2. Identify Currencies needed for View
@@ -65,14 +68,13 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
     // 3. Fetch Rates Efficiently (Cached)
     const rates = useCurrencyRates(currenciesNeeded, mainCurrency);
 
-    // 4. Memoized Display Conversion (No more double render)
+    // 4. Memoized Display Conversion
     const transactions = useMemo(() => {
         return rawTransactions.map(t => {
             const sourceCurr = t.originalCurrency || legacyBaseCurrency;
             const sourceAmt = t.originalAmount !== undefined ? t.originalAmount : t.amount;
-            const rate = rates[sourceCurr] || 1; // Default to 1 if fetching
+            const rate = rates[sourceCurr] || 1; 
             
-            // Calculate display amount
             return { ...t, amount: Math.abs(sourceAmt) * rate };
         });
     }, [rawTransactions, rates, legacyBaseCurrency]);
@@ -80,6 +82,10 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
     const loadMore = () => {
         setTxLimit(prev => prev + 50);
     };
+
+    // NOTE: The write functions below (add/update/delete) are maintained for compatibility,
+    // but the actual app logic seems to use 'useBudgetStore' for writing. 
+    // If these are used, the onSnapshot listener above will automatically handle the UI update.
 
     const addTransaction = async (data) => {
         if (!activeBudgetId || !user) return;
@@ -115,7 +121,7 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
         batch.update(getBudgetDocRef(), { currentBalance: increment(adjustment) });
 
         await batch.commit();
-        setTxLimit(prev => prev); // Trigger refetch
+        // No manual refetch needed due to onSnapshot
     };
 
     const updateTransaction = async (id, newData) => {
@@ -154,7 +160,7 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
                 transaction.update(budgetRef, { currentBalance: increment(diff) });
             }
         });
-        setTxLimit(prev => prev); // Trigger refetch
+        // No manual refetch needed due to onSnapshot
     };
 
     const deleteTransaction = async (id) => {
@@ -177,7 +183,7 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
                 transaction.update(budgetRef, { currentBalance: increment(adjustment) });
             });
             toast.success(t.success_delete || 'Deleted');
-            setRawTransactions(prev => prev.filter(t => t.id !== id));
+            // List updates automatically via snapshot
         } catch (e) {
             console.error(e);
             toast.error("Error deleting transaction");
