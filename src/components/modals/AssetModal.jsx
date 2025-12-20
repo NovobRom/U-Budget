@@ -12,55 +12,56 @@ const CRYPTO_OPTIONS = [
 export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, currency: mainCurrency }) {
     const [name, setName] = useState('');
     const [type, setType] = useState('cash');
-    const [amount, setAmount] = useState(''); // Amount (1 bitcoin or 10000 UAH)
-    const [valuePerUnit, setValuePerUnit] = useState(''); // Rate to main currency
+    const [amount, setAmount] = useState(''); 
+    const [valuePerUnit, setValuePerUnit] = useState(''); 
     
-    // New fields for multi-currency support
     const [selectedCrypto, setSelectedCrypto] = useState('tether');
     const [selectedCurrency, setSelectedCurrency] = useState(mainCurrency || 'EUR');
     const [isFetchingRate, setIsFetchingRate] = useState(false);
 
+    // Populate form when editing or resetting when adding
     useEffect(() => {
         if (isOpen) {
             if (editingAsset) {
-                setName(editingAsset.name);
-                setType(editingAsset.type);
-                setAmount(editingAsset.amount);
-                // Check both fields to support legacy data
-                setValuePerUnit(editingAsset.valuePerUnit || editingAsset.value || 1);
+                setName(editingAsset.name || '');
+                setType(editingAsset.type || 'cash');
+                setAmount(editingAsset.amount?.toString() || '');
+                // Handle legacy 'value' field or new 'valuePerUnit'
+                setValuePerUnit((editingAsset.valuePerUnit || editingAsset.value || 1).toString());
                 
                 if (editingAsset.type === 'crypto') {
                     setSelectedCrypto(editingAsset.cryptoId || 'tether');
                 } else {
-                    // Restore original currency if editing, otherwise default to main
                     setSelectedCurrency(editingAsset.originalCurrency || mainCurrency);
                 }
             } else {
-                // Default new state
                 setName('');
                 setType('cash');
                 setAmount('');
-                setValuePerUnit('');
+                setValuePerUnit('1');
                 setSelectedCrypto('tether');
                 setSelectedCurrency(mainCurrency || 'EUR');
             }
         }
     }, [editingAsset, isOpen, mainCurrency]);
 
-    // Effect: Auto-fetch fiat rate
+    // Auto-fetch fiat rate only for new assets or when currency changes
     useEffect(() => {
         let isMounted = true;
         const fetchFiatRate = async () => {
-            if (type === 'crypto') return; // Crypto is fetched manually via button
-            if (!isOpen) return;
+            if (type === 'crypto' || !isOpen) return;
 
-            // If asset currency matches app currency -> rate is 1
+            // Rate is 1 if currencies match
             if (selectedCurrency === mainCurrency) {
                 if (isMounted) setValuePerUnit('1');
                 return;
             }
 
-            // Otherwise fetch rate
+            // Don't auto-fetch if we're just loading an existing asset (keep saved rate)
+            if (editingAsset && editingAsset.originalCurrency === selectedCurrency && valuePerUnit !== '') {
+                return;
+            }
+
             setIsFetchingRate(true);
             try {
                 const rate = await fetchExchangeRate(selectedCurrency, mainCurrency);
@@ -74,19 +75,15 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
             }
         };
 
-        const timer = setTimeout(fetchFiatRate, 500); // Debounce
+        const timer = setTimeout(fetchFiatRate, 500);
         return () => { isMounted = false; clearTimeout(timer); };
-    }, [selectedCurrency, mainCurrency, type, isOpen]);
+    }, [selectedCurrency, mainCurrency, type, isOpen, editingAsset]);
 
-    // Manual fetch for crypto
     const handleCryptoFetch = async () => {
         setIsFetchingRate(true);
         try {
-            // true flag indicates crypto
             const rate = await fetchExchangeRate(selectedCrypto, mainCurrency, true);
-            if (rate) {
-                setValuePerUnit(rate.toString());
-            }
+            if (rate) setValuePerUnit(rate.toString());
         } catch (e) {
             console.error("Crypto fetch error", e);
         } finally {
@@ -99,7 +96,7 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // Final number validation
+        // QA Check: Ensure we send Numbers to Firestore, not Strings
         const finalAmount = parseFloat(amount) || 0;
         const finalRate = parseFloat(valuePerUnit) || 1;
 
@@ -111,9 +108,10 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
             cryptoId: type === 'crypto' ? selectedCrypto : null,
             originalCurrency: type === 'crypto' ? null : selectedCurrency
         });
+        
+        onClose();
     };
 
-    // Calculate total preview in main currency
     const totalPreview = (parseFloat(amount || 0) * (parseFloat(valuePerUnit || 1))).toFixed(2);
 
     return (
@@ -127,7 +125,6 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                 </div>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* TYPE SELECTOR */}
                     <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                         {['cash', 'crypto', 'stock'].map(assetType => (
                             <button 
@@ -141,7 +138,6 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                         ))}
                     </div>
                     
-                    {/* --- CRYPTO LOGIC --- */}
                     {type === 'crypto' ? (
                         <>
                             <div className="space-y-2">
@@ -161,7 +157,6 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                {/* Flex-col and mt-auto ensure inputs align at bottom even if labels wrap */}
                                 <div className="flex flex-col">
                                     <label className="text-xs text-slate-500 font-bold mb-1 block">{t.holdings}</label>
                                     <input 
@@ -199,7 +194,6 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                             </div>
                         </>
                     ) : (
-                        /* --- CASH / STOCK LOGIC --- */
                         <>
                             <div>
                                 <label className="text-xs text-slate-500 font-bold mb-1 block">{t.asset_name}</label>
@@ -207,14 +201,13 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                                     type="text" 
                                     value={name} 
                                     onChange={e=>setName(e.target.value)} 
-                                    placeholder={type === 'stock' ? "e.g. Apple Inc." : "e.g. Cash under mattress"} 
+                                    placeholder={type === 'stock' ? "e.g. Apple Inc." : "e.g. Cash"} 
                                     className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none font-medium" 
                                     required 
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                {/* Flex-col and mt-auto alignment fix here as well */}
                                 <div className="flex flex-col">
                                     <label className="text-xs text-slate-500 font-bold mb-1 block">{t.holdings}</label>
                                     <input 
@@ -242,7 +235,6 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                                 </div>
                             </div>
 
-                            {/* Auto-Rate Display */}
                             {selectedCurrency !== mainCurrency && (
                                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800 flex flex-col gap-2 animate-in fade-in">
                                     <div className="flex justify-between items-center text-xs">
@@ -259,6 +251,7 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                                             onChange={e => setValuePerUnit(e.target.value)}
                                             className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-sm font-bold outline-none text-right"
                                             placeholder="Rate"
+                                            step="any"
                                         />
                                         <span className="text-xs font-bold text-slate-500">{mainCurrency}</span>
                                     </div>
@@ -267,7 +260,6 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                         </>
                     )}
 
-                    {/* Total Preview */}
                     <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
                         <span className="text-xs text-slate-400 font-bold uppercase">{t.total_value}</span>
                         <span className="text-xl font-bold text-slate-900 dark:text-white">
@@ -278,7 +270,7 @@ export default function AssetModal({ isOpen, onClose, onSave, editingAsset, t, c
                     <button 
                         type="submit" 
                         disabled={!amount || isFetchingRate}
-                        className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-3 rounded-xl font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-3 rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all"
                     >
                         {t.save_btn}
                     </button>

@@ -10,9 +10,10 @@ import { db, appId } from '../firebase';
 class AssetService {
     /**
      * Helper to get assets collection reference
+     * FIXED: Aligned path with useAssets hook (public/data/budgets)
      */
     getCollectionRef(budgetId) {
-        return collection(db, 'artifacts', appId, 'users', budgetId, 'assets');
+        return collection(db, 'artifacts', appId, 'public', 'data', 'budgets', budgetId, 'assets');
     }
 
     /**

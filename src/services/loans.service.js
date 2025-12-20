@@ -10,9 +10,10 @@ import { db, appId } from '../firebase';
 class LoanService {
     /**
      * Helper to get loans collection reference
+     * FIXED: Aligned path with useLoans hook (public/data/budgets)
      */
     getCollectionRef(budgetId) {
-        return collection(db, 'artifacts', appId, 'users', budgetId, 'loans');
+        return collection(db, 'artifacts', appId, 'public', 'data', 'budgets', budgetId, 'loans');
     }
 
     /**
