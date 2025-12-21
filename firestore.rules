@@ -76,28 +76,33 @@ service cloud.firestore {
         
         match /budgets/{budgetId} {
           
-          // READ: Only members or owner
-          allow get: if hasAccessToData(resource.data);
+          // READ: 
+          // 1. If it's the user trying to check their own budget slot (even if empty/non-existent) -> ALLOW
+          // 2. If the document exists AND user has access -> ALLOW
+          allow get: if isUser(budgetId) || (resource != null && hasAccessToData(resource.data));
+          
           allow list: if hasAccessToData(resource.data);
 
           // CREATE: Only authorized
           allow create: if isSignedIn() && 
                         request.resource.data.ownerId == request.auth.uid;
-
+                        
           // UPDATE: Owner - all; Member - all except critical fields, UNLESS leaving
           allow update: if isOwner(resource.data) ||
-                        (isMember(resource.data) && 
-                         (
-                           // Standard member update (cannot touch authorizedUsers or ownerId)
-                           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorizedUsers', 'ownerId'])) ||
-                           // Exception: Leaving the budget (modifying authorizedUsers to remove self)
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorizedUsers']) && isLeaving(request.resource.data, resource.data))
-                         )
-                        );
+                         (isMember(resource.data) && 
+                           (
+                             // Standard member update (cannot touch authorizedUsers or ownerId)
+                             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorizedUsers', 'ownerId'])) ||
+           
+                             // Exception: Leaving the budget (modifying authorizedUsers to remove self)
+                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorizedUsers']) && isLeaving(request.resource.data, resource.data))
+                           )
+                    
+                         );
 
           // DELETE: Only owner
           allow delete: if isOwner(resource.data);
-
+          
           // --- SUBCOLLECTIONS ---
           match /{subcollection}/{document=**} {
             allow read, write: if hasRemoteAccess(appId, budgetId);
@@ -107,8 +112,11 @@ service cloud.firestore {
         // JOIN REQUESTS
         match /budget_requests/{requesterUid} {
           allow create: if isUser(requesterUid);
+          
+          // FIX: Added budgetExists check prevents crash if target budget is not created yet
           allow read, update, delete: if isUser(requesterUid) || 
                                      (resource.data.targetBudgetId != null && 
+                                      budgetExists(appId, resource.data.targetBudgetId) &&
                                       isOwner(getBudgetData(appId, resource.data.targetBudgetId)));
         }
       }

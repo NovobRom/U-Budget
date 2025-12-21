@@ -9,17 +9,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="theme-color" content="#ffffff" />
-    <meta name="description" content="U-Budget: Family finance tracker" />
+    <meta name="description" content="U-Budget: Розумний трекер сімейних фінансів. Керуйте бюджетом, активами та кредитами разом." />
+    
+    <meta property="og:title" content="U-Budget - Твій фінансовий помічник" />
+    <meta property="og:description" content="Ефективне керування сімейним бюджетом та активами." />
+    <meta property="og:type" content="website" />
+
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>U-Budget</title>
+    <title>U-Budget | Керуй грошима розумно</title>
 
     <style>
       body { margin: 0; background-color: #f9fafb; font-family: system-ui, -apple-system, sans-serif; }
       @media (prefers-color-scheme: dark) { body { background-color: #020617; } }
       
-      /* Скелетні стилі */
+      /* Скелетні стилі (Restored original) */
       .sk-container { padding: 0.5rem; max-width: 600px; margin: 0 auto; }
       .sk-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: white; border-radius: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
       .sk-nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; }
@@ -28,13 +33,11 @@
       .sk-card { height: 100px; background: white; border-radius: 1rem; border: 1px solid #e2e8f0; }
       .sk-card-large { grid-column: span 2; background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); border: none; }
       
-      /* Темна тема */
       @media (prefers-color-scheme: dark) {
         .sk-header, .sk-card { background: #0f172a; border-color: #1e293b; }
         .sk-nav-item { background: #1e293b; }
       }
 
-      /* Анімація пульсації */
       .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>

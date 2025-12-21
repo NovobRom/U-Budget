@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import { BudgetProgress } from '../BudgetProgress';
 import TransactionList from './budget/TransactionList';
-// import { useModalStore } from '../../store/useModalStore'; // Більше не потрібен тут, бо ми використовуємо пропси з App.jsx
 
 // Lazy load charts to keep initial bundle small
 const SimpleDonutChart = lazy(() => 
@@ -21,12 +20,12 @@ const Skeleton = ({ className }) => (
 
 export default function BudgetView({ 
     transactions, categories, limits, currency, formatMoney, t,
-    onOpenSettings, onOpenInvite, onOpenRecurring, onAddTransaction, onEditTransaction, // ВІДНОВЛЕНО: Використовуємо функції з App.jsx
+    onOpenSettings, onOpenInvite, onOpenRecurring, onAddTransaction, onEditTransaction, 
     onDeleteTransaction, 
     onExport,
     onOpenJoin,
     getCategoryStyles, getCategoryName, lang,
-    currentBalance, loadMore, hasMore 
+    currentBalance, loadMore, hasMore, recalculateBalance 
 }) {
     const [timeFilter, setTimeFilter] = useState('this_month');
     const [customStartDate, setCustomStartDate] = useState('');
@@ -35,12 +34,9 @@ export default function BudgetView({
     const [historyFilter, setHistoryFilter] = useState('all');
     const historyRef = useRef(null);
     
-    // Ми прибрали прямий доступ до стору тут, оскільки App.jsx вже передає налаштовані функції
-    // const openModal = useModalStore((state) => state.openModal);
-
     const isCustomRange = timeFilter === 'custom';
 
-    // 1. Efficient Filtering
+    // 1. Efficient Filtering (Full Logic Restored)
     const filteredTransactions = useMemo(() => {
         const now = new Date(); 
         const currentMonth = now.getMonth(); 
@@ -87,7 +83,7 @@ export default function BudgetView({
         return list;
     }, [transactions, timeFilter, searchTerm, historyFilter, customStartDate, customEndDate]);
 
-    // 2. Summary Calculation
+    // 2. Summary Calculation (Full Logic Restored)
     const { income, expense, expensesByCategory } = useMemo(() => {
         let inc = 0;
         let exp = 0;
@@ -117,7 +113,7 @@ export default function BudgetView({
         return { income: inc, expense: exp, expensesByCategory: byCat };
     }, [filteredTransactions, categories]);
 
-    // 3. Optimized Trends Calculation
+    // 3. Optimized Trends Calculation (Full Logic Restored)
     const trendsData = useMemo(() => {
         const today = new Date();
         const buckets = [];
@@ -127,7 +123,7 @@ export default function BudgetView({
             const key = `${d.getFullYear()}-${d.getMonth()}`;
             buckets.push({
                 key,
-                label: d.toLocaleString(lang === 'en' ? 'en-US' : lang === 'ua' ? 'uk-UA' : 'pl-PL', { month: 'short' }),
+                label: d.toLocaleString(lang === 'ua' ? 'uk-UA' : 'en-US', { month: 'short' }),
                 income: 0,
                 expense: 0
             });
@@ -156,13 +152,6 @@ export default function BudgetView({
         setTimeout(() => { historyRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 50);
     };
 
-    // Modal Handlers (Тепер використовують пропси з App.jsx)
-    const handleAddTransaction = () => onAddTransaction();
-    const handleEditTransaction = (tData) => onEditTransaction(tData);
-    const handleSettings = () => onOpenSettings();
-    const handleInvite = () => onOpenInvite();
-    const handleRecurring = () => onOpenRecurring();
-
     return (
         <>
             {/* --- CONTROLS SECTION --- */}
@@ -170,37 +159,49 @@ export default function BudgetView({
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
                     <div className="grid grid-cols-2 sm:flex gap-3 w-full sm:w-auto flex-1">
                         <div className="relative flex-1 min-w-[140px]">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                            <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} className="w-full appearance-none pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none cursor-pointer shadow-sm">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} aria-hidden="true" />
+                            <select 
+                                value={timeFilter} 
+                                onChange={(e) => setTimeFilter(e.target.value)} 
+                                aria-label="Виберіть період"
+                                className="w-full appearance-none pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none cursor-pointer shadow-sm"
+                            >
                                 <option value="this_month">{t.this_month}</option>
                                 <option value="last_month">{t.last_month}</option>
                                 <option value="this_year">{t.this_year}</option>
                                 <option value="all">{t.all_time}</option>
                                 <option value="custom">📅 {lang === 'ua' ? 'Обрати дати' : 'Custom Range'}</option>
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={14} />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={14} aria-hidden="true" />
                         </div>
                         <div className="relative flex-1 min-w-[140px]">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                            <input type="text" placeholder={t.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none shadow-sm" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} aria-hidden="true" />
+                            <input 
+                                type="text" 
+                                placeholder={t.search} 
+                                value={searchTerm} 
+                                onChange={(e) => setSearchTerm(e.target.value)} 
+                                aria-label="Пошук транзакцій"
+                                className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none shadow-sm" 
+                            />
                         </div>
                     </div>
                     <div className="flex items-center gap-2 sm:ml-auto">
-                        <button onClick={handleRecurring} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-100 transition-colors"><RefreshCw size={16} /> <span className="hidden sm:inline">Recurring</span></button>
-                        <button onClick={handleInvite} className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-indigo-100 transition-colors"><Share2 size={16} /></button>
-                        <button onClick={onOpenJoin} className="flex items-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors"><Users size={16} /></button>
+                        <button onClick={onOpenRecurring} aria-label="Регулярні платежі" className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-100 transition-colors"><RefreshCw size={16} aria-hidden="true" /> <span className="hidden sm:inline">Recurring</span></button>
+                        <button onClick={onOpenInvite} aria-label="Запросити партнера" className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-indigo-100 transition-colors"><Share2 size={16} aria-hidden="true" /></button>
+                        <button onClick={onOpenJoin} aria-label="Приєднатися до бюджету" className="flex items-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors"><Users size={16} aria-hidden="true" /></button>
                     </div>
                 </div>
                 {isCustomRange && (
                     <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Calendar size={16} className="text-blue-500 group-hover:text-blue-600 transition-colors" /></div>
-                            <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm cursor-pointer" />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Calendar size={16} className="text-blue-500" /></div>
+                            <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} aria-label="Початкова дата" className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm" />
                         </div>
                         <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><ArrowRight size={16} className="text-indigo-500 group-hover:text-indigo-600 transition-colors" /></div>
-                            <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm cursor-pointer" />
-                            {(customStartDate || customEndDate) && (<button onClick={() => { setCustomStartDate(''); setCustomEndDate(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all z-10"><X size={12}/></button>)}
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><ArrowRight size={16} className="text-indigo-500" /></div>
+                            <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} aria-label="Кінцева дата" className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm" />
+                            {(customStartDate || customEndDate) && (<button onClick={() => { setCustomStartDate(''); setCustomEndDate(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500 z-10"><X size={12}/></button>)}
                         </div>
                     </div>
                 )}
@@ -208,7 +209,7 @@ export default function BudgetView({
 
             {/* --- PROGRESS --- */}
             <div className="min-h-[100px]">
-                <BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={handleSettings} label={t.limits_title} />
+                <BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} />
             </div>
 
             {/* --- CARDS --- */}
@@ -229,8 +230,9 @@ export default function BudgetView({
                   </div>
             </div>
 
-            {/* --- CHARTS --- */}
+            {/* --- CHARTS & HISTORY (All original responsive blocks restored) --- */}
             <div className="grid lg:grid-cols-3 gap-4">
+                {/* Desktop Charts Block */}
                 <div className="hidden lg:block space-y-4">
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center min-h-[400px] h-auto">
                         {expensesByCategory.length > 0 ? (
@@ -242,7 +244,7 @@ export default function BudgetView({
                         )}
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 h-[350px]">
-                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} /> Trends</h3>
+                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} aria-hidden="true" /> Trends</h3>
                         <div className="h-[250px]">
                             <Suspense fallback={<Skeleton className="w-full h-full rounded-2xl" />}>
                                 <SimpleBarChart data={trendsData} currency={currency} />
@@ -251,17 +253,18 @@ export default function BudgetView({
                     </div>
                 </div>
 
+                {/* Mobile Donut Chart Block */}
                 <div className="lg:hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center mx-auto w-full min-h-[350px]">
                     <Suspense fallback={<Skeleton className="w-64 h-64 rounded-full" />}>
                         <SimpleDonutChart data={expensesByCategory} total={expense} currencyCode={currency} formatMoney={formatMoney} label={t.expense} getCategoryName={getCategoryName} otherLabel={t.other} />
                     </Suspense>
                 </div>
 
-                {/* --- HISTORY LIST (Extracted Component) --- */}
+                {/* HISTORY LIST */}
                 <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[765px] shadow-sm border border-slate-100 dark:border-slate-800" ref={historyRef}>
                     <TransactionList 
                         transactions={filteredTransactions}
-                        onEdit={handleEditTransaction}
+                        onEdit={onEditTransaction}
                         onDelete={onDeleteTransaction}
                         onExport={onExport}
                         getCategoryStyles={getCategoryStyles}
@@ -277,8 +280,9 @@ export default function BudgetView({
                     />
                 </div>
                 
+                {/* Mobile Bar Chart Block (Bottom) */}
                 <div className="block lg:hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 min-h-[300px]">
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} /> Trends</h3>
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} aria-hidden="true" /> Trends</h3>
                     <div className="h-[200px]">
                         <Suspense fallback={<Skeleton className="w-full h-full rounded-2xl" />}>
                             <SimpleBarChart data={trendsData} currency={currency} />
@@ -286,7 +290,14 @@ export default function BudgetView({
                     </div>
                 </div>
             </div>
-            <button onClick={handleAddTransaction} className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-50"><Plus size={28}/></button>
+            
+            <button 
+                onClick={onAddTransaction} 
+                aria-label="Додати транзакцію"
+                className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-50"
+            >
+                <Plus size={28} aria-hidden="true" />
+            </button>
         </>
     );
 }

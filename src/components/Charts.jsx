@@ -28,11 +28,9 @@ const getColorHex = (tailwindClass) => {
     return colors[tailwindClass] || '#94a3b8'; 
 };
 
-// Logic to group small expenses - decoupled from render
 const processData = (data, total, getCategoryName, otherLabel) => {
     if (!data || total === 0) return [];
-
-    const threshold = 0.03; // 3%
+    const threshold = 0.03; 
     let mainSegments = [];
     let otherTotal = 0;
 
@@ -66,16 +64,13 @@ const processData = (data, total, getCategoryName, otherLabel) => {
     return mainSegments.sort((a, b) => b.value - a.value);
 };
 
-// Using memo to prevent re-renders if props are identical
 export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, label, getCategoryName, otherLabel }) => {
     const [activeIndex, setActiveIndex] = useState(null);
     
-    // Memoize the data processing to avoid recalculation on hover
     const chartData = useMemo(() => 
         processData(data, total, getCategoryName, otherLabel), 
     [data, total, getCategoryName, otherLabel]);
 
-    // Optimize event handlers with useCallback
     const onPieEnter = useCallback((_, index) => setActiveIndex(index), []);
     const onPieLeave = useCallback(() => setActiveIndex(null), []);
 
@@ -88,8 +83,8 @@ export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, 
 
     return (
         <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
-            <div className="relative w-full h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="relative w-full h-[250px] min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <PieChart>
                         <Pie
                             data={chartData}
@@ -158,13 +153,11 @@ export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, 
 
 export const SimpleBarChart = memo(({ data, currency }) => {
     if (!data || data.length === 0) return null;
-
-    // Use a copy to avoid mutating props if data is frozen
     const chartData = useMemo(() => [...data].reverse(), [data]);
 
     return (
-        <div className="w-full h-[200px] mt-4 animate-in fade-in duration-500">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full h-[200px] mt-4 min-w-0">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
                     <XAxis 
@@ -180,7 +173,7 @@ export const SimpleBarChart = memo(({ data, currency }) => {
                             borderRadius: '12px', 
                             border: 'none', 
                             boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                            backgroundColor: 'var(--tw-bg-opacity, 1) rgb(255 255 255)',
+                            backgroundColor: 'white',
                             color: '#1e293b'
                         }}
                     />
