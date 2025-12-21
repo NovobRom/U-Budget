@@ -9,14 +9,13 @@ const FlagUA = () => <svg width="20" height="15" viewBox="0 0 24 18" className="
 const FlagGB = () => <svg width="20" height="15" viewBox="0 0 60 30" className="rounded-sm shadow-sm inline-block mr-2"><clipPath id="s"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clipPath="url(#s)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6"/><path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#t)" stroke="#C8102E" strokeWidth="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6"/></g></svg>;
 
 export default function GeneralSettings() {
-    // Direct access to contexts ensures immediate UI updates
+    // Отримуємо все з контексту для надійності
     const { lang, setLang, t } = useLanguage();
     const { currency, setCurrency } = useCurrency();
     const { darkMode, setDarkMode } = useTheme();
 
     return (
         <div className="space-y-3 mb-6">
-            {/* Language Settings */}
             <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase">
                     <Globe size={14}/> {t.language}
@@ -40,7 +39,6 @@ export default function GeneralSettings() {
                 </div>
             </div>
 
-            {/* Currency Settings */}
             <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase">
                     <DollarSign size={14}/> {t.currency}
@@ -63,7 +61,6 @@ export default function GeneralSettings() {
                 </div>
             </div>
 
-            {/* Theme Settings */}
             <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase">
                     <Moon size={14}/> {t.appearance}

@@ -61,7 +61,7 @@ export default function AssetsView({
                         </div>
                     );
                 }) : (
-                    <div className="col-span-full text-center py-10 text-slate-400">No assets yet. Add cash, crypto or stocks.</div>
+                    <div className="col-span-full text-center py-10 text-slate-400">{t.no_assets}</div>
                 )}
             </div>
         </div>

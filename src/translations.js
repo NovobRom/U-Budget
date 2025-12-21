@@ -1,6 +1,7 @@
 export const TRANSLATIONS = {
     ua: {
         // --- Auth & General ---
+        website_title: "U-Budget | Керуй грошима розумно",
         login: "Вхід",
         register: "Реєстрація",
         email_placeholder: "Ваш email",
@@ -91,7 +92,7 @@ export const TRANSLATIONS = {
         custom_expense_title: "Власні категорії витрат",
         requests: "Запити на приєднання",
         
-        // --- Team Management (New) ---
+        // --- Team Management ---
         team_title: "Учасники бюджету",
         team_empty: "Поки що тільки ви",
         owner_label: "Власник",
@@ -99,7 +100,7 @@ export const TRANSLATIONS = {
         remove_user_btn: "Видалити",
         leave_budget_btn: "Вийти з бюджету",
 
-        // --- Budget Connection (NEW) ---
+        // --- Budget Connection ---
         budget_connection: "Підключення до Бюджету",
         current_id_label: "ID цього бюджету (Ваш):",
         switch_budget_label: "Перемикнутися на інший бюджет:",
@@ -141,10 +142,10 @@ export const TRANSLATIONS = {
         partner_id_placeholder: "Введіть ID тут...",
         send_request: "Надіслати запит",
         
-        // Errors / Validations
+        // --- Errors / Validations ---
         budget_not_found: "Бюджет з таким ID не знайдено",
         cannot_join_self: "Ви не можете приєднатися до власного бюджету",
-        pending_approval: "Очікування підтвердження...",
+        pending_approval: "Очікування подствердження...",
         cancel_request: "Скасувати запит",
         access_lost: "Доступ до бюджету втрачено",
 
@@ -228,6 +229,7 @@ export const TRANSLATIONS = {
     },
     en: {
         // --- Auth & General ---
+        website_title: "U-Budget | Manage money wisely",
         login: "Login",
         register: "Register",
         email_placeholder: "Your email",
@@ -318,7 +320,7 @@ export const TRANSLATIONS = {
         custom_expense_title: "Custom Expense Categories",
         requests: "Join Requests",
 
-        // --- Team Management (New) ---
+        // --- Team Management ---
         team_title: "Budget Members",
         team_empty: "Just you for now",
         owner_label: "Owner",
@@ -326,7 +328,7 @@ export const TRANSLATIONS = {
         remove_user_btn: "Remove",
         leave_budget_btn: "Leave Budget",
 
-        // --- Budget Connection (NEW) ---
+        // --- Budget Connection ---
         budget_connection: "Budget Connection",
         current_id_label: "Current Budget ID (Yours):",
         switch_budget_label: "Switch to another budget:",

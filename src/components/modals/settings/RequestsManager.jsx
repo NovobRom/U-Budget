@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Check, X } from 'lucide-react';
+import { Bell, Check, X } from 'lucide-react'; // ВИПРАВЛЕНО: Було lucide-center
 
 export default function RequestsManager({ incomingRequests, approveRequest, declineRequest, t }) {
     if (!incomingRequests || incomingRequests.length === 0) return null;

@@ -92,7 +92,12 @@ const AppContent = () => {
 
     // --- EFFECTS ---
     
-    // Theme effect removed (handled by ThemeContext)
+    // Dynamic website title update based on current language
+    useEffect(() => {
+        if (t && t.website_title) {
+            document.title = t.website_title;
+        }
+    }, [t]);
 
     useEffect(() => {
         const syncPhoto = async () => {

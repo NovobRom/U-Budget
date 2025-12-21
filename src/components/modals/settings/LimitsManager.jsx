@@ -4,7 +4,6 @@ import { Plus, Trash2, X } from 'lucide-react';
 export default function LimitsManager({ categories, limits, onSaveLimit, onDeleteCategory, currency, t, getCategoryName }) {
     const [isEditingLimit, setIsEditingLimit] = useState(false);
 
-    // Внутрішній компонент редактора
     const LimitEditor = () => (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4 animate-in fade-in">
             <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-2xl p-4 shadow-xl border border-slate-200 dark:border-slate-700">
@@ -41,10 +40,9 @@ export default function LimitsManager({ categories, limits, onSaveLimit, onDelet
         <div className="mb-6">
             {isEditingLimit && <LimitEditor />}
             
-            {/* LIMITS LIST */}
             <div className="flex justify-between items-center mb-3">
                 <h3 className="font-bold text-xs uppercase text-slate-500">{t.limits_title}</h3>
-                <button onClick={() => setIsEditingLimit(true)} className="text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-lg transition-colors"><Plus size={14}/> Add Limit</button>
+                <button onClick={() => setIsEditingLimit(true)} className="text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-lg transition-colors"><Plus size={14}/> {t.add_limit_btn}</button>
             </div>
             
             <div className="space-y-2 mb-6">
@@ -59,11 +57,10 @@ export default function LimitsManager({ categories, limits, onSaveLimit, onDelet
                     </div> 
                 ))}
                 {categories.filter(c => c.type === 'expense' && limits[c.id] > 0).length === 0 && (
-                    <div className="text-center py-4 text-xs text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">No limits set</div>
+                    <div className="text-center py-4 text-xs text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">{t.no_limits_set}</div>
                 )}
             </div>
 
-            {/* CUSTOM CATEGORIES */}
             {['expense', 'income'].map(type => {
                     const customCats = categories.filter(c => c.type === type && c.isCustom);
                     if (customCats.length === 0) return null;

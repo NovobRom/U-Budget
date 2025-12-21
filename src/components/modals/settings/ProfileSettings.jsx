@@ -14,14 +14,12 @@ export default function ProfileSettings({ user, t }) {
 
         setLoading(true);
         try {
-            // 1. Update Firebase Auth Profile (Local state mainly)
             if (auth.currentUser) {
                 await updateProfile(auth.currentUser, {
                     displayName: displayName
                 });
             }
 
-            // 2. Update Firestore Profile (Source of truth for TeamManager)
             const userProfileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile');
             await updateDoc(userProfileRef, {
                 displayName: displayName
