@@ -26,7 +26,7 @@ export default function BudgetView({
     getCategoryStyles, getCategoryName, lang,
     currentBalance, loadMore, hasMore 
 }) {
-    const [timeFilter, setTimeFilter] = useState('this_month');
+    const [timeFilter, setTimeFilter] = useState('all');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');

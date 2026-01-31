@@ -20,26 +20,35 @@ export const useAssets = (activeBudgetId, currency, t) => {
         return () => unsubscribe();
     }, [activeBudgetId]);
 
-    // Convert
+    // Convert assets to display currency
     useEffect(() => {
         let isMounted = true;
         const convertAssets = async () => {
             const converted = await Promise.all(rawAssets.map(async (a) => {
-                let valuePerUnit = a.valuePerUnit || 1;
+                let convertedValue = a.amount || 0;
+                const assetCurrency = a.currency || a.originalCurrency || currency;
+
+                // Convert to display currency
                 if (a.type === 'crypto' && a.cryptoId) {
                     try {
                         const rate = await fetchExchangeRate(a.cryptoId, currency, true);
-                        if (rate) valuePerUnit = rate;
-                    } catch(e) {}
-                } else if (a.originalCurrency) {
-                    if (a.originalCurrency !== currency) {
-                        try {
-                            const rate = await fetchExchangeRate(a.originalCurrency, currency);
-                            if (rate) valuePerUnit = rate;
-                        } catch(e) {}
-                    } else { valuePerUnit = 1; }
+                        if (rate) convertedValue = (a.amount || 0) * rate;
+                    } catch(e) {
+                        console.error('Failed to convert crypto asset:', e);
+                    }
+                } else if (assetCurrency !== currency) {
+                    try {
+                        const rate = await fetchExchangeRate(assetCurrency, currency);
+                        if (rate) convertedValue = (a.amount || 0) * (a.valuePerUnit || 1) * rate;
+                    } catch(e) {
+                        console.error('Failed to convert asset:', e);
+                    }
+                } else {
+                    // Same currency - just multiply amount by valuePerUnit
+                    convertedValue = (a.amount || 0) * (a.valuePerUnit || 1);
                 }
-                return { ...a, valuePerUnit };
+
+                return { ...a, convertedValue };
             }));
             if (isMounted) setAssets(converted);
         };

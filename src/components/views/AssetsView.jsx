@@ -6,8 +6,8 @@ export default function AssetsView({
     onAddAsset, onEditAsset, onDeleteAsset, onExport 
 }) {
     
-    const netWorth = useMemo(() => { 
-        return assets.reduce((acc, a) => acc + (a.amount * (a.valuePerUnit || 1)), 0); 
+    const netWorth = useMemo(() => {
+        return assets.reduce((acc, a) => acc + (a.convertedValue || 0), 0);
     }, [assets]);
 
     return (
