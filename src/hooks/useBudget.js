@@ -110,15 +110,16 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang, currenc
     }, [budgetData.currentBalance, budgetData.limits, currency]);
 
     // --- SUB-HOOKS ---
+    // NOTE: Write operations are delegated to useBudgetStore, not returned from these hooks
     const transactionLogic = useTransactions(activeBudgetId, user, t, currency, budgetData.baseCurrency);
     const assetLogic = useAssets(activeBudgetId, currency, t);
     const loanLogic = useLoans(activeBudgetId, currency, t);
-    
+
     // We pass convertedLimits to useCategories so it returns correct values for UI
     const categoryLogic = useCategories(
-        activeBudgetId, 
-        { categories: budgetData.categories, limits: convertedLimits }, 
-        t, 
+        activeBudgetId,
+        { categories: budgetData.categories, limits: convertedLimits },
+        t,
         currency
     );
 
@@ -192,12 +193,7 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang, currenc
 
         // Actions
         loadMore: transactionLogic.loadMore,
-        recalculateBalance: transactionLogic.recalculateBalance,
-        
-        addTransaction: transactionLogic.addTransaction,
-        updateTransaction: transactionLogic.updateTransaction,
-        deleteTransaction: transactionLogic.deleteTransaction,
-        
+
         addAsset: assetLogic.addAsset,
         updateAsset: assetLogic.updateAsset,
         deleteAsset: assetLogic.deleteAsset,

@@ -148,6 +148,9 @@ export const TRANSLATIONS = {
         pending_approval: "Очікування подствердження...",
         cancel_request: "Скасувати запит",
         access_lost: "Доступ до бюджету втрачено",
+        exchange_rate_error: "Не вдалося отримати актуальний курс обміну. Використовується останній відомий курс або потрібен ручний ввід.",
+        conversion_error: "Помилка конвертації валюти",
+        invalid_amount: "Некоректна сума",
 
         // --- Footer & Legal ---
         privacy_title: "Політика конфіденційності",
@@ -376,6 +379,9 @@ export const TRANSLATIONS = {
         pending_approval: "Pending Approval...",
         cancel_request: "Cancel Request",
         access_lost: "Access to budget lost",
+        exchange_rate_error: "Could not fetch current exchange rate. Using last known rate or manual input required.",
+        conversion_error: "Currency conversion failed",
+        invalid_amount: "Invalid amount",
 
         // --- Footer & Legal ---
         privacy_title: "Privacy Policy",

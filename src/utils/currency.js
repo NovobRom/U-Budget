@@ -7,6 +7,41 @@ const CRYPTO_IDS = ['bitcoin', 'ethereum', 'tether'];
 const rateCache = new Map();
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
+// Persistent cache configuration
+const CACHE_STORAGE_KEY = 'smart-budget-exchange-rates-cache';
+const CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours for persistent cache
+
+// Load persistent cache on init
+const loadPersistentCache = () => {
+    try {
+        const stored = localStorage.getItem(CACHE_STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            Object.entries(parsed).forEach(([key, value]) => {
+                rateCache.set(key, value);
+            });
+        }
+    } catch (e) {
+        console.error('Failed to load persistent cache:', e);
+    }
+};
+
+// Save to localStorage
+const savePersistentCache = () => {
+    try {
+        const cacheObj = {};
+        rateCache.forEach((value, key) => {
+            cacheObj[key] = value;
+        });
+        localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cacheObj));
+    } catch (e) {
+        console.error('Failed to save cache:', e);
+    }
+};
+
+// Initialize on module load
+loadPersistentCache();
+
 export const fetchExchangeRate = async (base, target, isCrypto = false) => {
     // 1. Same currency check
     if (!base || !target) return 1;
@@ -57,7 +92,23 @@ export const fetchExchangeRate = async (base, target, isCrypto = false) => {
 
     } catch (error) {
         console.error(`Error converting ${base} to ${target}:`, error);
-        return 1; // Return 1 to avoid UI crash
+
+        // Try to use cached rate if available (even if expired)
+        const key = `${base}-${target}-${isCrypto}`;
+        if (rateCache.has(key)) {
+            const cached = rateCache.get(key);
+            const age = Date.now() - cached.timestamp;
+
+            if (age < CACHE_MAX_AGE) {
+                console.warn(`Using cached rate (${(age/1000/60).toFixed(0)}min old):`, cached.rate);
+                return cached.rate;
+            } else {
+                console.warn(`Cached rate too old (${(age/1000/60/60).toFixed(1)}h), discarding`);
+            }
+        }
+
+        // No valid cache - throw error instead of returning 1
+        throw new Error(`Failed to fetch rate ${base}->${target}: ${error.message}`);
     }
 };
 
@@ -66,6 +117,7 @@ export const fetchExchangeRateCached = async (base, target, isCrypto = false) =>
     const key = `${base}-${target}-${isCrypto}`;
     const now = Date.now();
 
+    // Check in-memory cache first
     if (rateCache.has(key)) {
         const cached = rateCache.get(key);
         if (now - cached.timestamp < CACHE_TTL) {
@@ -73,7 +125,14 @@ export const fetchExchangeRateCached = async (base, target, isCrypto = false) =>
         }
     }
 
+    // Fetch fresh rate
     const rate = await fetchExchangeRate(base, target, isCrypto);
+
+    // Update cache
     rateCache.set(key, { rate, timestamp: now });
+
+    // Persist to localStorage
+    savePersistentCache();
+
     return rate;
 };

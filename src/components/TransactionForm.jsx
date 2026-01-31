@@ -19,6 +19,7 @@ export default function TransactionForm({
     const [selectedCurrency, setSelectedCurrency] = useState(currencyCode || 'EUR');
     const [exchangeRate, setExchangeRate] = useState(1);
     const [isCalculating, setIsCalculating] = useState(false);
+    const [exchangeRateError, setExchangeRateError] = useState(null);
     
     const [category, setCategory] = useState('');
     const [description, setDescription] = useState('');
@@ -44,6 +45,7 @@ export default function TransactionForm({
                 setAmount('');
                 setSelectedCurrency(currencyCode || 'EUR');
                 setExchangeRate(1);
+                setExchangeRateError(null);
                 setCategory('');
                 setDescription('');
                 setType('expense');
@@ -59,7 +61,10 @@ export default function TransactionForm({
 
         const getRate = async () => {
             if (selectedCurrency === currencyCode) {
-                if(isMounted) setExchangeRate(1);
+                if(isMounted) {
+                    setExchangeRate(1);
+                    setExchangeRateError(null);
+                }
                 return;
             }
 
@@ -70,9 +75,13 @@ export default function TransactionForm({
                 const rate = await fetchExchangeRate(selectedCurrency, currencyCode);
                 if(isMounted) {
                     setExchangeRate(rate);
+                    setExchangeRateError(null);
                 }
             } catch(e) {
                 console.error(e);
+                if(isMounted) {
+                    setExchangeRateError(e.message);
+                }
             } finally {
                 if(isMounted) setIsCalculating(false);
             }
@@ -196,6 +205,14 @@ export default function TransactionForm({
                                         </span>
                                     </>
                                 )}
+                            </div>
+                        )}
+
+                        {exchangeRateError && (
+                            <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
+                                    ⚠️ {t.exchange_rate_error || 'Could not fetch rate. Using last known or manual input required.'}
+                                </p>
                             </div>
                         )}
                     </div>

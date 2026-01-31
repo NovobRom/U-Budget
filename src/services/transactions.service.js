@@ -49,7 +49,8 @@ class TransactionService {
             try {
                 rateToStorage = await fetchExchangeRate(inputCurrency, this.storageCurrency);
             } catch (error) {
-                console.error("Failed to fetch rate, defaulting to 1:", error);
+                console.error("Failed to fetch rate:", error);
+                throw new Error(`Currency conversion failed: ${error.message}`);
             }
         }
 
@@ -97,7 +98,12 @@ class TransactionService {
             let newRateToStorage = 1;
 
             if (inputCurrency !== this.storageCurrency) {
-                newRateToStorage = await fetchExchangeRate(inputCurrency, this.storageCurrency);
+                try {
+                    newRateToStorage = await fetchExchangeRate(inputCurrency, this.storageCurrency);
+                } catch (error) {
+                    console.error("Failed to fetch rate:", error);
+                    throw new Error(`Currency conversion failed: ${error.message}`);
+                }
             }
             
             const absNewOriginal = Math.abs(newData.originalAmount);

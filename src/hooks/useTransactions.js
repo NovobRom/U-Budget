@@ -1,12 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { 
-    collection, query, orderBy, limit, onSnapshot, 
-    doc, writeBatch, 
-    serverTimestamp, increment, runTransaction
+import {
+    collection, query, orderBy, limit, onSnapshot
 } from 'firebase/firestore';
 import { db, appId } from '../firebase';
-import { toast } from 'react-hot-toast';
-import { fetchExchangeRate } from '../utils/currency';
 import { useCurrencyRates } from './useCurrencyRates';
 
 const STORAGE_CURRENCY = 'EUR';
@@ -79,117 +75,14 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
         setTxLimit(prev => prev + 50);
     };
 
-    // NOTE: The write functions below (add/update/delete) are maintained for compatibility,
-    // but the actual app logic seems to use 'useBudgetStore' for writing. 
-    // If these are used, the onSnapshot listener above will automatically handle the UI update.
-
-    const addTransaction = async (data) => {
-        if (!activeBudgetId || !user) return;
-        
-        const batch = writeBatch(db);
-        const newTxRef = doc(getTxColRef());
-        
-        const inputCurrency = data.originalCurrency || mainCurrency;
-        let rateToStorage = 1;
-
-        if (inputCurrency !== STORAGE_CURRENCY) {
-            try {
-                rateToStorage = await fetchExchangeRate(inputCurrency, STORAGE_CURRENCY);
-            } catch (e) { console.error("Rate error:", e); }
-        }
-
-        const absOriginal = Math.abs(data.originalAmount);
-        const amountInStorage = absOriginal * rateToStorage;
-
-        const payload = { 
-            ...data, 
-            originalAmount: absOriginal,
-            amount: amountInStorage, 
-            userId: user.uid,
-            userName: user.displayName || user.email?.split('@')[0], 
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp() 
-        };
-
-        batch.set(newTxRef, payload);
-
-        const adjustment = payload.type === 'income' ? amountInStorage : -amountInStorage;
-        batch.update(getBudgetDocRef(), { currentBalance: increment(adjustment) });
-
-        await batch.commit();
-    };
-
-    const updateTransaction = async (id, newData) => {
-        if (!activeBudgetId) return;
-        const txRef = doc(getTxColRef(), id);
-        const budgetRef = getBudgetDocRef();
-
-        await runTransaction(db, async (transaction) => {
-            const txDoc = await transaction.get(txRef);
-            if (!txDoc.exists()) throw new Error("Transaction does not exist!");
-            
-            const oldData = txDoc.data();
-            const oldStorageAmount = Math.abs(parseFloat(oldData.amount));
-            const oldImpact = oldData.type === 'income' ? oldStorageAmount : -oldStorageAmount;
-
-            const inputCurrency = newData.originalCurrency || mainCurrency;
-            let newRateToStorage = 1;
-            if (inputCurrency !== STORAGE_CURRENCY) {
-                newRateToStorage = await fetchExchangeRate(inputCurrency, STORAGE_CURRENCY);
-            }
-            
-            const absNewOriginal = Math.abs(newData.originalAmount);
-            const newStorageAmount = absNewOriginal * newRateToStorage;
-            const newImpact = newData.type === 'income' ? newStorageAmount : -newStorageAmount;
-
-            const diff = newImpact - oldImpact;
-
-            transaction.update(txRef, { 
-                ...newData, 
-                originalAmount: absNewOriginal,
-                amount: newStorageAmount, 
-                updatedAt: serverTimestamp() 
-            });
-            
-            if (Math.abs(diff) > 0.0001) {
-                transaction.update(budgetRef, { currentBalance: increment(diff) });
-            }
-        });
-    };
-
-    const deleteTransaction = async (id) => {
-        if (!activeBudgetId) return;
-        if (!confirm(t.confirm_delete || 'Delete?')) return;
-
-        const txRef = doc(getTxColRef(), id);
-        const budgetRef = getBudgetDocRef();
-
-        try {
-            await runTransaction(db, async (transaction) => {
-                const txDoc = await transaction.get(txRef);
-                if (!txDoc.exists()) throw new Error("Transaction not found");
-                
-                const oldData = txDoc.data();
-                const oldStorageAmount = Math.abs(parseFloat(oldData.amount));
-                const adjustment = oldData.type === 'income' ? -oldStorageAmount : oldStorageAmount;
-
-                transaction.delete(txRef);
-                transaction.update(budgetRef, { currentBalance: increment(adjustment) });
-            });
-            toast.success(t.success_delete || 'Deleted');
-        } catch (e) {
-            console.error(e);
-            toast.error("Error deleting transaction");
-        }
-    };
+    // NOTE: This hook is READ-ONLY. It provides real-time transaction data via onSnapshot.
+    // All WRITE operations (add/update/delete) are handled by useBudgetStore -> transactionsService.
+    // The listener automatically updates UI when Firestore changes.
 
     return {
-        transactions,
+        transactions,        // Converted for display
         loadMore,
         hasMore,
-        addTransaction,
-        updateTransaction,
-        deleteTransaction,
-        loadingTx
+        loadingTx           // Loading state
     };
 };

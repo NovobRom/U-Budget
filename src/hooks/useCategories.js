@@ -4,6 +4,7 @@ import { db, appId } from '../firebase';
 import { DEFAULT_CATEGORIES } from '../constants';
 import { toast } from 'react-hot-toast';
 import { fetchExchangeRate } from '../utils/currency';
+import { categoriesService } from '../services/categories.service';
 import { 
     Utensils, Pizza, Coffee, ShoppingBag, ShoppingCart, Home, Car, 
     Heart, Smartphone, Plane, Wallet, Briefcase, PiggyBank, Star, 
@@ -29,6 +30,20 @@ const ICON_MAP = {
 
 const STORAGE_CURRENCY = 'EUR';
 
+/**
+ * useCategories Hook
+ *
+ * @param {string} activeBudgetId - Current budget ID
+ * @param {object} rawData - { categories, limits }
+ *   - categories: Array of category objects from Firestore
+ *   - limits: Object map of categoryId -> limitAmount (MUST be in mainCurrency, pre-converted by parent)
+ * @param {object} t - Translations
+ * @param {string} mainCurrency - Display currency (e.g. 'USD', 'EUR')
+ *
+ * @returns {object} { allCategories, categoryLimits, addCategory, deleteCategory, saveLimit }
+ *   - categoryLimits: Same as input limits (display-ready)
+ *   - saveLimit: Converts back to STORAGE_CURRENCY before saving to Firestore
+ */
 export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') => {
     const { categories: rawCategories = [], limits: rawLimits = {} } = rawData;
 
@@ -47,27 +62,12 @@ export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') 
         return [...mergedStored, ...missingDefaults];
     }, [rawCategories]);
 
-    // Convert limits
+    // Return limits as-is
+    // IMPORTANT: Expects limits ALREADY CONVERTED to mainCurrency by parent (useBudget)
+    // These are display-ready values - no additional conversion needed
     const categoryLimits = useMemo(() => {
-        // We need an async effect for rates usually, but useBudget handles the global rate calc for balance
-        // Ideally we pass a conversion rate here or handle async. 
-        // For simplicity and matching original logic, we apply a rate estimation or assume passed rate.
-        // NOTE: In the original, limits were converted in useEffect.
-        // Let's assume rawLimits are in STORAGE currency and we convert them here if needed.
-        // However, useMemo can't do async. 
-        // Strategy: Return rawLimits multiplied by a rate if main != storage.
-        // But we don't have the rate here easily sync.
-        // Fallback: Return rawLimits as is, UI will have to deal or we assume mainCurrency matches storage for now
-        // OR: useBudget passes processed limits. 
-        // LET'S STICK TO: returning rawLimits but we need to respect the architecture.
-        // FIX: The original useBudget converted limits in an effect. We should rely on useBudget passing CONVERTED limits or handle it.
-        // Since useBudget is the Facade, let's assume rawData.limits IS ALREADY CONVERTED/PROCESSED by useBudget before passing?
-        // No, let's keep it simple: return rawLimits for now, but really we should convert.
-        return rawLimits; 
+        return rawLimits;
     }, [rawLimits]);
-    
-    // !!! Important: We need to handle the limit conversion. 
-    // In the Facade (useBudget), we will handle the limits conversion state and pass THAT to this hook.
     
     const addCategory = async (catData) => {
         if (!activeBudgetId) return;
@@ -90,22 +90,34 @@ export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') 
 
     const saveLimit = async (categoryId, amount) => {
         if (!activeBudgetId) return;
+
         let limitInStorage = parseFloat(amount);
-        
-        // Simple conversion attempt if currencies differ
+
+        if (isNaN(limitInStorage) || limitInStorage < 0) {
+            toast.error(t.invalid_amount || 'Invalid amount');
+            return;
+        }
+
+        // Convert from display currency to storage currency
         if (mainCurrency !== STORAGE_CURRENCY) {
             try {
                 const rate = await fetchExchangeRate(mainCurrency, STORAGE_CURRENCY);
                 limitInStorage = limitInStorage * rate;
-            } catch(e) { console.error(e); }
+                console.log(`Converted limit: ${amount} ${mainCurrency} -> ${limitInStorage.toFixed(2)} ${STORAGE_CURRENCY}`);
+            } catch(e) {
+                console.error('Conversion failed:', e);
+                toast.error(t.conversion_error || 'Currency conversion failed');
+                return;
+            }
         }
-        
-        const currentLimits = { ...rawLimits }; // rawLimits from props
-        if (limitInStorage <= 0) delete currentLimits[categoryId];
-        else currentLimits[categoryId] = limitInStorage;
 
-        await updateDoc(getBudgetDocRef(), { limits: currentLimits });
-        toast.success(t.success_save || 'Saved');
+        try {
+            await categoriesService.saveLimit(activeBudgetId, categoryId, limitInStorage);
+            toast.success(t.success_save || 'Saved');
+        } catch(e) {
+            console.error('Failed to save limit:', e);
+            toast.error(t.error_save || 'Error saving limit');
+        }
     };
 
     return {

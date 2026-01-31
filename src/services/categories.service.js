@@ -1,6 +1,6 @@
-import { 
-    collection, doc, addDoc, deleteDoc, updateDoc, 
-    serverTimestamp 
+import {
+    collection, doc, addDoc, deleteDoc, updateDoc,
+    serverTimestamp, deleteField
 } from 'firebase/firestore';
 import { db, appId } from '../firebase';
 
@@ -57,20 +57,27 @@ class CategoriesService {
 
     /**
      * Save or Update a spending limit for a category
-     * @param {string} budgetId 
-     * @param {string} categoryId 
-     * @param {number} amount 
+     * @param {string} budgetId
+     * @param {string} categoryId
+     * @param {number} amount - Amount in storage currency (EUR). If <= 0, limit will be removed.
      */
     async saveLimit(budgetId, categoryId, amount) {
         if (!budgetId || !categoryId) throw new Error('Missing args');
 
         const budgetRef = this.getBudgetDocRef(budgetId);
-        
-        // Update the specific field in the 'limits' map using dot notation
-        // e.g., "limits.groceries": 500
-        await updateDoc(budgetRef, {
-            [`limits.${categoryId}`]: parseFloat(amount)
-        });
+        const numAmount = parseFloat(amount);
+
+        if (numAmount <= 0) {
+            // Remove limit by deleting the field
+            await updateDoc(budgetRef, {
+                [`limits.${categoryId}`]: deleteField()
+            });
+        } else {
+            // Update the specific field in the 'limits' map using dot notation
+            await updateDoc(budgetRef, {
+                [`limits.${categoryId}`]: numAmount
+            });
+        }
     }
 }
 
