@@ -1,121 +1,75 @@
-import { useState, useEffect, useCallback } from 'react';
-import { doc, onSnapshot, updateDoc, arrayRemove, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db, appId } from '../firebase';
-import { toast } from 'react-hot-toast';
 import { TRANSLATIONS } from '../translations';
-import { fetchExchangeRate } from '../utils/currency';
-import { DEFAULT_CATEGORIES } from '../constants';
 
-// Sub-hooks
+// Core budget hooks (split from original useBudget)
+import { useBudgetData } from './useBudgetData';
+import { useBudgetConversions } from './useBudgetConversions';
+import { useBudgetUsers } from './useBudgetUsers';
+
+// Sub-hooks for specific data domains
 import { useTransactions } from './useTransactions';
 import { useAssets } from './useAssets';
 import { useLoans } from './useLoans';
 import { useCategories } from './useCategories';
 
-const STORAGE_CURRENCY = 'EUR';
-
-const cleanCategoriesForFirestore = (categories) => categories.map(({ icon, ...rest }) => rest);
-
+/**
+ * useBudget Hook - Main orchestrator for budget data
+ *
+ * Combines multiple specialized hooks to provide complete budget functionality:
+ * - useBudgetData: Firestore subscription and core budget data
+ * - useBudgetConversions: Currency conversions for balance and limits
+ * - useBudgetUsers: User management operations
+ * - useTransactions: Transaction list and operations
+ * - useAssets: Asset management
+ * - useLoans: Loan tracking
+ * - useCategories: Category and limit management
+ *
+ * @param {string} activeBudgetId - Current budget ID
+ * @param {boolean} isPendingApproval - Whether user is pending approval
+ * @param {object} user - Current user object
+ * @param {string} lang - Language code ('ua', 'en')
+ * @param {string} currency - Display currency (e.g., 'USD', 'EUR', 'UAH')
+ *
+ * @returns {object} Complete budget interface with data and actions
+ */
 export const useBudget = (activeBudgetId, isPendingApproval, user, lang, currency) => {
-    const [budgetData, setBudgetData] = useState({
-        currentBalance: 0,
-        allowedUsers: [],
-        ownerId: null,
-        categories: [],
-        limits: {},
-        baseCurrency: 'UAH' // legacy fallback
-    });
-    
-    // Converted global states
-    const [currentBalance, setCurrentBalance] = useState(0);
-    const [convertedLimits, setConvertedLimits] = useState({});
-
-    const [loading, setLoading] = useState(true);
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ua'];
 
-    const getBudgetDocRef = useCallback(() => activeBudgetId ? doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId) : null, [activeBudgetId]);
+    // --- CORE BUDGET DATA ---
+    // Firestore subscription, security checks, document creation
+    const { budgetData, loading, getBudgetDocRef } = useBudgetData(
+        activeBudgetId,
+        isPendingApproval,
+        user,
+        t
+    );
 
-    // --- CORE BUDGET SUBSCRIPTION ---
-    useEffect(() => {
-        if (!activeBudgetId || isPendingApproval) {
-            setLoading(false);
-            return;
-        }
+    // --- CURRENCY CONVERSIONS ---
+    // Convert balance and limits from storage currency (EUR) to display currency
+    const { currentBalance, convertedLimits } = useBudgetConversions(budgetData, currency);
 
-        const unsubscribe = onSnapshot(getBudgetDocRef(), async (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                
-                // Security check logic from original file
-                if (user && data.ownerId !== user.uid) {
-                    const isAuthorized = (data.authorizedUsers || []).includes(user.uid);
-                    if (!isAuthorized) {
-                        toast.error(t.access_lost);
-                        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { activeBudgetId: user.uid });
-                        return;
-                    }
-                }
+    // --- USER MANAGEMENT ---
+    // Actions for managing budget users
+    const { removeUser, leaveBudget, switchBudget } = useBudgetUsers(
+        activeBudgetId,
+        user,
+        getBudgetDocRef
+    );
 
-                setBudgetData({
-                    currentBalance: data.currentBalance || 0,
-                    allowedUsers: data.authorizedUsers || [],
-                    ownerId: data.ownerId,
-                    categories: data.categories || [],
-                    limits: data.limits || {},
-                    baseCurrency: data.baseCurrency || 'UAH'
-                });
-            } else {
-                 // Create if not exists (Original logic)
-                 if (user && activeBudgetId === user.uid) {
-                    await setDoc(getBudgetDocRef(), { 
-                        createdAt: serverTimestamp(), 
-                        ownerId: user.uid, 
-                        categories: cleanCategoriesForFirestore(DEFAULT_CATEGORIES), 
-                        limits: {},
-                        currentBalance: 0,
-                        storageCurrency: STORAGE_CURRENCY,
-                        baseCurrency: 'UAH'
-                    });
-                }
-            }
-            setLoading(false);
-        }, (error) => {
-            console.error("Budget snapshot error:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [activeBudgetId, isPendingApproval, getBudgetDocRef, user, t]);
-
-    // --- GLOBAL CONVERSION (Balance & Limits) ---
-    useEffect(() => {
-        let isMounted = true;
-        const convertGlobals = async () => {
-            let rate = 1;
-            if (STORAGE_CURRENCY !== currency) {
-                try { rate = await fetchExchangeRate(STORAGE_CURRENCY, currency); } catch(e) {}
-            }
-            
-            if (isMounted) {
-                setCurrentBalance(budgetData.currentBalance * rate);
-                const newLimits = {};
-                Object.keys(budgetData.limits).forEach(catId => {
-                    newLimits[catId] = budgetData.limits[catId] * rate;
-                });
-                setConvertedLimits(newLimits);
-            }
-        };
-        convertGlobals();
-        return () => { isMounted = false; };
-    }, [budgetData.currentBalance, budgetData.limits, currency]);
-
-    // --- SUB-HOOKS ---
+    // --- SUB-HOOKS FOR SPECIFIC DATA ---
     // NOTE: Write operations are delegated to useBudgetStore, not returned from these hooks
-    const transactionLogic = useTransactions(activeBudgetId, user, t, currency, budgetData.baseCurrency);
+    const transactionLogic = useTransactions(
+        activeBudgetId,
+        user,
+        t,
+        currency,
+        budgetData.baseCurrency
+    );
+
     const assetLogic = useAssets(activeBudgetId, currency, t);
+
     const loanLogic = useLoans(activeBudgetId, currency, t);
 
-    // We pass convertedLimits to useCategories so it returns correct values for UI
+    // Pass convertedLimits to useCategories so it returns display-ready values
     const categoryLogic = useCategories(
         activeBudgetId,
         { categories: budgetData.categories, limits: convertedLimits },
@@ -123,65 +77,15 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang, currenc
         currency
     );
 
-    // --- CORE ACTIONS (User Management) ---
-
-    const removeUser = async (u) => {
-        if (!activeBudgetId) return;
-        
-        // FIXED: Extract UID safely. Handle both direct string, User object, or prevent Event objects.
-        let uidToRemove = null;
-        if (typeof u === 'string') {
-            uidToRemove = u;
-        } else if (u && typeof u === 'object' && u.uid) {
-            uidToRemove = u.uid;
-        }
-
-        if (!uidToRemove) {
-            console.error("removeUser: Invalid user argument", u);
-            toast.error("Error: Invalid user ID");
-            return;
-        }
-        
-        try {
-            await updateDoc(getBudgetDocRef(), {
-                authorizedUsers: arrayRemove(uidToRemove) 
-            });
-            toast.success("User removed successfully");
-        } catch (e) {
-            console.error("Error removing user:", e);
-            toast.error("Error removing user");
-        }
-    };
-
-    const leaveBudget = async () => {
-        if (!activeBudgetId || !user) return;
-        try {
-            await updateDoc(getBudgetDocRef(), { authorizedUsers: arrayRemove(user.uid) });
-            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { activeBudgetId: user.uid });
-            toast.success("You have left the budget");
-        } catch (e) {
-            console.error("Error leaving budget:", e);
-            toast.error("Error leaving budget");
-        }
-    };
-
-    const switchBudget = async (id) => {
-        if (!user) return;
-        try {
-            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), { activeBudgetId: id, isPendingApproval: false });
-            window.location.reload();
-        } catch (e) {
-            toast.error("Error switching budget");
-        }
-    };
-
+    // --- AGGREGATE RETURN ---
+    // Combine all data and actions into single interface
     return {
         // Core Data
         loading: loading || transactionLogic.loadingTx,
         currentBalance,
         allowedUsers: budgetData.allowedUsers,
         budgetOwnerId: budgetData.ownerId,
-        
+
         // Sub-hook Data
         transactions: transactionLogic.transactions,
         hasMore: transactionLogic.hasMore,
@@ -197,15 +101,15 @@ export const useBudget = (activeBudgetId, isPendingApproval, user, lang, currenc
         addAsset: assetLogic.addAsset,
         updateAsset: assetLogic.updateAsset,
         deleteAsset: assetLogic.deleteAsset,
-        
+
         addLoan: loanLogic.addLoan,
         updateLoan: loanLogic.updateLoan,
         deleteLoan: loanLogic.deleteLoan,
-        
+
         addCategory: categoryLogic.addCategory,
         deleteCategory: categoryLogic.deleteCategory,
         saveLimit: categoryLogic.saveLimit,
-        
+
         removeUser,
         leaveBudget,
         switchBudget
