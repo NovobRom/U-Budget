@@ -1,9 +1,7 @@
 export const fetchClientInfo = async (token) => {
-    // During dev, use local proxy. In prod, point to Cloud Function.
-    // Replace 'us-central1-smartbudget-7b00a.cloudfunctions.net' with your actual function URL after deploy
-    const baseUrl = import.meta.env.DEV
-        ? '/monobank'
-        : 'https://us-central1-smartbudget-7b00a.cloudfunctions.net/monobank';
+    // Use relative path '/monobank' which is handled by Vite proxy in Dev
+    // and Firebase Hosting rewrite in Prod.
+    const baseUrl = '/monobank';
 
     try {
         const response = await fetch(`${baseUrl}/merchant/details`, { // Actually for clients it is /personal/client-info
@@ -34,9 +32,7 @@ export const fetchClientInfo = async (token) => {
 };
 
 export const fetchStatements = async (token, accountId, from, to) => {
-    const baseUrl = import.meta.env.DEV
-        ? '/monobank'
-        : 'https://us-central1-smartbudget-7b00a.cloudfunctions.net/monobank';
+    const baseUrl = '/monobank';
     const url = `${baseUrl}/personal/statement/${accountId}/${from}/${to}`;
 
     const res = await fetch(url, {

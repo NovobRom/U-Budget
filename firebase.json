@@ -12,6 +12,10 @@
     ],
     "rewrites": [
       {
+        "source": "/monobank/**",
+        "function": "monobank"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
