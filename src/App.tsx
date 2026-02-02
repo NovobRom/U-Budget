@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { Mail } from 'lucide-react';
@@ -14,10 +15,11 @@ import { useCurrency } from './context/CurrencyContext';
 import { useAppActions } from './hooks/useAppActions';
 
 // COMPONENTS
-import AuthScreen from './components/AuthScreen';
-import AppShell from './components/AppShell';
-import AppRoutes from './routes/AppRoutes';
-import ModalManager from './components/modals/ModalManager';
+import AuthScreen from './components/AuthScreen.jsx';
+import AppShell from './components/AppShell.jsx';
+import AppRoutes from './routes/AppRoutes.jsx';
+import ModalManager from './components/modals/ModalManager.jsx';
+// const ModalManager = React.lazy(() => import('./components/modals/ModalManager'));
 
 // STORE
 import { AppProviders } from './providers/AppProviders';

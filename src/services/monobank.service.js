@@ -4,9 +4,7 @@ export const fetchClientInfo = async (token) => {
     const baseUrl = '/monobank';
 
     try {
-        const response = await fetch(`${baseUrl}/merchant/details`, { // Actually for clients it is /personal/client-info
-            // Wait, the docs say /personal/client-info for personal token
-        });
+
 
         // Correct endpoint for Personal Token
         const clientInfoUrl = `${baseUrl}/personal/client-info`;
