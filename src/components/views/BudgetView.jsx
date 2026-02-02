@@ -24,7 +24,8 @@ export default function BudgetView({
     onExport,
     onOpenJoin,
     getCategoryStyles, getCategoryName, lang,
-    currentBalance, loadMore, hasMore
+    currentBalance, loadMore, hasMore,
+    onSaveTransaction // Passed from AppRoutes
 }) {
     const [timeFilter, setTimeFilter] = useState('all');
     const [customStartDate, setCustomStartDate] = useState('');
@@ -164,7 +165,15 @@ export default function BudgetView({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 <div><BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} /></div>
-                <div className="col-span-1 md:col-span-1 lg:col-span-2"><Suspense fallback={<Skeleton className="h-full w-full" />}><MonobankConnect lang={lang} /></Suspense></div>
+                <div className="col-span-1 md:col-span-1 lg:col-span-2">
+                    <Suspense fallback={<Skeleton className="h-full w-full" />}>
+                        <MonobankConnect
+                            lang={lang}
+                            onSyncTransactions={(tx) => onSaveTransaction(tx, null)}
+                            existingTransactions={transactions}
+                        />
+                    </Suspense>
+                </div>
             </div>
 
             <BudgetSummaryCards

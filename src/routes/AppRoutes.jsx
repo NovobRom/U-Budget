@@ -173,6 +173,7 @@ export default function AppRoutes({
                             loadMore={loadMore}
                             hasMore={hasMore}
                             recalculateBalance={recalculateBalance}
+                            onSaveTransaction={handleSaveTransaction}
                         />
                     </Suspense>
                 } />

@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Loader2, Check, RefreshCw, Smartphone } from 'lucide-react';
 import { useMonobankStore } from '../../store/useMonobankStore';
 import { fetchClientInfo, fetchStatements } from '../../services/monobank.service';
+import { getCategoryByMcc } from '../../utils/mccCodes';
 import toast from 'react-hot-toast';
 
-export default function MonobankConnect({ lang }) {
+export default function MonobankConnect({ lang, onSyncTransactions, existingTransactions = [] }) {
     const { token, setToken, accounts, setAccounts, lastSyncTime, setLastSyncTime } = useMonobankStore();
     const [inputToken, setInputToken] = useState(token);
     const [loading, setLoading] = useState(false);
@@ -26,8 +27,8 @@ export default function MonobankConnect({ lang }) {
     };
 
     const handleSync = async () => {
-        // Simple rate limit check (naive)
         const now = Date.now();
+        // Allow sync if 60s passed
         if (now - lastSyncTime < 60000) {
             const waitSec = Math.ceil((60000 - (now - lastSyncTime)) / 1000);
             toast.error(lang === 'ua' ? `Зачекайте ${waitSec} с` : `Wait ${waitSec}s`);
@@ -36,13 +37,70 @@ export default function MonobankConnect({ lang }) {
 
         setSyncing(true);
         try {
-            // Sync logic will be extended here to fetch statements for each account
-            // For now, let's just refresh client info
-            const data = await fetchClientInfo(token);
-            setAccounts(data.accounts);
+            // 1. Refresh Accounts (Balance)
+            const clientData = await fetchClientInfo(token);
+            setAccounts(clientData.accounts);
+
+            // 2. Fetch Transactions (Statements) - Last 31 days (max allowed is 31 days + 1 hour)
+            const to = Math.floor(now / 1000);
+            const from = to - (30 * 24 * 60 * 60); // 30 days ago
+
+            let newTxCount = 0;
+
+            // Limit: fetch only for first 2 active accounts to avoid hitting rate limits instantly
+            // Realistically user has 1-2 main cards (UAH [980], USD [840], EUR [978])
+            // Monobank rate limit is Global for token? Or per endpoint? It says "1 request per 60s" per endpoint usually.
+            // Actually, "Statement" endopint has specific limits.
+            // Let's try fetching ONLY for the first account (Black card usually) for now to be safe.
+            const mainAccount = clientData.accounts.find(a => a.currencyCode === 980); // UAH
+
+            if (mainAccount && onSyncTransactions) {
+                const statements = await fetchStatements(token, mainAccount.id, from, to);
+                if (Array.isArray(statements)) {
+                    // Filter duplicates
+                    // We check if we already have a transaction with this monobankId
+                    // OR if we don't store monobankId, we check time & amount matches
+
+                    const newItems = statements.filter(stmt => {
+                        const exists = existingTransactions.some(tx =>
+                            tx.monobankId === stmt.id ||
+                            (tx.date === new Date(stmt.time * 1000).toISOString().split('T')[0] && tx.amount === Math.abs(stmt.amount / 100) && tx.description === stmt.description)
+                        );
+                        return !exists;
+                    });
+
+                    for (const item of newItems) {
+                        const isExpense = item.amount < 0;
+                        const amount = Math.abs(item.amount / 100);
+                        const categoryId = getCategoryByMcc(item.mcc);
+
+                        // Construct U-Budget Transaction
+                        const newTx = {
+                            amount: amount,
+                            type: isExpense ? 'expense' : 'income',
+                            category: isExpense ? categoryId : 'salary', // simple fallback for income
+                            date: new Date(item.time * 1000).toISOString().split('T')[0],
+                            description: item.description,
+                            monobankId: item.id,
+                            originalCurrency: 'UAH', // Simplified
+                            originalAmount: item.amount / 100
+                        };
+
+                        await onSyncTransactions(newTx, null); // null = not editing
+                        newTxCount++;
+                    }
+                }
+            }
+
             setLastSyncTime(Date.now());
-            toast.success(lang === 'ua' ? 'Дані оновлено' : 'Data synced');
+            if (newTxCount > 0) {
+                toast.success(lang === 'ua' ? `Додано ${newTxCount} транзакцій` : `Added ${newTxCount} transactions`);
+            } else {
+                toast.success(lang === 'ua' ? 'Баланс оновлено' : 'Balance synced');
+            }
+
         } catch (error) {
+            console.error(error);
             toast.error(error.message);
         } finally {
             setSyncing(false);
@@ -112,7 +170,7 @@ export default function MonobankConnect({ lang }) {
                         className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                     >
                         {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                        {lang === 'ua' ? 'Оновити баланс' : 'Sync Balance'}
+                        {lang === 'ua' ? 'Оновити баланс і транзакції' : 'Sync Balance & Transactions'}
                     </button>
 
                     <div className="text-[10px] text-center text-slate-400">

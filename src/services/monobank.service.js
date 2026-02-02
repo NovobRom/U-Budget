@@ -1,7 +1,9 @@
 export const fetchClientInfo = async (token) => {
-    // During dev, use local proxy. In prod, this should point to a backend function.
-    // NOTE: Direct calls to monobank from browser will fail CORS without proxy/backend.
-    const baseUrl = import.meta.env.DEV ? '/monobank' : 'https://api.monobank.ua/api';
+    // During dev, use local proxy. In prod, point to Cloud Function.
+    // Replace 'us-central1-smartbudget-7b00a.cloudfunctions.net' with your actual function URL after deploy
+    const baseUrl = import.meta.env.DEV
+        ? '/monobank'
+        : 'https://us-central1-smartbudget-7b00a.cloudfunctions.net/monobank';
 
     try {
         const response = await fetch(`${baseUrl}/merchant/details`, { // Actually for clients it is /personal/client-info
@@ -32,7 +34,9 @@ export const fetchClientInfo = async (token) => {
 };
 
 export const fetchStatements = async (token, accountId, from, to) => {
-    const baseUrl = import.meta.env.DEV ? '/monobank' : 'https://api.monobank.ua/api';
+    const baseUrl = import.meta.env.DEV
+        ? '/monobank'
+        : 'https://us-central1-smartbudget-7b00a.cloudfunctions.net/monobank';
     const url = `${baseUrl}/personal/statement/${accountId}/${from}/${to}`;
 
     const res = await fetch(url, {
