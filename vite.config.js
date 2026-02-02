@@ -82,6 +82,13 @@ export default defineConfig({
 
   server: {
     port: 5173,
+    proxy: {
+      '/monobank': {
+        target: 'https://api.monobank.ua',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/monobank/, '/api')
+      }
+    }
   },
 
   build: {

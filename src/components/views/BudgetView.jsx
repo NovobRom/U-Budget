@@ -11,6 +11,7 @@ import BudgetCharts from './budget/BudgetCharts';
 const SimpleBarChart = lazy(() =>
     import('../Charts').then(module => ({ default: module.SimpleBarChart }))
 );
+const MonobankConnect = lazy(() => import('../integrations/MonobankConnect'));
 
 const Skeleton = ({ className }) => (
     <div className={`animate-pulse bg-slate-200 dark:bg-slate-800 rounded-xl ${className}`}></div>
@@ -161,8 +162,9 @@ export default function BudgetView({
                 onJoin={onOpenJoin}
             />
 
-            <div className="min-h-[100px]">
-                <BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div><BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} /></div>
+                <div className="col-span-1 md:col-span-1 lg:col-span-2"><Suspense fallback={<Skeleton className="h-full w-full" />}><MonobankConnect lang={lang} /></Suspense></div>
             </div>
 
             <BudgetSummaryCards
