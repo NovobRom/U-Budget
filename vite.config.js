@@ -32,6 +32,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        cleanupOutdatedCaches: true, // Offline mode fix
+        clientsClaim: true, // Offline mode fix
+        skipWaiting: true, // Offline mode fix
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
@@ -40,7 +43,7 @@ export default defineConfig({
               cacheName: 'firebase-data-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 86400
+                maxAgeSeconds: 86400 // 24h
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -60,7 +63,7 @@ export default defineConfig({
             options: {
               cacheName: 'gstatic-fonts-cache',
               expiration: {
-                maxAgeSeconds: 31536000
+                maxAgeSeconds: 31536000 // 1 year
               }
             }
           }
@@ -68,27 +71,30 @@ export default defineConfig({
       }
     })
   ],
-  
-  envPrefix: 'REACT_APP_', 
-  
+
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
+  },
+
+  envPrefix: 'REACT_APP_',
+
   server: {
     port: 5173,
   },
-  
+
   build: {
     target: 'es2020',
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // React core separate
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
             return 'vendor-react';
           }
-          // Firebase SDK separate
           if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
             return 'vendor-firebase';
           }
-          // Recharts (heavy charting library) separate
           if (id.includes('node_modules/recharts')) {
             return 'vendor-recharts';
           }
