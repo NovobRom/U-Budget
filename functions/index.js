@@ -6,11 +6,19 @@ exports.monobank = onRequest({
     cors: true,
     maxInstances: 10
 }, async (req, res) => {
-    // 1. Get path from query or URL params (e.g., /api/monobank/personal/client-info)
-    // Our rewrite rule in vite sends: /api/monobank -> but in cloud functions it is /monobank
+    // Firebase Hosting rewrite sends /monobank/** to this function
+    // req.path will be "/monobank/personal/client-info" - we need to strip "/monobank"
 
-    // Usage: https://us-central1-YOUR-PROJECT.cloudfunctions.net/monobank/personal/client-info
-    // req.path will be "/personal/client-info"
+    // 1. Strip /monobank prefix from path
+    let apiPath = req.path;
+    if (apiPath.startsWith('/monobank')) {
+        apiPath = apiPath.replace('/monobank', '');
+    }
+
+    // Ensure path starts with /
+    if (!apiPath.startsWith('/')) {
+        apiPath = '/' + apiPath;
+    }
 
     // 2. Validate Token
     const token = req.get("X-Token");
@@ -19,18 +27,31 @@ exports.monobank = onRequest({
         return;
     }
 
-    // 3. Forward Request
-    const targetUrl = `https://api.monobank.ua${req.path}`;
+    // 3. Forward Request to Monobank API
+    const targetUrl = `https://api.monobank.ua${apiPath}`;
     logger.info(`Proxying to: ${targetUrl}`);
 
     try {
         const monoRes = await fetch(targetUrl, {
             method: req.method,
             headers: {
-                "X-Token": token
+                "X-Token": token,
+                "Content-Type": "application/json"
             },
             body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined
         });
+
+        // Handle non-JSON responses (like 404 HTML pages)
+        const contentType = monoRes.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const text = await monoRes.text();
+            logger.error(`Non-JSON response from Monobank: ${text.substring(0, 200)}`);
+            res.status(monoRes.status).json({
+                error: "Invalid response from Monobank API",
+                status: monoRes.status
+            });
+            return;
+        }
 
         if (monoRes.status === 429) {
             res.status(429).json({ error: "Too many requests to Monobank (Limit 1 per 60s)" });
