@@ -231,4 +231,34 @@ export default {
     verify_email_text_start: "We sent an email to",
     verify_email_text_end: "Please follow the link in the email to activate your account.",
     i_verified_btn: "I Verified!",
+
+    // --- Import ---
+    import_btn: "Import",
+    import_title: "Import Transactions",
+    import_drop_hint: "Drag & drop CSV file here or click to select",
+    import_invalid_format: "Invalid file format. Please select a .csv file",
+    import_unknown_structure: "Unknown file structure. Expected Revolut CSV format",
+    import_parse_error: "Error reading file",
+    import_file_too_large: "File is too large (max 5MB)",
+    import_no_transactions: "No valid transactions found",
+    import_preview_title: "Preview",
+    import_found_transactions: "transactions found",
+    import_select_all: "Select All",
+    import_back: "Back",
+    import_confirm: "Import",
+    import_success: "Successfully imported",
+    import_skipped_duplicates: "duplicates skipped",
+    transactions: "transactions",
+
+    // --- Category Rules ---
+    category_rules_title: "Category Rules",
+    category_rules_hint: "Auto-assign categories during CSV import",
+    add_rule: "Add Rule",
+    keyword: "Keyword",
+    rule_placeholder: "e.g. maxima, bolt...",
+    rules_reset_defaults: 'Reset to defaults',
+
+    // AI Loading
+    ai_loading: 'AI is analyzing your expenses...',
+    ai_loading_hint: 'This may take a few seconds',
 };

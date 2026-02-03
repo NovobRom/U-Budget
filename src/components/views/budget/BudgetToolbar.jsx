@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, ChevronDown, Search, Share2, Users, RefreshCw, X, ArrowRight } from 'lucide-react';
+import { Calendar, ChevronDown, Search, Share2, Users, RefreshCw, X, ArrowRight, Upload } from 'lucide-react';
 
 export default function BudgetToolbar({
     timeFilter, setTimeFilter,
@@ -8,7 +8,7 @@ export default function BudgetToolbar({
     customStartDate, setCustomStartDate,
     customEndDate, setCustomEndDate,
     t,
-    onRecurring, onInvite, onJoin
+    onRecurring, onInvite, onJoin, onImport
 }) {
     return (
         <div className="flex flex-col gap-3 px-1 mb-4 min-h-[50px]">
@@ -31,6 +31,7 @@ export default function BudgetToolbar({
                     </div>
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">
+                    <button onClick={onImport} className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-emerald-100 transition-colors" title={t.import_btn || 'Import'}><Upload size={16} /><span className="hidden sm:inline">{t.import_btn || 'Import'}</span></button>
                     <button onClick={onRecurring} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-100 transition-colors"><RefreshCw size={16} /> <span className="hidden sm:inline">{t.recurring_btn}</span></button>
                     <button onClick={onInvite} className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-indigo-100 transition-colors"><Share2 size={16} /></button>
                     <button onClick={onJoin} className="flex items-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors"><Users size={16} /></button>

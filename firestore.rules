@@ -69,10 +69,10 @@ service cloud.firestore {
         allow read, write: if isUser(userId);
       }
 
-      // 2. BUDGET DATA COLLECTIONS (Transactions, Assets, Loans, Categories)
+      // 2. BUDGET DATA COLLECTIONS (Transactions, Assets, Loans, Categories, Settings)
       match /users/{budgetId}/{collectionName}/{docId} {
         allow read, write: if 
-          (collectionName in ['transactions', 'assets', 'loans', 'categories']) &&
+          (collectionName in ['transactions', 'assets', 'loans', 'categories', 'settings']) &&
           (isUser(budgetId) || (budgetExists(appId, budgetId) && hasRemoteAccess(appId, budgetId)));
       }
 

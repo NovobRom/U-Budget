@@ -231,4 +231,34 @@ export default {
     verify_email_text_start: "Ми надіслали лист на",
     verify_email_text_end: "Будь ласка, перейдіть за посиланням у листі, щоб активувати акаунт.",
     i_verified_btn: "Я підтвердив!",
+
+    // --- Import ---
+    import_btn: "Імпорт",
+    import_title: "Імпорт транзакцій",
+    import_drop_hint: "Перетягніть CSV файл сюди або натисніть для вибору",
+    import_invalid_format: "Невірний формат файлу. Оберіть .csv",
+    import_unknown_structure: "Невідома структура файлу. Очікується Revolut CSV",
+    import_parse_error: "Помилка при читанні файлу",
+    import_file_too_large: "Файл занадто великий (макс. 5MB)",
+    import_no_transactions: "Не знайдено жодної дійсної транзакції",
+    import_preview_title: "Попередній перегляд",
+    import_found_transactions: "транзакцій знайдено",
+    import_select_all: "Вибрати всі",
+    import_back: "Назад",
+    import_confirm: "Імпортувати",
+    import_success: "Успішно імпортовано",
+    import_skipped_duplicates: "дублікатів пропущено",
+    transactions: "транзакцій",
+
+    // --- Category Rules ---
+    category_rules_title: "Правила категоризації",
+    category_rules_hint: "Автоматичне визначення категорій при імпорті CSV",
+    add_rule: "Додати правило",
+    keyword: "Ключове слово",
+    rule_placeholder: "напр. maxima, bolt...",
+    rules_reset_defaults: 'Відновити стандартні',
+
+    // AI Loading
+    ai_loading: 'ШІ аналізує ваші витрати...',
+    ai_loading_hint: 'Це може зайняти кілька секунд',
 };

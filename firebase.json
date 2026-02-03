@@ -16,6 +16,10 @@
         "function": "monobank"
       },
       {
+        "source": "/categorize",
+        "function": "categorize"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

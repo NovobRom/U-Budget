@@ -24,7 +24,7 @@ const Skeleton = ({ className }) => (
 export default function BudgetView({
     activeBudgetId,
     transactions, categories, limits, currency, formatMoney, t,
-    onOpenSettings, onOpenInvite, onOpenRecurring, onAddTransaction, onEditTransaction,
+    onOpenSettings, onOpenInvite, onOpenRecurring, onOpenImport, onAddTransaction, onEditTransaction,
     onDeleteTransaction,
     onExport,
     onOpenJoin,
@@ -130,7 +130,7 @@ export default function BudgetView({
 
         if (searchTerm) {
             const lowerTerm = searchTerm.toLowerCase();
-            list = list.filter(t => t.description.toLowerCase().includes(lowerTerm));
+            list = list.filter(t => (t.description || t.comment || '').toLowerCase().includes(lowerTerm));
         }
 
         return list;
@@ -292,6 +292,7 @@ export default function BudgetView({
                 onRecurring={onOpenRecurring}
                 onInvite={onOpenInvite}
                 onJoin={onOpenJoin}
+                onImport={onOpenImport}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">

@@ -5,6 +5,8 @@ import AppShell from '../components/AppShell';
 import { CURRENCIES } from '../constants';
 import { toast } from 'react-hot-toast';
 import { useModalStore } from '../store/useModalStore';
+import { transactionsService } from '../services/transactions.service';
+import { getCategoryRules } from '../services/categoryRules.service';
 
 // Lazy loaded views
 const BudgetView = lazy(() => import('../components/views/BudgetView'));
@@ -161,6 +163,33 @@ export default function AppRoutes({
                                 onAdd: async (tx) => { actions.handleSaveTransaction(tx, null); }, // Use action
                                 formatMoney, currency, t
                             })}
+                            onOpenImport={async () => {
+                                // Load category rules before opening modal
+                                const rules = await getCategoryRules(activeBudgetId);
+                                openModal('import', {
+                                    t,
+                                    categoryRules: rules,
+                                    categories: allCategories, // Pass categories for AI categorization
+                                    onImport: async (parsedTxs) => {
+                                        try {
+                                            const result = await transactionsService.importTransactions(
+                                                activeBudgetId,
+                                                user,
+                                                parsedTxs,
+                                                currency
+                                            );
+                                            if (result.imported > 0) {
+                                                toast.success(`${t.import_success || 'Imported'}: ${result.imported}`);
+                                            }
+                                            return result;
+                                        } catch (err) {
+                                            console.error('[Import] Error:', err);
+                                            toast.error(t.error_save || 'Import failed');
+                                            throw err;
+                                        }
+                                    }
+                                });
+                            }}
                             onAddTransaction={() => openTransactionModal(null)}
                             onEditTransaction={(tx) => openTransactionModal(tx)}
                             onDeleteTransaction={handleDeleteTransaction}

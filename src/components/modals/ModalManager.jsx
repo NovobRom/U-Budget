@@ -12,6 +12,7 @@ import LinkModal from './LinkModal';
 import SettingsModal from './SettingsModal';
 import InfoModal from './InfoModal';
 import RecurringModal from './RecurringModal';
+import ImportModal from './ImportModal';
 
 export default function ModalManager() {
     const activeModal = useModalStore((state) => state.activeModal);
@@ -40,6 +41,8 @@ export default function ModalManager() {
                 return <InfoModal {...modalProps} isOpen={true} onClose={closeModal} type={modalProps.type} />;
             case 'recurring':
                 return <RecurringModal {...modalProps} isOpen={true} onClose={closeModal} />;
+            case 'import':
+                return <ImportModal {...modalProps} isOpen={true} onClose={closeModal} />;
             default:
                 return null;
         }
