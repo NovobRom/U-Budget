@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getAggregateFromServer, sum } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db, appId } from '../firebase';
 
 /**
  * useTransactionTotals Hook
  * 
- * Uses Firestore server-side aggregation to calculate total income and expenses
- * without loading all transaction documents. Much more efficient than client-side sum.
+ * Loads all transactions and calculates totals client-side.
+ * This ensures accurate totals regardless of pagination in the transaction list.
  * 
  * @param {string} activeBudgetId - Current budget ID
  * @param {string} timeFilter - Time filter ('all', 'this_month', 'last_month', etc.)
@@ -37,54 +37,63 @@ export const useTransactionTotals = (
             try {
                 const txCollection = collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions');
 
-                // Build date filter
+                // Fetch all transactions (no limit)
+                const snapshot = await getDocs(txCollection);
+                const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Build date filter function
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
 
-                let startDate = null;
-                let endDate = null;
+                const isInRange = (dateStr) => {
+                    if (timeFilter === 'all') return true;
 
-                if (timeFilter === 'this_month') {
-                    startDate = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
-                    endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
-                } else if (timeFilter === 'last_month') {
-                    startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0];
-                    endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0];
-                } else if (timeFilter === 'this_year') {
-                    startDate = new Date(currentYear, 0, 1).toISOString().split('T')[0];
-                    endDate = new Date(currentYear, 11, 31).toISOString().split('T')[0];
-                } else if (timeFilter === 'custom') {
-                    startDate = customStartDate || null;
-                    endDate = customEndDate || null;
-                }
-                // For 'all', startDate and endDate remain null - no date filter
+                    const d = new Date(dateStr);
 
-                // Build queries
-                let incomeQuery = query(txCollection, where('type', '==', 'income'));
-                let expenseQuery = query(txCollection, where('type', '==', 'expense'));
+                    if (timeFilter === 'this_month') {
+                        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                    }
+                    if (timeFilter === 'last_month') {
+                        const last = new Date(currentYear, currentMonth - 1, 1);
+                        return d.getMonth() === last.getMonth() && d.getFullYear() === last.getFullYear();
+                    }
+                    if (timeFilter === 'this_year') {
+                        return d.getFullYear() === currentYear;
+                    }
+                    if (timeFilter === 'custom') {
+                        if (!customStartDate && !customEndDate) return true;
+                        const txDate = new Date(dateStr);
+                        txDate.setHours(0, 0, 0, 0);
+                        const start = customStartDate ? new Date(customStartDate) : new Date('1970-01-01');
+                        const end = customEndDate ? new Date(customEndDate) : new Date('9999-12-31');
+                        start.setHours(0, 0, 0, 0);
+                        end.setHours(0, 0, 0, 0);
+                        return txDate >= start && txDate <= end;
+                    }
+                    return true;
+                };
 
-                // Add date filters only if specified
-                if (startDate && endDate) {
-                    incomeQuery = query(incomeQuery, where('date', '>=', startDate), where('date', '<=', endDate));
-                    expenseQuery = query(expenseQuery, where('date', '>=', startDate), where('date', '<=', endDate));
-                } else if (startDate) {
-                    incomeQuery = query(incomeQuery, where('date', '>=', startDate));
-                    expenseQuery = query(expenseQuery, where('date', '>=', startDate));
-                } else if (endDate) {
-                    incomeQuery = query(incomeQuery, where('date', '<=', endDate));
-                    expenseQuery = query(expenseQuery, where('date', '<=', endDate));
-                }
+                // Calculate totals
+                let income = 0;
+                let expense = 0;
 
-                // Execute aggregations in parallel
-                const [incomeSnapshot, expenseSnapshot] = await Promise.all([
-                    getAggregateFromServer(incomeQuery, { total: sum('amount') }),
-                    getAggregateFromServer(expenseQuery, { total: sum('amount') })
-                ]);
+                transactions.forEach(t => {
+                    if (!isInRange(t.date)) return;
+
+                    // Use the stored amount directly (already in storage currency)
+                    const amount = Math.abs(Number(t.amount) || 0);
+
+                    if (t.type === 'income') {
+                        income += amount;
+                    } else if (t.type === 'expense') {
+                        expense += amount;
+                    }
+                });
 
                 // Round to 2 decimal places
-                setTotalIncome(Math.round((incomeSnapshot.data().total || 0) * 100) / 100);
-                setTotalExpense(Math.round((expenseSnapshot.data().total || 0) * 100) / 100);
+                setTotalIncome(Math.round(income * 100) / 100);
+                setTotalExpense(Math.round(expense * 100) / 100);
             } catch (error) {
                 console.error('[useTransactionTotals] Error fetching totals:', error);
                 setTotalIncome(0);
