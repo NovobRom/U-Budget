@@ -4,7 +4,7 @@
 
 /* --- Styles migrated from App.css --- */
 #root {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
   /* padding: 2rem;  <-- Вимкнено, бо в App.jsx є свої паддінги, це може конфліктувати з мобільною версткою */
   /* text-align: center; <-- Вимкнено, бо більшість контенту вирівняно по лівому краю або flex */
