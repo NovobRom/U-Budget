@@ -6,7 +6,7 @@ import { getCategoryByMcc } from '../../utils/mccCodes';
 import toast from 'react-hot-toast';
 
 export default function MonobankConnect({ lang, onSyncTransactions, existingTransactions = [] }) {
-    const { token, setToken, accounts, setAccounts, lastSyncTime, setLastSyncTime } = useMonobankStore();
+    const { token, setToken, accounts, setAccounts, lastSyncTime, setLastSyncTime, isLoading } = useMonobankStore();
     const [inputToken, setInputToken] = useState(token);
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
@@ -16,8 +16,8 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
         setLoading(true);
         try {
             const data = await fetchClientInfo(inputToken);
-            setToken(inputToken);
-            setAccounts(data.accounts);
+            await setToken(inputToken);
+            await setAccounts(data.accounts);
             toast.success(lang === 'ua' ? 'Monobank успішно підключено!' : 'Monobank connected successfully!');
         } catch (error) {
             toast.error(error.message);
@@ -39,7 +39,7 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
         try {
             // 1. Refresh Accounts (Balance)
             const clientData = await fetchClientInfo(token);
-            setAccounts(clientData.accounts);
+            await setAccounts(clientData.accounts);
 
             // 2. Fetch Transactions (Statements) - Last 31 days (max allowed is 31 days + 1 hour)
             const to = Math.floor(now / 1000);
@@ -92,7 +92,7 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                 }
             }
 
-            setLastSyncTime(Date.now());
+            await setLastSyncTime(Date.now());
             if (newTxCount > 0) {
                 toast.success(lang === 'ua' ? `Додано ${newTxCount} транзакцій` : `Added ${newTxCount} transactions`);
             } else {

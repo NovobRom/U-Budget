@@ -64,6 +64,11 @@ service cloud.firestore {
         allow write: if isUser(userId);
       }
 
+      // 1.5 USER INTEGRATIONS (Monobank, etc.) - Private to user only
+      match /users/{userId}/integrations/{integrationId} {
+        allow read, write: if isUser(userId);
+      }
+
       // 2. BUDGET DATA COLLECTIONS (Transactions, Assets, Loans, Categories)
       match /users/{budgetId}/{collectionName}/{docId} {
         allow read, write: if 

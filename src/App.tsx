@@ -62,6 +62,18 @@ const AppContent = () => {
         syncPhoto();
     }, [user]);
 
+    // Initialize Monobank store from Firestore when user logs in
+    useEffect(() => {
+        const initMonobank = async () => {
+            if (user?.uid) {
+                const { initFromFirestore } = await import('./store/useMonobankStore');
+                // @ts-ignore - dynamic import
+                (await import('./store/useMonobankStore')).useMonobankStore.getState().initFromFirestore(user.uid);
+            }
+        };
+        initMonobank();
+    }, [user?.uid]);
+
     // --- RENDERING ---
 
     if (authLoading) return <AppShell />;
