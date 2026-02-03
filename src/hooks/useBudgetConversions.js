@@ -37,13 +37,13 @@ export const useBudgetConversions = (budgetData, displayCurrency) => {
             }
 
             if (isMounted) {
-                // Convert balance
-                setCurrentBalance(budgetData.currentBalance * rate);
+                // Convert balance and round to 2 decimals
+                setCurrentBalance(Math.round(budgetData.currentBalance * rate * 100) / 100);
 
-                // Convert limits
+                // Convert limits and round to 2 decimals
                 const newLimits = {};
                 Object.keys(budgetData.limits).forEach(catId => {
-                    newLimits[catId] = budgetData.limits[catId] * rate;
+                    newLimits[catId] = Math.round(budgetData.limits[catId] * rate * 100) / 100;
                 });
                 setConvertedLimits(newLimits);
             }

@@ -51,7 +51,7 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
     const currenciesNeeded = useMemo(() => {
         const set = new Set();
         set.add(legacyBaseCurrency);
-        rawTransactions.forEach(t => { 
+        rawTransactions.forEach(t => {
             if (t.originalCurrency) set.add(t.originalCurrency);
         });
         return Array.from(set);
@@ -65,9 +65,11 @@ export const useTransactions = (activeBudgetId, user, t, mainCurrency = 'EUR', l
         return rawTransactions.map(t => {
             const sourceCurr = t.originalCurrency || legacyBaseCurrency;
             const sourceAmt = t.originalAmount !== undefined ? t.originalAmount : t.amount;
-            const rate = rates[sourceCurr] || 1; 
-            
-            return { ...t, amount: Math.abs(sourceAmt) * rate };
+            const rate = rates[sourceCurr] || 1;
+
+            // Round to 2 decimal places to avoid floating point issues
+            const convertedAmount = Math.round(Math.abs(sourceAmt) * rate * 100) / 100;
+            return { ...t, amount: convertedAmount };
         });
     }, [rawTransactions, rates, legacyBaseCurrency]);
 

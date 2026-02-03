@@ -32,20 +32,20 @@ export const useAssets = (activeBudgetId, currency, t) => {
                 if (a.type === 'crypto' && a.cryptoId) {
                     try {
                         const rate = await fetchExchangeRate(a.cryptoId, currency, true);
-                        if (rate) convertedValue = (a.amount || 0) * rate;
-                    } catch(e) {
+                        if (rate) convertedValue = Math.round((a.amount || 0) * rate * 100) / 100;
+                    } catch (e) {
                         console.error('Failed to convert crypto asset:', e);
                     }
                 } else if (assetCurrency !== currency) {
                     try {
                         const rate = await fetchExchangeRate(assetCurrency, currency);
-                        if (rate) convertedValue = (a.amount || 0) * (a.valuePerUnit || 1) * rate;
-                    } catch(e) {
+                        if (rate) convertedValue = Math.round((a.amount || 0) * (a.valuePerUnit || 1) * rate * 100) / 100;
+                    } catch (e) {
                         console.error('Failed to convert asset:', e);
                     }
                 } else {
-                    // Same currency - just multiply amount by valuePerUnit
-                    convertedValue = (a.amount || 0) * (a.valuePerUnit || 1);
+                    // Same currency - just multiply amount by valuePerUnit and round
+                    convertedValue = Math.round((a.amount || 0) * (a.valuePerUnit || 1) * 100) / 100;
                 }
 
                 return { ...a, convertedValue };

@@ -58,16 +58,23 @@ export const useTransactionTotals = (
                     startDate = customStartDate || null;
                     endDate = customEndDate || null;
                 }
+                // For 'all', startDate and endDate remain null - no date filter
 
-                // Query for income
+                // Build queries
                 let incomeQuery = query(txCollection, where('type', '==', 'income'));
-                if (startDate) incomeQuery = query(incomeQuery, where('date', '>=', startDate));
-                if (endDate) incomeQuery = query(incomeQuery, where('date', '<=', endDate));
-
-                // Query for expenses
                 let expenseQuery = query(txCollection, where('type', '==', 'expense'));
-                if (startDate) expenseQuery = query(expenseQuery, where('date', '>=', startDate));
-                if (endDate) expenseQuery = query(expenseQuery, where('date', '<=', endDate));
+
+                // Add date filters only if specified
+                if (startDate && endDate) {
+                    incomeQuery = query(incomeQuery, where('date', '>=', startDate), where('date', '<=', endDate));
+                    expenseQuery = query(expenseQuery, where('date', '>=', startDate), where('date', '<=', endDate));
+                } else if (startDate) {
+                    incomeQuery = query(incomeQuery, where('date', '>=', startDate));
+                    expenseQuery = query(expenseQuery, where('date', '>=', startDate));
+                } else if (endDate) {
+                    incomeQuery = query(incomeQuery, where('date', '<=', endDate));
+                    expenseQuery = query(expenseQuery, where('date', '<=', endDate));
+                }
 
                 // Execute aggregations in parallel
                 const [incomeSnapshot, expenseSnapshot] = await Promise.all([
@@ -75,8 +82,9 @@ export const useTransactionTotals = (
                     getAggregateFromServer(expenseQuery, { total: sum('amount') })
                 ]);
 
-                setTotalIncome(incomeSnapshot.data().total || 0);
-                setTotalExpense(expenseSnapshot.data().total || 0);
+                // Round to 2 decimal places
+                setTotalIncome(Math.round((incomeSnapshot.data().total || 0) * 100) / 100);
+                setTotalExpense(Math.round((expenseSnapshot.data().total || 0) * 100) / 100);
             } catch (error) {
                 console.error('[useTransactionTotals] Error fetching totals:', error);
                 setTotalIncome(0);
