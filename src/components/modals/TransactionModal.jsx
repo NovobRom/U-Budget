@@ -1,9 +1,9 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { useTransactionForm } from '../hooks/useTransactionForm';
-import TypeSwitcher from './forms/transaction/TypeSwitcher';
-import CategoryGrid from './forms/transaction/CategoryGrid';
-import { CURRENCIES } from '../constants';
+import { useTransactionForm } from '../../hooks/useTransactionForm';
+import TypeSwitcher from '../forms/transaction/TypeSwitcher';
+import CategoryGrid from '../forms/transaction/CategoryGrid';
+import { CURRENCIES } from '../../constants';
 
 export default function TransactionModal({
     isOpen,
