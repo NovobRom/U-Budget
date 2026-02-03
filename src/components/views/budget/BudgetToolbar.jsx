@@ -27,7 +27,7 @@ export default function BudgetToolbar({
                     </div>
                     <div className="relative flex-1 min-w-[140px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                        <input type="text" placeholder={t.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoComplete="off" className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none shadow-sm" />
+                        <input type="text" placeholder={t.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoComplete="new-password" name="search-no-autofill" className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none shadow-sm" />
                     </div>
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">
