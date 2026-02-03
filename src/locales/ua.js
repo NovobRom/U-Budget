@@ -29,6 +29,9 @@ export default {
     history: "Історія",
     no_trans: "Немає транзакцій",
     export: "Експорт",
+    clear_history: "Очистити історію",
+    confirm_clear_history_title: "Очистити всю історію?",
+    confirm_clear_history_msg: "Це незворотньо видалить ВСІ ваші транзакції. Ви впевнені?",
 
     // --- Time Filters ---
     this_month: "Цей місяць",

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db, appId } from '../firebase';
 
 /**
@@ -32,13 +32,12 @@ export const useTransactionTotals = (
             return;
         }
 
-        const fetchTotals = async () => {
-            setLoading(true);
-            try {
-                const txCollection = collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions');
 
-                // Fetch all transactions (no limit)
-                const snapshot = await getDocs(txCollection);
+        const txCollection = collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions');
+        setLoading(true);
+
+        const unsubscribe = onSnapshot(txCollection, (snapshot) => {
+            try {
                 const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
                 // Build date filter function
@@ -96,15 +95,16 @@ export const useTransactionTotals = (
                 setTotalIncome(Math.round(income * 100) / 100);
                 setTotalExpense(Math.round(expense * 100) / 100);
             } catch (error) {
-                console.error('[useTransactionTotals] Error fetching totals:', error);
-                setTotalIncome(0);
-                setTotalExpense(0);
+                console.error('[useTransactionTotals] Error processing totals:', error);
             } finally {
                 setLoading(false);
             }
-        };
+        }, (error) => {
+            console.error('[useTransactionTotals] Snapshot error:', error);
+            setLoading(false);
+        });
 
-        fetchTotals();
+        return () => unsubscribe();
     }, [activeBudgetId, timeFilter, customStartDate, customEndDate]);
 
     return {

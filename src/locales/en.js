@@ -27,6 +27,9 @@ export default {
     income: "Income",
     savings: "Savings",
     history: "History",
+    clear_history: "Clear History",
+    confirm_clear_history_title: "Clear all history?",
+    confirm_clear_history_msg: "This will permanently delete ALL your transactions. Are you sure?",
     no_trans: "No transactions yet",
     export: "Export",
 

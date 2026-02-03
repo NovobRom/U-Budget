@@ -6,8 +6,9 @@ import BudgetToolbar from './budget/BudgetToolbar';
 import BudgetSummaryCards from './budget/BudgetSummaryCards';
 import BudgetCharts from './budget/BudgetCharts';
 import { useTransactionTotals } from '../../hooks/useTransactionTotals';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, writeBatch, collection, getDocs, query } from 'firebase/firestore';
 import { db, appId } from '../../firebase';
+import ConfirmModal from '../modals/ConfirmModal';
 
 // Mobile-only chart import can remain lazily or be moved. Charts inside BudgetCharts are already lazy.
 // We need the mobile second chart? Line 270 in original...
@@ -36,6 +37,7 @@ export default function BudgetView({
     const [customEndDate, setCustomEndDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
+    const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
     const historyRef = useRef(null);
 
     // Server-side aggregated totals
@@ -48,19 +50,19 @@ export default function BudgetView({
 
     // Exchange Rate State
     const [exchangeRate, setExchangeRate] = useState(1);
-    const [convertedTotals, setConvertedTotals] = useState({ income: 0, expense: 0 });
 
     // Fetch Exchange Rate
     useEffect(() => {
         let isActive = true;
         const fetchRate = async () => {
-            const STORAGE_CURRENCY = 'EUR';
+            // Default to 1 if currencies match
+            if (currency === 'EUR' || currency === 'UAH' && lang === 'ua') { // Assuming base is EUR, but check logic
+                // Actually logic says STORAGE_CURRENCY = 'EUR'
+            }
 
+            const STORAGE_CURRENCY = 'EUR';
             if (currency === STORAGE_CURRENCY) {
-                if (isActive) {
-                    setExchangeRate(1);
-                    setConvertedTotals({ income: rawIncome, expense: rawExpense });
-                }
+                if (isActive) setExchangeRate(1);
                 return;
             }
 
@@ -70,27 +72,21 @@ export default function BudgetView({
 
                 if (isActive) {
                     setExchangeRate(rate);
-                    setConvertedTotals({
-                        income: rawIncome * rate,
-                        expense: rawExpense * rate
-                    });
                 }
             } catch (e) {
                 console.error('Conversion error in BudgetView:', e);
-                // Fallback to 1
-                if (isActive) {
-                    setExchangeRate(1);
-                    setConvertedTotals({ income: rawIncome, expense: rawExpense });
-                }
+                if (isActive) setExchangeRate(1);
             }
         };
 
         fetchRate();
 
         return () => { isActive = false; };
-    }, [rawIncome, rawExpense, currency]);
+    }, [currency]);
 
-    const { income: totalIncome, expense: totalExpense } = convertedTotals;
+    // Derived totals (always consistent with exchangeRate)
+    const totalIncome = useMemo(() => rawIncome * exchangeRate, [rawIncome, exchangeRate]);
+    const totalExpense = useMemo(() => rawExpense * exchangeRate, [rawExpense, exchangeRate]);
 
     const isCustomRange = timeFilter === 'custom';
 
@@ -176,35 +172,106 @@ export default function BudgetView({
     }, [filteredTransactions, categories, exchangeRate]);
 
     const trendsData = useMemo(() => {
-        const today = new Date();
-        const buckets = [];
+        // Dynamic trends based on timeFilter
+        // if timeFilter is short (month), show Days.
+        // if timeFilter is long (year), show Months.
+        // if 'all', show Years or Months depending on span.
 
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            const key = `${d.getFullYear()}-${d.getMonth()}`;
-            buckets.push({
-                key,
-                label: d.toLocaleString(lang === 'en' ? 'en-US' : lang === 'ua' ? 'uk-UA' : 'pl-PL', { month: 'short' }),
-                income: 0,
-                expense: 0
-            });
+        let mode = 'month';
+        if (timeFilter === 'this_month' || timeFilter === 'last_month') mode = 'day';
+        else if (timeFilter === 'this_year') mode = 'month';
+        else if (timeFilter === 'custom') {
+            const start = customStartDate ? new Date(customStartDate) : new Date();
+            const end = customEndDate ? new Date(customEndDate) : new Date();
+            const diffDays = Math.abs((end - start) / (1000 * 60 * 60 * 24));
+            mode = diffDays < 62 ? 'day' : 'month';
+        } else if (timeFilter === 'all') {
+            mode = 'month'; // Default to month for all time usually looks best unless very long history
         }
 
-        transactions.forEach(t => {
+        const map = new Map();
+
+        // sort transactions by date first to ensure order if we iterate
+        // actually we can just map and then sort keys
+        filteredTransactions.forEach(t => { // Use FILTERED transactions for Trends to match user current view
             if (!t.date || t.isHidden) return;
             const d = new Date(t.date);
-            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            let key, label;
 
-            const bucket = buckets.find(b => b.key === key);
-            if (bucket) {
-                const val = (Number(t.amount) || 0) * exchangeRate; // Apply rate
-                if (t.type === 'income') bucket.income += val;
-                else if (t.type === 'expense') bucket.expense += val;
+            if (mode === 'day') {
+                key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                label = d.toLocaleDateString(lang === 'ua' ? 'uk-UA' : 'en-US', { day: 'numeric', month: 'short' });
+            } else if (mode === 'month') {
+                key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                label = d.toLocaleString(lang === 'ua' ? 'uk-UA' : 'en-US', { month: 'short', year: 'numeric' });
+            } else {
+                key = `${d.getFullYear()}`;
+                label = `${d.getFullYear()}`;
             }
+
+            if (!map.has(key)) map.set(key, { key, label, income: 0, expense: 0 });
+            const bucket = map.get(key);
+            const val = (Number(t.amount) || 0) * exchangeRate;
+
+            // Rounding happens at display time or here. Let's keep high precision here.
+            if (t.type === 'income') bucket.income += val;
+            else if (t.type === 'expense') bucket.expense += val;
         });
 
-        return buckets;
-    }, [transactions, lang, exchangeRate]);
+        // Fill gaps if 'day' mode and within standard ranges?
+        // For simplicity and "Vibe", let's just sort the existing data points.
+        // If user wants to see empty days, we can add loop later.
+        // But for "Trends", seeing the flow is enough.
+
+        return Array.from(map.values()).sort((a, b) => a.key.localeCompare(b.key));
+
+    }, [filteredTransactions, timeFilter, lang, exchangeRate, customStartDate, customEndDate]);
+
+    const handleClearHistory = async () => {
+        try {
+            // Delete ALL transactions for this budget visible in "All Time"
+            // Or really ALL in Firestore? User said "Clear History" -> implies current budget.
+            // Safe approach: Delete from Firestore collection.
+
+            const q = query(collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions'));
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) return;
+
+            // Batch delete
+            const batches = [];
+            let batch = writeBatch(db);
+            let count = 0;
+
+            snapshot.docs.forEach((doc) => {
+                batch.delete(doc.ref);
+                count++;
+                if (count >= 400) {
+                    batches.push(batch.commit());
+                    batch = writeBatch(db);
+                    count = 0;
+                }
+            });
+            if (count > 0) batches.push(batch.commit());
+
+            await Promise.all(batches);
+
+            // Also reset currentBalance to 0 in the budget document
+            // To get budget doc path, we need to know where it is.
+            // In usageBudgetData: doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId)
+            const budgetDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId);
+            await updateDoc(budgetDocRef, {
+                currentBalance: 0
+            });
+
+            // UI should update automatically via real-time listeners if logic uses them.
+            // BudgetView uses `transactions` prop. If it comes from onSnapshot, it will clear.
+
+        } catch (error) {
+            console.error("Failed to clear history:", error);
+            // Maybe alert user
+        }
+    };
 
     const displayBalance = currentBalance || 0;
 
@@ -278,8 +345,9 @@ export default function BudgetView({
                         setHistoryFilter={setHistoryFilter}
                         isCustomRange={isCustomRange}
                         lang={lang}
-                        exchangeRate={exchangeRate}
+                        // exchangeRate removed - transactions already converted
                         onToggleHidden={handleToggleHidden}
+                        onClearHistory={() => setIsConfirmClearOpen(true)}
                     />
                 </div>
 
@@ -293,6 +361,14 @@ export default function BudgetView({
                 </div>
             </div>
             <button onClick={onAddTransaction} className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-50"><Plus size={28} /></button>
+            <ConfirmModal
+                isOpen={isConfirmClearOpen}
+                onClose={() => setIsConfirmClearOpen(false)}
+                onConfirm={handleClearHistory}
+                title={t.confirm_clear_history_title}
+                message={t.confirm_clear_history_msg}
+                t={{ btn_cancel: t.btn_cancel || "Cancel", btn_confirm: t.btn_confirm || "Delete All" }}
+            />
         </>
     );
 }

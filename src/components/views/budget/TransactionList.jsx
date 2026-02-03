@@ -20,8 +20,9 @@ export default function TransactionList({
     setHistoryFilter,
     isCustomRange,
     lang,
-    exchangeRate = 1, // New prop
-    onToggleHidden // New prop
+    // exchangeRate removed - transactions already converted by useTransactions
+    onToggleHidden, // New prop
+    onClearHistory // New prop
 }) {
     if (transactions.length === 0) {
         return (
@@ -49,19 +50,32 @@ export default function TransactionList({
                         </span>
                     )}
                 </div>
-                <button
-                    onClick={() => onExport(transactions)}
-                    className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl hover:bg-slate-200 transition-colors"
-                    aria-label={t.export || "Export transactions"}
-                >
-                    <Download size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                    {transactions.length > 0 && onClearHistory && (
+                        <button
+                            onClick={onClearHistory}
+                            className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                            aria-label={t.clear_history}
+                            title={t.clear_history}
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
+                    <button
+                        onClick={() => onExport(transactions)}
+                        className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl hover:bg-slate-200 transition-colors"
+                        aria-label={t.export || "Export transactions"}
+                        title={t.export}
+                    >
+                        <Download size={16} />
+                    </button>
+                </div>
             </div>
 
             <div className="overflow-auto p-0 flex-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
                 {transactions.map(tData => {
                     const style = getCategoryStyles(tData.category);
-                    const amount = (Number(tData.amount) || 0) * exchangeRate;
+                    const amount = Number(tData.amount) || 0; // Already converted by useTransactions
 
                     return (
                         <div

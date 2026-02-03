@@ -157,7 +157,28 @@ export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, 
 
 export const SimpleBarChart = memo(({ data, currency }) => {
     if (!data || data.length === 0) return null;
-    const chartData = useMemo(() => [...data].reverse(), [data]);
+    const chartData = useMemo(() => [...data], [data]); // Removed .reverse() because we want chronological order usually? Original had reverse. Let's check trendsData.
+    // Original trendsData was "Last 6 months" pushed [5 months ago, 4 months ago... today]. 
+    // If I used push, it's chronological 0..5 (oldest..newest).
+    // If original code had .reverse(), maybe it wanted Newest first?
+    // Usually Trends are Left (Old) -> Right (New).
+    // Original: `for (let i = 5; i >= 0; i--)`. i=5 (5 months ago), i=0 (today).
+    // Pushed: [Month-5, Month-4, ..., Month-0].
+    // Charts.jsx had `.reverse()`. So it became [Month-0, ..., Month-5].
+    // That means Right (Old) -> Left (New)? Or Left (New) -> Right (Old)?
+    // BarChart default XAxis is Left->Right (index 0 -> N).
+    // If I reverse, index 0 is Month-0 (Today). So Today is Left. 5-Months-Ago is Right.
+    // That's weird for a trend chart. Usually Time flows L->R.
+    // I will REMOVE .reverse() so it flows Old->New. 
+
+    const formatValue = (value) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(value);
+    };
 
     return (
         <div className="w-full h-[200px] mt-4" style={{ minHeight: '200px' }}>
@@ -171,6 +192,9 @@ export const SimpleBarChart = memo(({ data, currency }) => {
                         tick={{ fontSize: 10, fill: '#94a3b8' }}
                         dy={10}
                     />
+                    <YAxis
+                        hide={true}
+                    />
                     <Tooltip
                         cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                         contentStyle={{
@@ -180,6 +204,7 @@ export const SimpleBarChart = memo(({ data, currency }) => {
                             backgroundColor: 'white',
                             color: '#1e293b'
                         }}
+                        formatter={(value) => [new Intl.NumberFormat('en-US', { style: 'currency', currency: currency }).format(value), '']}
                     />
                     <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} barSize={20} name="Income" animationDuration={1000} />
                     <Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} name="Expense" animationDuration={1000} />
