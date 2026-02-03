@@ -3,15 +3,15 @@ import React, { Suspense } from 'react';
 import { useModalStore } from '../../store/useModalStore';
 
 // Static imports to fix build failure
-import TransactionForm from '../TransactionForm';
+import TransactionModal from './TransactionModal';
 import LoanModal from './LoanModal';
-// import LoanPaymentModal from './LoanPaymentModal';
-// import AssetModal from './AssetModal';
-// import CategoryModal from './CategoryModal';
-// import LinkModal from './LinkModal';
-// import SettingsModal from './SettingsModal';
-// import InfoModal from './InfoModal';
-// import RecurringModal from './RecurringModal';
+import LoanPaymentModal from './LoanPaymentModal';
+import AssetModal from './AssetModal';
+import CategoryModal from './CategoryModal';
+import LinkModal from './LinkModal';
+import SettingsModal from './SettingsModal';
+import InfoModal from './InfoModal';
+import RecurringModal from './RecurringModal';
 
 export default function ModalManager() {
     const activeModal = useModalStore((state) => state.activeModal);
@@ -23,23 +23,23 @@ export default function ModalManager() {
     const renderModal = () => {
         switch (activeModal) {
             case 'transaction':
-                return <TransactionForm {...modalProps} isOpen={true} onClose={closeModal} />;
+                return <TransactionModal {...modalProps} isOpen={true} onClose={closeModal} />;
             case 'loan':
                 return <LoanModal {...modalProps} isOpen={true} onClose={closeModal} />;
-            // case 'loanPayment':
-            //     return <LoanPaymentModal {...modalProps} isOpen={true} onClose={closeModal} />;
-            // case 'asset':
-            //     return <AssetModal {...modalProps} isOpen={true} onClose={closeModal} />;
-            // case 'category':
-            //     return <CategoryModal {...modalProps} isOpen={true} onClose={closeModal} />;
-            // case 'link':
-            //     return <LinkModal {...modalProps} isOpen={true} onClose={closeModal} />;
-            // case 'settings':
-            //     return <SettingsModal {...modalProps} isOpen={true} onClose={closeModal} />;
-            // case 'info':
-            //     return <InfoModal {...modalProps} isOpen={true} onClose={closeModal} type={modalProps.type} />;
-            // case 'recurring':
-            //     return <RecurringModal {...modalProps} isOpen={true} onClose={closeModal} />;
+            case 'loanPayment':
+                return <LoanPaymentModal {...modalProps} isOpen={true} onClose={closeModal} />;
+            case 'asset':
+                return <AssetModal {...modalProps} isOpen={true} onClose={closeModal} />;
+            case 'category':
+                return <CategoryModal {...modalProps} isOpen={true} onClose={closeModal} />;
+            case 'link':
+                return <LinkModal {...modalProps} isOpen={true} onClose={closeModal} />;
+            case 'settings':
+                return <SettingsModal {...modalProps} isOpen={true} onClose={closeModal} />;
+            case 'info':
+                return <InfoModal {...modalProps} isOpen={true} onClose={closeModal} type={modalProps.type} />;
+            case 'recurring':
+                return <RecurringModal {...modalProps} isOpen={true} onClose={closeModal} />;
             default:
                 return null;
         }
