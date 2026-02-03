@@ -27,19 +27,23 @@ export const useLoans = (activeBudgetId, currency, t) => {
                 if (loan.currentBalance <= 0) continue;
                 let amount = parseFloat(loan.currentBalance || 0);
                 const loanCurr = loan.currency || 'UAH';
-                if (loanCurr !== currency) {
+
+                if (loanCurr === currency) {
+                    total += amount;
+                } else {
                     try {
                         const rate = await fetchExchangeRate(loanCurr, currency);
-                        amount *= rate;
+                        total += amount * rate;
                     } catch (e) {
-                        console.error("Rate fetch error", e);
+                        console.error("Rate fetch error in useLoans", e);
+                        // Fallback: add as is (better than 0, but inaccurate)
+                        total += amount;
                     }
                 }
-                total += amount;
             }
             if (isMounted) setTotalCreditDebt(total);
         };
-        
+
         calcDebt();
         return () => { isMounted = false; };
     }, [loans, currency]);

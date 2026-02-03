@@ -3,15 +3,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyB387FzPy9hsgoFnoreLSPw8w4Az6PuICM",
-    // FIXED: Use the default firebaseapp domain for authDomain.
-    // Using a custom domain here (like ubudget.app) causes popup redirect loops
-    // because the auth handler (/__/auth/handler) might not be correctly routed.
-    authDomain: "smartbudget-7b00a.firebaseapp.com",
-    projectId: "smartbudget-7b00a",
-    storageBucket: "smartbudget-7b00a.firebasestorage.app",
-    messagingSenderId: "367187608778",
-    appId: "1:367187608778:web:891200fff0881767746033"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "smartbudget-7b00a.firebaseapp.com",
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "smartbudget-7b00a",
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "smartbudget-7b00a.firebasestorage.app",
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "367187608778",
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:367187608778:web:891200fff0881767746033"
 };
 
 const app = initializeApp(firebaseConfig);

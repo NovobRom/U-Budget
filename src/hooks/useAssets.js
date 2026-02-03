@@ -26,7 +26,7 @@ export const useAssets = (activeBudgetId, currency, t) => {
         const convertAssets = async () => {
             const converted = await Promise.all(rawAssets.map(async (a) => {
                 let convertedValue = a.amount || 0;
-                const assetCurrency = a.currency || a.originalCurrency || currency;
+                const assetCurrency = a.currency || a.originalCurrency || 'USD'; // Default to USD if missing (common for assets)
 
                 // Convert to display currency
                 if (a.type === 'crypto' && a.cryptoId) {
@@ -35,13 +35,17 @@ export const useAssets = (activeBudgetId, currency, t) => {
                         if (rate) convertedValue = Math.round((a.amount || 0) * rate * 100) / 100;
                     } catch (e) {
                         console.error('Failed to convert crypto asset:', e);
+                        // Fallback: assume 1
+                        convertedValue = Math.round((a.amount || 0) * 100) / 100;
                     }
-                } else if (assetCurrency !== currency) {
+                } else if (assetCurrency && assetCurrency !== currency) {
                     try {
                         const rate = await fetchExchangeRate(assetCurrency, currency);
                         if (rate) convertedValue = Math.round((a.amount || 0) * (a.valuePerUnit || 1) * rate * 100) / 100;
                     } catch (e) {
                         console.error('Failed to convert asset:', e);
+                        // Fallback: keep original value but it might be wrong scale
+                        convertedValue = Math.round((a.amount || 0) * (a.valuePerUnit || 1) * 100) / 100;
                     }
                 } else {
                     // Same currency - just multiply amount by valuePerUnit and round
