@@ -37,12 +37,58 @@ export default function BudgetView({
     const historyRef = useRef(null);
 
     // Server-side aggregated totals
-    const { totalIncome, totalExpense, loading: totalsLoading } = useTransactionTotals(
+    const { totalIncome: rawIncome, totalExpense: rawExpense, loading: totalsLoading } = useTransactionTotals(
         activeBudgetId,
         timeFilter,
         customStartDate,
         customEndDate
     );
+
+    // Exchange Rate State
+    const [exchangeRate, setExchangeRate] = useState(1);
+    const [convertedTotals, setConvertedTotals] = useState({ income: 0, expense: 0 });
+
+    // Fetch Exchange Rate
+    useEffect(() => {
+        let isActive = true;
+        const fetchRate = async () => {
+            const STORAGE_CURRENCY = 'EUR';
+
+            if (currency === STORAGE_CURRENCY) {
+                if (isActive) {
+                    setExchangeRate(1);
+                    setConvertedTotals({ income: rawIncome, expense: rawExpense });
+                }
+                return;
+            }
+
+            try {
+                const { fetchExchangeRateCached } = await import('../../utils/currency');
+                const rate = await fetchExchangeRateCached(STORAGE_CURRENCY, currency);
+
+                if (isActive) {
+                    setExchangeRate(rate);
+                    setConvertedTotals({
+                        income: rawIncome * rate,
+                        expense: rawExpense * rate
+                    });
+                }
+            } catch (e) {
+                console.error('Conversion error in BudgetView:', e);
+                // Fallback to 1
+                if (isActive) {
+                    setExchangeRate(1);
+                    setConvertedTotals({ income: rawIncome, expense: rawExpense });
+                }
+            }
+        };
+
+        fetchRate();
+
+        return () => { isActive = false; };
+    }, [rawIncome, rawExpense, currency]);
+
+    const { income: totalIncome, expense: totalExpense } = convertedTotals;
 
     const isCustomRange = timeFilter === 'custom';
 
@@ -106,12 +152,14 @@ export default function BudgetView({
         return categories
             .filter(c => c.type === 'expense')
             .map(c => {
-                const total = expenseMap[c.id] || 0;
+                const rawTotal = expenseMap[c.id] || 0;
+                // Apply exchange rate
+                const total = rawTotal * exchangeRate;
                 return { ...c, total };
             })
             .filter(x => x.total > 0)
             .sort((a, b) => b.total - a.total);
-    }, [filteredTransactions, categories]);
+    }, [filteredTransactions, categories, exchangeRate]);
 
     const trendsData = useMemo(() => {
         const today = new Date();
@@ -135,14 +183,14 @@ export default function BudgetView({
 
             const bucket = buckets.find(b => b.key === key);
             if (bucket) {
-                const val = Number(t.amount) || 0;
+                const val = (Number(t.amount) || 0) * exchangeRate; // Apply rate
                 if (t.type === 'income') bucket.income += val;
                 else if (t.type === 'expense') bucket.expense += val;
             }
         });
 
         return buckets;
-    }, [transactions, lang]);
+    }, [transactions, lang, exchangeRate]);
 
     const displayBalance = currentBalance || 0;
 
@@ -216,6 +264,7 @@ export default function BudgetView({
                         setHistoryFilter={setHistoryFilter}
                         isCustomRange={isCustomRange}
                         lang={lang}
+                        exchangeRate={exchangeRate}
                     />
                 </div>
 
