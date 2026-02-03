@@ -29,8 +29,5 @@ jobs:
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_SMARTBUDGET_7B00A }}' > $HOME/gcloud.json
           export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud.json
           npx firebase-tools deploy --only functions --project smartbudget-7b00a
-      # Deploy Firestore Security Rules
-      - name: Deploy Firestore Rules
-        run: |
-          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud.json
-          npx firebase-tools deploy --only firestore:rules --project smartbudget-7b00a
+      # Note: Firestore Rules must be deployed manually via:
+      # firebase deploy --only firestore:rules
