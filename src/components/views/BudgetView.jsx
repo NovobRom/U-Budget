@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, Suspense, lazy } from 'react';
+import React, { useState, useMemo, useRef, Suspense, lazy, useEffect } from 'react';
 import { Plus, BarChart3 } from 'lucide-react';
 import { BudgetProgress } from '../BudgetProgress';
 import TransactionList from './budget/TransactionList';
@@ -6,6 +6,8 @@ import BudgetToolbar from './budget/BudgetToolbar';
 import BudgetSummaryCards from './budget/BudgetSummaryCards';
 import BudgetCharts from './budget/BudgetCharts';
 import { useTransactionTotals } from '../../hooks/useTransactionTotals';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db, appId } from '../../firebase';
 
 // Mobile-only chart import can remain lazily or be moved. Charts inside BudgetCharts are already lazy.
 // We need the mobile second chart? Line 270 in original...
@@ -138,12 +140,24 @@ export default function BudgetView({
         return list;
     }, [transactions, timeFilter, searchTerm, historyFilter, customStartDate, customEndDate]);
 
+    const handleToggleHidden = async (transaction) => {
+        try {
+            const txRef = doc(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions', transaction.id);
+            await updateDoc(txRef, {
+                isHidden: !transaction.isHidden
+            });
+            // toast.success(t.success_update || 'Updated'); // Toast not imported? 
+        } catch (error) {
+            console.error('Error toggling hidden:', error);
+        }
+    };
+
     // expensesByCategory is calculated from visible filtered transactions for charts
     const expensesByCategory = useMemo(() => {
         const expenseMap = {};
 
         filteredTransactions.forEach(t => {
-            if (t.type === 'expense' && t.category) {
+            if (t.type === 'expense' && t.category && !t.isHidden) {
                 const amount = Number(t.amount) || 0;
                 expenseMap[t.category] = (expenseMap[t.category] || 0) + amount;
             }
@@ -177,7 +191,7 @@ export default function BudgetView({
         }
 
         transactions.forEach(t => {
-            if (!t.date) return;
+            if (!t.date || t.isHidden) return;
             const d = new Date(t.date);
             const key = `${d.getFullYear()}-${d.getMonth()}`;
 
@@ -265,6 +279,7 @@ export default function BudgetView({
                         isCustomRange={isCustomRange}
                         lang={lang}
                         exchangeRate={exchangeRate}
+                        onToggleHidden={handleToggleHidden}
                     />
                 </div>
 

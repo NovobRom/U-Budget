@@ -14,6 +14,8 @@ export const useMonobankStore = create((set, get) => ({
     isLoading: false,
     userId: null,
 
+    hiddenAccountIds: [],
+
     // Initialize store from Firestore when user logs in
     initFromFirestore: async (userId) => {
         if (!userId) return;
@@ -26,6 +28,7 @@ export const useMonobankStore = create((set, get) => ({
                 set({
                     token: config.token || '',
                     accounts: config.accounts || [],
+                    hiddenAccountIds: config.hiddenAccountIds || [],
                     lastSyncTime: config.lastSyncTime || 0,
                     isLoading: false
                 });
@@ -40,12 +43,12 @@ export const useMonobankStore = create((set, get) => ({
 
     // Set token and save to Firestore
     setToken: async (token) => {
-        const { userId, accounts, lastSyncTime } = get();
+        const { userId, accounts, lastSyncTime, hiddenAccountIds } = get();
         set({ token });
 
         if (userId) {
             try {
-                await saveMonobankConfig(userId, { token, accounts, lastSyncTime });
+                await saveMonobankConfig(userId, { token, accounts, lastSyncTime, hiddenAccountIds });
             } catch (error) {
                 console.error('[MonobankStore] Save token error:', error);
             }
@@ -54,14 +57,33 @@ export const useMonobankStore = create((set, get) => ({
 
     // Set accounts and save to Firestore
     setAccounts: async (accounts) => {
-        const { userId, token, lastSyncTime } = get();
+        const { userId, token, lastSyncTime, hiddenAccountIds } = get();
         set({ accounts });
 
         if (userId) {
             try {
-                await saveMonobankConfig(userId, { token, accounts, lastSyncTime });
+                await saveMonobankConfig(userId, { token, accounts, lastSyncTime, hiddenAccountIds });
             } catch (error) {
                 console.error('[MonobankStore] Save accounts error:', error);
+            }
+        }
+    },
+
+    // Toggle hidden account status
+    toggleAccountVisibility: async (accountId) => {
+        const { userId, token, accounts, lastSyncTime, hiddenAccountIds } = get();
+
+        const newHiddenIds = hiddenAccountIds.includes(accountId)
+            ? hiddenAccountIds.filter(id => id !== accountId)
+            : [...hiddenAccountIds, accountId];
+
+        set({ hiddenAccountIds: newHiddenIds });
+
+        if (userId) {
+            try {
+                await saveMonobankConfig(userId, { token, accounts, lastSyncTime, hiddenAccountIds: newHiddenIds });
+            } catch (error) {
+                console.error('[MonobankStore] Save hidden accounts error:', error);
             }
         }
     },

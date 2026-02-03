@@ -80,6 +80,7 @@ export const useTransactionTotals = (
 
                 transactions.forEach(t => {
                     if (!isInRange(t.date)) return;
+                    if (t.isHidden) return; // Ignore hidden transactions
 
                     // Use the stored amount directly (already in storage currency)
                     const amount = Math.abs(Number(t.amount) || 0);

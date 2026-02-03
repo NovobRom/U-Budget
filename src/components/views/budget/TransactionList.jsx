@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wallet, Pencil, Trash2, RefreshCw, Download, X } from 'lucide-react';
+import { Wallet, Pencil, Trash2, RefreshCw, Download, X, Eye, EyeOff } from 'lucide-react';
 
 /**
  * TransactionList
@@ -20,7 +20,8 @@ export default function TransactionList({
     setHistoryFilter,
     isCustomRange,
     lang,
-    exchangeRate = 1 // New prop
+    exchangeRate = 1, // New prop
+    onToggleHidden // New prop
 }) {
     if (transactions.length === 0) {
         return (
@@ -65,7 +66,7 @@ export default function TransactionList({
                     return (
                         <div
                             key={tData.id}
-                            className="flex justify-between items-center p-4 border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors group"
+                            className={`flex justify-between items-center p-4 border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors group ${tData.isHidden ? 'opacity-50 grayscale bg-slate-50 dark:bg-slate-800/50' : ''}`}
                             onClick={() => onEdit(tData)}
                             role="button"
                             tabIndex={0}
@@ -90,10 +91,17 @@ export default function TransactionList({
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className={`font-bold ${tData.type === 'income' ? 'text-green-600' : 'text-slate-900 dark:text-white'}`}>
+                                <div className={`font-bold ${tData.type === 'income' ? 'text-green-600' : 'text-slate-900 dark:text-white'} ${tData.isHidden ? 'opacity-50 line-through' : ''}`}>
                                     {tData.type === 'income' ? '+' : '-'}{formatMoney(amount, currency)}
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity sm:opacity-100">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onToggleHidden(tData); }}
+                                        className="text-slate-300 hover:text-indigo-500 p-1"
+                                        title={tData.isHidden ? (lang === 'ua' ? 'Врахувати' : 'Include') : (lang === 'ua' ? 'Ігнорувати' : 'Ignore')}
+                                    >
+                                        {tData.isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                                    </button>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onEdit(tData); }}
                                         className="text-slate-300 hover:text-blue-500 p-1"

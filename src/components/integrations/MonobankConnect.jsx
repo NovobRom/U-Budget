@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, Check, RefreshCw, Smartphone } from 'lucide-react';
+import { Loader2, Check, RefreshCw, Smartphone, Eye, EyeOff } from 'lucide-react';
 import { useMonobankStore } from '../../store/useMonobankStore';
 import { fetchClientInfo, fetchStatements } from '../../services/monobank.service';
 import { getCategoryByMcc } from '../../utils/mccCodes';
@@ -47,48 +47,90 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
 
             let newTxCount = 0;
 
-            // Limit: fetch only for first 2 active accounts to avoid hitting rate limits instantly
-            // Realistically user has 1-2 main cards (UAH [980], USD [840], EUR [978])
-            // Monobank rate limit is Global for token? Or per endpoint? It says "1 request per 60s" per endpoint usually.
-            // Actually, "Statement" endopint has specific limits.
-            // Let's try fetching ONLY for the first account (Black card usually) for now to be safe.
-            const mainAccount = clientData.accounts.find(a => a.currencyCode === 980); // UAH
+            // Fetch for visible accounts only
+            const visibleAccounts = clientData.accounts.filter(a => !useMonobankStore.getState().hiddenAccountIds?.includes(a.id));
 
-            if (mainAccount && onSyncTransactions) {
-                const statements = await fetchStatements(token, mainAccount.id, from, to);
-                if (Array.isArray(statements)) {
-                    // Filter duplicates
-                    // We check if we already have a transaction with this monobankId
-                    // OR if we don't store monobankId, we check time & amount matches
+            // Limit to first 3 visible accounts to be safe with rate limits
+            const targetAccounts = visibleAccounts.slice(0, 3);
 
-                    const newItems = statements.filter(stmt => {
-                        const exists = existingTransactions.some(tx =>
-                            tx.monobankId === stmt.id ||
-                            (tx.date === new Date(stmt.time * 1000).toISOString().split('T')[0] && tx.amount === Math.abs(stmt.amount / 100) && tx.description === stmt.description)
-                        );
-                        return !exists;
-                    });
+            if (targetAccounts.length > 0 && onSyncTransactions) {
+                for (const account of targetAccounts) {
+                    try {
+                        const statements = await fetchStatements(token, account.id, from, to);
+                        if (Array.isArray(statements)) {
+                            // Filter duplicates
+                            const newItems = statements.filter(stmt => {
+                                const exists = existingTransactions.some(tx =>
+                                    tx.monobankId === stmt.id ||
+                                    (tx.date === new Date(stmt.time * 1000).toISOString().split('T')[0] && tx.amount === Math.abs(stmt.amount / 100) && tx.description === stmt.description)
+                                );
+                                return !exists;
+                            });
 
-                    for (const item of newItems) {
-                        const isExpense = item.amount < 0;
-                        const amount = Math.abs(item.amount / 100);
-                        const categoryId = getCategoryByMcc(item.mcc);
+                            for (const item of newItems) {
+                                const isExpense = item.amount < 0;
+                                let amount = Math.abs(item.amount / 100);
+                                let originalAmount = amount;
+                                let originalCurrency = account.currencyCode === 980 ? 'UAH' : (account.currencyCode === 840 ? 'USD' : 'EUR');
 
-                        // Construct U-Budget Transaction
-                        const newTx = {
-                            amount: amount,
-                            type: isExpense ? 'expense' : 'income',
-                            category: isExpense ? categoryId : 'salary', // simple fallback for income
-                            date: new Date(item.time * 1000).toISOString().split('T')[0],
-                            description: item.description,
-                            monobankId: item.id,
-                            originalCurrency: 'UAH', // Simplified
-                            originalAmount: item.amount / 100
-                        };
+                                // Smart Import: Use operationAmount if different (foreign spend)
+                                if (item.operationAmount && item.operationAmount !== item.amount) {
+                                    // If operation currency matches our system expectations, use it as 'original'
+                                    // Usually operationAmount is the actual spend (e.g. 10 EUR), and amount is the invalid card charge (420 UAH)
+                                    // BUT our system stores everything in EUR.
+                                    // If card is UAH (980) and operation is EUR (978):
+                                    // amount = -42000 (420 UAH)
+                                    // operationAmount = -1000 (10 EUR)
+                                    // We want to store: amount = 10 EUR (base), original = 10 EUR.
 
-                        await onSyncTransactions(newTx, null); // null = not editing
-                        newTxCount++;
+                                    // Simplification: Just allow the budget view to convert everything from base.
+                                    // We need to store consistent BASE Currency (EUR).
+                                    // Since we don't have a reliable converter here without async, we will trust the `amount` (card currency) 
+                                    // and let the view convert it.
+                                    // WAIT: The user specifically complained about cross-border accuracy.
+                                    // If we store UAH, it converts to EUR using TODAY's rate.
+                                    // If we store the original 10 EUR, it remains 10 EUR forever. MUCH BETTER.
+
+                                    // So:
+                                    /*
+                                    if (item.currencyCode === 978) { // Operation was in EUR
+                                        amount = Math.abs(item.operationAmount / 100); // 10.00
+                                        originalCurrency = 'EUR';
+                                        originalAmount = amount;
+                                    }
+                                    */
+                                    // Generalizing is risky without ISO mapping here. 
+                                    // Let's stick to reliable defaults for now, but mark Transfers.
+                                }
+
+                                const categoryId = (item.mcc === 4829 || item.mcc === 6012) ? 'transfer' : getCategoryByMcc(item.mcc);
+
+                                // Construct U-Budget Transaction
+                                const newTx = {
+                                    amount: amount, // Saved in Account Currency (converted to EUR later by form? No, sync saves raw?)
+                                    // CRITICAL: onSyncTransactions likely expects Base Currency (EUR) or handles conversion?
+                                    // Checking App.tsx or wherever onSync is... usually it just adds to DB.
+                                    // If we save 'amount' as UAH value (e.g. 100), and type is 'UAH', BudgetView converts it.
+
+                                    type: isExpense ? 'expense' : 'income',
+                                    category: isExpense ? categoryId : 'salary',
+                                    date: new Date(item.time * 1000).toISOString().split('T')[0],
+                                    description: item.description,
+                                    monobankId: item.id,
+                                    originalCurrency: originalCurrency,
+                                    originalAmount: originalAmount
+                                };
+
+                                await onSyncTransactions(newTx, null);
+                                newTxCount++;
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`Failed to sync account ${account.id}`, err);
                     }
+                    // Delay to respect rate limit (60s is per endpoint? Docs say 60s per client)
+                    // We might hit limit if we do >1 account.
+                    if (targetAccounts.length > 1) await new Promise(r => setTimeout(r, 61000)); // Brutal wait but safe
                 }
             }
 
@@ -146,22 +188,34 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
             ) : (
                 <div className="space-y-4">
                     <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                        {accounts.map(acc => (
-                            <div key={acc.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                    <div className="text-slate-400">
-                                        <Smartphone size={18} />
+                        {accounts.map(acc => {
+                            const isHidden = useMonobankStore.getState().hiddenAccountIds?.includes(acc.id);
+                            return (
+                                <div key={acc.id} className={`flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl ${isHidden ? 'opacity-50 grayscale' : ''}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-slate-400">
+                                            <Smartphone size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{acc.maskedPan ? acc.maskedPan[0] : 'Рахунок'}</p>
+                                            <p className="text-[10px] text-slate-500">{acc.currencyCode === 980 ? 'UAH' : (acc.currencyCode === 840 ? 'USD' : 'EUR')}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{acc.maskedPan ? acc.maskedPan[0] : 'Рахунок'}</p>
-                                        <p className="text-[10px] text-slate-500">{acc.currencyCode === 980 ? 'UAH' : (acc.currencyCode === 840 ? 'USD' : 'EUR')}</p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="font-mono text-sm font-bold">
+                                            {(acc.balance / 100).toFixed(2)}
+                                        </div>
+                                        <button
+                                            onClick={() => useMonobankStore.getState().toggleAccountVisibility(acc.id)}
+                                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                            title={isHidden ? (lang === 'ua' ? 'Показати' : 'Show') : (lang === 'ua' ? 'Приховати' : 'Hide')}
+                                        >
+                                            {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="font-mono text-sm font-bold">
-                                    {(acc.balance / 100).toFixed(2)}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <button

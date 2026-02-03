@@ -1,9 +1,9 @@
 
-// import { 
-//     Utensils, Coffee, Home, Car, Heart, ShoppingBag, Clapperboard, 
-//     Wifi, Plane, Wallet, Briefcase, PiggyBank, Star, 
-//     BookOpen, Gift, Zap, TrendingUp, HelpCircle 
-// } from 'lucide-react';
+import {
+    Utensils, Coffee, Home, Car, Heart, ShoppingBag, Clapperboard,
+    Wifi, Plane, Wallet, Briefcase, PiggyBank, Star,
+    BookOpen, Gift, Zap, TrendingUp, HelpCircle, Smartphone, ShoppingCart
+} from 'lucide-react';
 
 export const CURRENCIES = {
     EUR: { symbol: '€', name: 'Euro' },
@@ -12,9 +12,30 @@ export const CURRENCIES = {
     PLN: { symbol: 'zł', name: 'Zloty' }
 };
 
-// Clean list of categories with Icons
-export const DEFAULT_CATEGORIES = [];
-// [
-//     { id: 'food', name: 'Food & Groceries', type: 'expense', color: 'bg-orange-500', iconId: 'utensils', icon: Utensils },
-//     ...
-// ];
+export const DEFAULT_CATEGORIES = [
+    // Expenses
+    { id: 'food', name: 'Food & Dining', type: 'expense', color: 'bg-orange-500', textColor: 'text-white', iconId: 'utensils', icon: Utensils },
+    { id: 'cafe', name: 'Cafe & Coffee', type: 'expense', color: 'bg-amber-600', textColor: 'text-white', iconId: 'coffee', icon: Coffee },
+    { id: 'transport', name: 'Transport', type: 'expense', color: 'bg-blue-500', textColor: 'text-white', iconId: 'car', icon: Car },
+    { id: 'housing', name: 'Housing & Rent', type: 'expense', color: 'bg-indigo-500', textColor: 'text-white', iconId: 'home', icon: Home },
+    { id: 'health', name: 'Health & Wellness', type: 'expense', color: 'bg-red-500', textColor: 'text-white', iconId: 'heart', icon: Heart },
+    { id: 'shopping', name: 'Shopping', type: 'expense', color: 'bg-pink-500', textColor: 'text-white', iconId: 'shopping', icon: ShoppingBag },
+    { id: 'utilities', name: 'Utilities & Bills', type: 'expense', color: 'bg-cyan-500', textColor: 'text-white', iconId: 'zap', icon: Zap },
+    { id: 'communication', name: 'Phone & Internet', type: 'expense', color: 'bg-sky-500', textColor: 'text-white', iconId: 'wifi', icon: Wifi },
+    { id: 'tech', name: 'Electronics', type: 'expense', color: 'bg-slate-700', textColor: 'text-white', iconId: 'smartphone', icon: Smartphone },
+    { id: 'entertainment', name: 'Entertainment', type: 'expense', color: 'bg-purple-500', textColor: 'text-white', iconId: 'film', icon: Clapperboard },
+    { id: 'education', name: 'Education', type: 'expense', color: 'bg-yellow-500', textColor: 'text-white', iconId: 'book', icon: BookOpen },
+    { id: 'travel', name: 'Travel', type: 'expense', color: 'bg-emerald-500', textColor: 'text-white', iconId: 'plane', icon: Plane },
+    { id: 'gifts', name: 'Gifts & Donations', type: 'expense', color: 'bg-rose-500', textColor: 'text-white', iconId: 'gift', icon: Gift },
+    { id: 'services', name: 'Services', type: 'expense', color: 'bg-gray-500', textColor: 'text-white', iconId: 'zap', icon: Zap },
+    { id: 'investments', name: 'Investments', type: 'expense', color: 'bg-green-600', textColor: 'text-white', iconId: 'stock', icon: TrendingUp },
+    { id: 'transfer', name: 'Transfer', type: 'expense', color: 'bg-gray-400', textColor: 'text-white', iconId: 'wallet', icon: Wallet },
+
+    // Income
+    { id: 'salary', name: 'Salary', type: 'income', color: 'bg-green-500', textColor: 'text-white', iconId: 'briefcase', icon: Briefcase },
+    { id: 'freelance', name: 'Freelance', type: 'income', color: 'bg-teal-500', textColor: 'text-white', iconId: 'star', icon: Star },
+    { id: 'savings', name: 'Savings Use', type: 'income', color: 'bg-blue-400', textColor: 'text-white', iconId: 'piggy', icon: PiggyBank },
+
+    // Other
+    { id: 'other', name: 'Other', type: 'expense', color: 'bg-slate-400', textColor: 'text-white', iconId: 'other', icon: HelpCircle }
+];

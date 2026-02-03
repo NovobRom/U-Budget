@@ -6,7 +6,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis
 const getColorHex = (tailwindClass) => {
     if (!tailwindClass) return '#94a3b8';
     const colors = {
-        'bg-slate-400': '#94a3b8', 'bg-slate-500': '#64748b', 'bg-slate-600': '#475569',
+        'bg-slate-400': '#94a3b8', 'bg-slate-500': '#64748b', 'bg-slate-600': '#475569', 'bg-slate-700': '#334155', 'bg-slate-800': '#1e293b',
+        'bg-gray-400': '#9ca3af', 'bg-gray-500': '#6b7280', 'bg-gray-600': '#4b5563', 'bg-gray-700': '#374151', 'bg-gray-800': '#1f2937',
+        'bg-zinc-400': '#a1a1aa', 'bg-zinc-500': '#71717a', 'bg-zinc-600': '#52525b',
+        'bg-neutral-400': '#a3a3a3', 'bg-neutral-500': '#737373', 'bg-neutral-600': '#525252',
+        'bg-stone-400': '#a8a29e', 'bg-stone-500': '#78716c', 'bg-stone-600': '#57534e',
         'bg-red-400': '#f87171', 'bg-red-500': '#ef4444', 'bg-red-600': '#dc2626',
         'bg-orange-400': '#fb923c', 'bg-orange-500': '#f97316', 'bg-orange-600': '#ea580c',
         'bg-amber-400': '#fbbf24', 'bg-amber-500': '#f59e0b', 'bg-amber-600': '#d97706',
@@ -25,12 +29,12 @@ const getColorHex = (tailwindClass) => {
         'bg-pink-400': '#f472b6', 'bg-pink-500': '#ec4899', 'bg-pink-600': '#db2777',
         'bg-rose-400': '#fb7185', 'bg-rose-500': '#f43f5e', 'bg-rose-600': '#e11d48',
     };
-    return colors[tailwindClass] || '#94a3b8'; 
+    return colors[tailwindClass] || '#94a3b8';
 };
 
 const processData = (data, total, getCategoryName, otherLabel) => {
     if (!data || total === 0) return [];
-    const threshold = 0.03; 
+    const threshold = 0.03;
     let mainSegments = [];
     let otherTotal = 0;
 
@@ -41,7 +45,7 @@ const processData = (data, total, getCategoryName, otherLabel) => {
         } else {
             const displayName = getCategoryName ? getCategoryName(item) : item.name;
             mainSegments.push({
-                name: displayName, 
+                name: displayName,
                 value: item.total,
                 color: item.color ? item.color.replace('bg-', '') : 'gray',
                 originalColor: item.color,
@@ -66,25 +70,25 @@ const processData = (data, total, getCategoryName, otherLabel) => {
 
 export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, label, getCategoryName, otherLabel }) => {
     const [activeIndex, setActiveIndex] = useState(null);
-    
-    const chartData = useMemo(() => 
-        processData(data, total, getCategoryName, otherLabel), 
-    [data, total, getCategoryName, otherLabel]);
+
+    const chartData = useMemo(() =>
+        processData(data, total, getCategoryName, otherLabel),
+        [data, total, getCategoryName, otherLabel]);
 
     const onPieEnter = useCallback((_, index) => setActiveIndex(index), []);
     const onPieLeave = useCallback(() => setActiveIndex(null), []);
 
-    const centerLabel = activeIndex !== null ? chartData[activeIndex].name : label; 
-    const centerValue = activeIndex !== null 
-        ? formatMoney(chartData[activeIndex].value, currencyCode) 
+    const centerLabel = activeIndex !== null ? chartData[activeIndex].name : label;
+    const centerValue = activeIndex !== null
+        ? formatMoney(chartData[activeIndex].value, currencyCode)
         : formatMoney(total, currencyCode);
 
     if (total === 0) return <div className="text-center text-slate-400 py-10">No data</div>;
 
     return (
         <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
-            <div className="relative w-full h-[250px] min-w-0">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <div className="relative w-full h-[250px]" style={{ minHeight: '250px' }}>
+                <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
                             data={chartData}
@@ -100,9 +104,9 @@ export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, 
                             cursor="pointer"
                         >
                             {chartData.map((entry, index) => (
-                                <Cell 
-                                    key={`cell-${index}`} 
-                                    fill={getColorHex(entry.originalColor)} 
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={getColorHex(entry.originalColor)}
                                     className="transition-all duration-300 focus:outline-none"
                                     style={{
                                         filter: activeIndex === index ? 'drop-shadow(0px 0px 8px rgba(0,0,0,0.2))' : 'none',
@@ -115,7 +119,7 @@ export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, 
                         </Pie>
                     </PieChart>
                 </ResponsiveContainer>
-                
+
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1 text-center px-4 truncate w-full">
                         {centerLabel}
@@ -128,8 +132,8 @@ export const SimpleDonutChart = memo(({ data, total, currencyCode, formatMoney, 
 
             <div className="w-full mt-4 space-y-3">
                 {chartData.map((item, index) => (
-                    <div 
-                        key={index} 
+                    <div
+                        key={index}
                         className={`flex items-center justify-between p-2 rounded-xl transition-colors cursor-pointer ${activeIndex === index ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         onMouseEnter={() => setActiveIndex(index)}
                         onMouseLeave={() => setActiveIndex(null)}
@@ -156,22 +160,22 @@ export const SimpleBarChart = memo(({ data, currency }) => {
     const chartData = useMemo(() => [...data].reverse(), [data]);
 
     return (
-        <div className="w-full h-[200px] mt-4 min-w-0">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <div className="w-full h-[200px] mt-4" style={{ minHeight: '200px' }}>
+            <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
-                    <XAxis 
-                        dataKey="label" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{fontSize: 10, fill: '#94a3b8'}} 
+                    <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#94a3b8' }}
                         dy={10}
                     />
-                    <Tooltip 
-                        cursor={{fill: 'rgba(0,0,0,0.05)'}}
+                    <Tooltip
+                        cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                         contentStyle={{
-                            borderRadius: '12px', 
-                            border: 'none', 
+                            borderRadius: '12px',
+                            border: 'none',
                             boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                             backgroundColor: 'white',
                             color: '#1e293b'
