@@ -136,6 +136,7 @@ export default function AppRoutes({
                 <Route index element={
                     <Suspense fallback={<AppShell />}>
                         <BudgetView
+                            activeBudgetId={activeBudgetId}
                             transactions={transactions} categories={allCategories} limits={categoryLimits}
                             currency={currency} formatMoney={formatMoney} t={t} lang={lang}
                             onOpenSettings={openSettings}

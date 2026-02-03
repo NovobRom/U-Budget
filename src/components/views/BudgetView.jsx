@@ -5,6 +5,7 @@ import TransactionList from './budget/TransactionList';
 import BudgetToolbar from './budget/BudgetToolbar';
 import BudgetSummaryCards from './budget/BudgetSummaryCards';
 import BudgetCharts from './budget/BudgetCharts';
+import { useTransactionTotals } from '../../hooks/useTransactionTotals';
 
 // Mobile-only chart import can remain lazily or be moved. Charts inside BudgetCharts are already lazy.
 // We need the mobile second chart? Line 270 in original...
@@ -18,6 +19,7 @@ const Skeleton = ({ className }) => (
 );
 
 export default function BudgetView({
+    activeBudgetId,
     transactions, categories, limits, currency, formatMoney, t,
     onOpenSettings, onOpenInvite, onOpenRecurring, onAddTransaction, onEditTransaction,
     onDeleteTransaction,
@@ -33,6 +35,14 @@ export default function BudgetView({
     const [searchTerm, setSearchTerm] = useState('');
     const [historyFilter, setHistoryFilter] = useState('all');
     const historyRef = useRef(null);
+
+    // Server-side aggregated totals
+    const { totalIncome, totalExpense, loading: totalsLoading } = useTransactionTotals(
+        activeBudgetId,
+        timeFilter,
+        customStartDate,
+        customEndDate
+    );
 
     const isCustomRange = timeFilter === 'custom';
 
@@ -82,24 +92,18 @@ export default function BudgetView({
         return list;
     }, [transactions, timeFilter, searchTerm, historyFilter, customStartDate, customEndDate]);
 
-    const { income, expense, expensesByCategory } = useMemo(() => {
-        let inc = 0;
-        let exp = 0;
+    // expensesByCategory is calculated from visible filtered transactions for charts
+    const expensesByCategory = useMemo(() => {
         const expenseMap = {};
 
         filteredTransactions.forEach(t => {
-            const amount = Number(t.amount) || 0;
-            if (t.type === 'income') {
-                inc += amount;
-            } else if (t.type === 'expense') {
-                exp += amount;
-                if (t.category) {
-                    expenseMap[t.category] = (expenseMap[t.category] || 0) + amount;
-                }
+            if (t.type === 'expense' && t.category) {
+                const amount = Number(t.amount) || 0;
+                expenseMap[t.category] = (expenseMap[t.category] || 0) + amount;
             }
         });
 
-        const byCat = categories
+        return categories
             .filter(c => c.type === 'expense')
             .map(c => {
                 const total = expenseMap[c.id] || 0;
@@ -107,8 +111,6 @@ export default function BudgetView({
             })
             .filter(x => x.total > 0)
             .sort((a, b) => b.total - a.total);
-
-        return { income: inc, expense: exp, expensesByCategory: byCat };
     }, [filteredTransactions, categories]);
 
     const trendsData = useMemo(() => {
@@ -178,8 +180,9 @@ export default function BudgetView({
 
             <BudgetSummaryCards
                 displayBalance={displayBalance}
-                income={income}
-                expense={expense}
+                income={totalIncome}
+                expense={totalExpense}
+                loading={totalsLoading}
                 currency={currency}
                 formatMoney={formatMoney}
                 t={t}
@@ -189,7 +192,7 @@ export default function BudgetView({
             <div className="grid lg:grid-cols-3 gap-4">
                 <BudgetCharts
                     expensesByCategory={expensesByCategory}
-                    expense={expense}
+                    expense={totalExpense}
                     trendsData={trendsData}
                     currency={currency}
                     formatMoney={formatMoney}
