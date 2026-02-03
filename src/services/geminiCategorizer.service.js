@@ -5,7 +5,7 @@
  */
 
 const CATEGORIZE_ENDPOINT = '/categorize';
-const BATCH_SIZE = 50; // Transactions per request (max allowed by Cloud Function)
+const BATCH_SIZE = 30; // Transactions per request (reduced to avoid truncated response)
 
 /**
  * Categorize transactions using AI via Cloud Function
@@ -18,10 +18,13 @@ export const categorizeWithAI = async (transactions, categories) => {
         return transactions;
     }
 
-    // Get category IDs (only expense categories)
-    const categoryIds = categories
+    // Get category objects (only expense categories)
+    // We send {id, name} so the AI understands what each category means
+    const categoryObjects = categories
         .filter(c => c.type === 'expense' || !c.type)
-        .map(c => c.id);
+        .map(c => ({ id: c.id, name: c.name || c.id }));
+
+    const categoryIds = categoryObjects.map(c => c.id);
 
     // Add 'other' if not present
     if (!categoryIds.includes('other')) {
@@ -48,7 +51,8 @@ export const categorizeWithAI = async (transactions, categories) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     descriptions: batchDescriptions,
-                    categories: categoryIds
+                    descriptions: batchDescriptions,
+                    categories: categoryObjects
                 })
             });
 
@@ -59,6 +63,7 @@ export const categorizeWithAI = async (transactions, categories) => {
             }
 
             const data = await response.json();
+            console.log('[AI] Batch response data:', data);
 
             if (data.categories && Array.isArray(data.categories)) {
                 data.categories.forEach((category, j) => {

@@ -111,33 +111,38 @@ exports.categorize = onRequest({
         return;
     }
 
-    // Build enhanced multi-language prompt
+    // Categories from request (expected: [{id, name}, ...])
+    // If simple strings received, map them to {id, name}
+    const categoriesList = categories.map(c =>
+        typeof c === 'string' ? { id: c, name: c } : c
+    );
+
+    // Build enhanced multi-language prompt with DYNAMIC categories
     const prompt = `You are a multilingual financial transaction categorizer.
-Analyze bank transactions and assign ONE category to each.
+Analyze bank transactions and assign ONE category ID from the list below to each transaction.
+
+USER CATEGORIES (id: name):
+${categoriesList.map(c => `- ${c.id}: ${c.name}`).join('\n')}
+- other: Uncategorized / Unknown
 
 GUIDELINES:
-1. Detect context from merchant names (MAXIMA/IKI=Lithuania, ATB/Silpo=Ukraine, Żabka/Biedronka=Poland, etc.)
-2. Understand multiple languages: English, Ukrainian, Lithuanian, Polish, Russian, German, etc.
-3. ALWAYS analyze description AND comments for context clues (e.g., "rent", "nuoma", "оренда", "czynsz", "miete" = housing, etc.)
-4. For transfers: check comments for purpose - if mentions rent/utilities/gifts assign accordingly
-
-CATEGORIES (use exact IDs only):
-- food: supermarkets, groceries, restaurants, cafes, food delivery, bakeries, etc.
-- transport: taxi (Bolt, Uber), fuel stations, parking, public transit, car services, etc.
-- shopping: retail stores, online marketplaces, clothing, electronics, furniture, etc.
-- entertainment: streaming (Netflix, Spotify), gaming, cinema, concerts, hobbies, etc.
-- utilities: electricity, gas, water, internet, phone, heating, etc.
-- health: pharmacies, hospitals, medical services, fitness, sports, etc.
-- housing: rent, mortgage, repairs, home maintenance, accommodation, etc.
-- subscriptions: recurring payments, memberships, SaaS, premium services, etc.
-- transfers: money transfers between accounts, P2P payments (ONLY if no other context in comments)
-- other: anything that doesn't clearly fit above
+1. Match transaction meaning to the closest User Category Name.
+2. Context: MAXIMA/IKI=Lithuania, ATB/Silpo=Ukraine, Żabka=Poland.
+3. Keywords mapping (use if category names match):
+   - Food/Groceries: supermarkets, restaurants, cafe, bolt food
+   - Transport/Car: fuel, parking, taxi, bolt, uber, public transport
+   - Housing/Rent: rent, nuoma, оренда, czynsz, utilities
+   - Shopping: clothes, electronics, online stores
+4. If no suitable category exists in the list above, use "other".
 
 TRANSACTIONS:
 ${descriptions.map((d, i) => `${i + 1}. ${d}`).join('\n')}
 
 RESPOND with JSON array ONLY - exact category IDs in same order:
-["food", "transport", "housing", ...]`;
+["${categoriesList[0]?.id || 'other'}", "other", ...]`;
+
+    // DEBUG LOGS
+    logger.info("Generated Prompt Categories:", categoriesList.map(c => `${c.id}:${c.name}`));
 
     try {
         const geminiRes = await fetch(
@@ -149,24 +154,23 @@ RESPOND with JSON array ONLY - exact category IDs in same order:
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: {
                         temperature: 0.1,
-                        maxOutputTokens: 1000
+                        maxOutputTokens: 4000,
                     }
                 })
             }
         );
 
         if (!geminiRes.ok) {
-            const errorData = await geminiRes.json();
-            logger.error("Gemini API error:", errorData);
-            res.status(geminiRes.status).json({
-                error: "AI categorization failed",
-                details: errorData.error?.message
-            });
+            const errorText = await geminiRes.text();
+            logger.error("Gemini API Error:", errorText);
+            res.status(geminiRes.status).json({ error: "AI Error", details: errorText });
             return;
         }
 
         const data = await geminiRes.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        logger.info("Gemini Raw Response:", text); // See what AI actually returns
 
         // Parse JSON array from response
         const jsonMatch = text.match(/\[[\s\S]*\]/);
