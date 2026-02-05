@@ -1,3 +1,4 @@
+import { renderHook, act, waitFor } from '@testing-library/react';
 import {
     onAuthStateChanged,
     createUserWithEmailAndPassword,
@@ -7,27 +8,24 @@ import {
 } from 'firebase/auth';
 import { onSnapshot, setDoc } from 'firebase/firestore';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
 
 import { useAuth } from '../../../hooks/useAuth';
-
-// --- MOCKS ---
 
 vi.mock('../../../firebase', () => ({
     auth: { currentUser: null },
     db: {},
-    appId: 'test-app-id'
+    appId: 'test-app-id',
 }));
 
 const { mockDocRef } = vi.hoisted(() => ({
-    mockDocRef: { id: 'mock-doc-id' }
+    mockDocRef: { id: 'mock-doc-id' },
 }));
 
 vi.mock('firebase/firestore', () => ({
     doc: vi.fn(() => mockDocRef),
     setDoc: vi.fn(),
     onSnapshot: vi.fn(),
-    DocumentReference: class { }
+    DocumentReference: class { },
 }));
 
 vi.mock('firebase/auth', () => ({
@@ -38,7 +36,9 @@ vi.mock('firebase/auth', () => ({
     signOut: vi.fn(),
     sendPasswordResetEmail: vi.fn(),
     updateProfile: vi.fn(),
-    GoogleAuthProvider: class { setCustomParameters() { } },
+    GoogleAuthProvider: class {
+        setCustomParameters() { }
+    },
     signInWithPopup: vi.fn(),
     sendEmailVerification: vi.fn(),
 }));
@@ -49,7 +49,9 @@ describe('useAuth', () => {
     });
 
     it('should initialize with loading state and subscribe to auth', () => {
-        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as any);
+        vi.mocked(onAuthStateChanged).mockImplementation(
+            () => vi.fn() as unknown as any
+        );
 
         const { result } = renderHook(() => useAuth());
 
@@ -59,10 +61,12 @@ describe('useAuth', () => {
 
     it('should update user and profile on auth state change', async () => {
         let authCallback: (user: unknown) => void = () => { };
-        vi.mocked(onAuthStateChanged).mockImplementation((_auth: unknown, cb: unknown) => {
-            authCallback = cb as (user: unknown) => void;
-            return vi.fn() as unknown as any;
-        });
+        vi.mocked(onAuthStateChanged).mockImplementation(
+            (_auth: unknown, cb: unknown) => {
+                authCallback = cb as (user: unknown) => void;
+                return vi.fn() as unknown as any;
+            }
+        );
 
         let profileCallback: (snap: unknown) => void = () => { };
         vi.mocked(onSnapshot).mockImplementation((_ref: unknown, cb: unknown) => {
@@ -84,7 +88,10 @@ describe('useAuth', () => {
         // Simulate profile load
         const mockProfileSnap = {
             exists: () => true,
-            data: () => ({ activeBudgetId: 'budget-1', isPendingApproval: false })
+            data: () => ({
+                activeBudgetId: 'budget-1',
+                isPendingApproval: false,
+            }),
         };
 
         act(() => {
@@ -99,12 +106,16 @@ describe('useAuth', () => {
 
     it('should handle registration flow', async () => {
         // Setup initial auth subscription to just do nothing so hook renders
-        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as any);
+        vi.mocked(onAuthStateChanged).mockImplementation(
+            () => vi.fn() as unknown as any
+        );
 
         const { result } = renderHook(() => useAuth());
 
         const mockUser = { uid: 'new-user', email: 'new@test.com' };
-        vi.mocked(createUserWithEmailAndPassword).mockResolvedValue({ user: mockUser } as unknown as any);
+        vi.mocked(createUserWithEmailAndPassword).mockResolvedValue({
+            user: mockUser,
+        } as unknown as any);
         vi.mocked(updateProfile).mockResolvedValue(undefined as unknown as any);
         vi.mocked(setDoc).mockResolvedValue(undefined as unknown as any); // Profile creation
 
@@ -112,14 +123,22 @@ describe('useAuth', () => {
             await result.current.register('new@test.com', 'password', 'New User');
         });
 
-        expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(expect.anything(), 'new@test.com', 'password');
-        expect(updateProfile).toHaveBeenCalledWith(mockUser, { displayName: 'New User' });
+        expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
+            expect.anything(),
+            'new@test.com',
+            'password'
+        );
+        expect(updateProfile).toHaveBeenCalledWith(mockUser, {
+            displayName: 'New User',
+        });
         expect(setDoc).toHaveBeenCalled(); // Profile creation
         expect(sendEmailVerification).toHaveBeenCalledWith(mockUser);
     });
 
     it('should handle logout', async () => {
-        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as any);
+        vi.mocked(onAuthStateChanged).mockImplementation(
+            () => vi.fn() as unknown as any
+        );
         const { result } = renderHook(() => useAuth());
 
         await act(async () => {
