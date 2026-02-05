@@ -20,6 +20,8 @@
 10. [Testing Coverage](#10-testing-coverage)
 11. [Recommendations](#11-recommendations)
 12. [Action Items](#12-action-items)
+13. [Implementation Checklist](#13-implementation-checklist)
+14. [Future Features Roadmap](#14-future-features-roadmap)
 
 ---
 
@@ -733,6 +735,860 @@ exports.monobank = onRequest({
   }
 }
 ```
+
+---
+
+## 13. Implementation Checklist
+
+This section provides a detailed, actionable checklist for your team to implement the audit recommendations. Tasks are organized by sprints and priority levels.
+
+---
+
+### Sprint 1: Critical Security Fixes (Week 1)
+
+**Owner:** _________________ **Due Date:** _________________
+
+#### 1.1 Remove Hardcoded API Keys
+- [ ] Open `src/firebase.js`
+- [ ] Remove all hardcoded fallback values (lines 5-12)
+- [ ] Replace with environment-only configuration:
+  ```javascript
+  const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
+  };
+  ```
+- [ ] Add validation to fail fast if env vars missing
+- [ ] Test locally with `.env.local` file
+- [ ] Verify production deployment uses proper env vars
+
+#### 1.2 Create Environment Variable Documentation
+- [ ] Create `.env.example` file in project root:
+  ```
+  # Firebase Configuration
+  VITE_FIREBASE_API_KEY=your_api_key_here
+  VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+  VITE_FIREBASE_PROJECT_ID=your_project_id
+  VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+  VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+  VITE_FIREBASE_APP_ID=your_app_id
+  ```
+- [ ] Add `.env.local` and `.env` to `.gitignore` (verify existing)
+- [ ] Update `README.md` with environment setup instructions
+
+#### 1.3 Restrict Firebase API Key
+- [ ] Open Firebase Console → Project Settings → API Keys
+- [ ] Add HTTP referrer restrictions:
+  - `https://smartbudget-7b00a.firebaseapp.com/*`
+  - `https://smartbudget-7b00a.web.app/*`
+  - `http://localhost:*` (for development)
+- [ ] Document restricted key configuration
+- [ ] Test that restrictions don't break production
+
+#### 1.4 Fix CORS Configuration
+- [ ] Open `functions/index.js`
+- [ ] Update monobank function CORS:
+  ```javascript
+  const allowedOrigins = [
+    'https://smartbudget-7b00a.firebaseapp.com',
+    'https://smartbudget-7b00a.web.app',
+    'http://localhost:5173' // dev only, remove for production
+  ];
+
+  exports.monobank = onRequest({
+    cors: { origin: allowedOrigins, credentials: true },
+    maxInstances: 10
+  }, async (req, res) => { ... });
+  ```
+- [ ] Update categorize function with same CORS config
+- [ ] Deploy functions: `firebase deploy --only functions`
+- [ ] Test both functions from production domain
+- [ ] Test that unauthorized origins are blocked
+
+#### 1.5 Fix NPM Vulnerabilities
+- [ ] Run `npm audit` to see current vulnerabilities
+- [ ] Run `npm audit fix` for auto-fixes
+- [ ] For remaining issues, run `npm audit fix --force` (review changes)
+- [ ] Manually update problematic packages if needed:
+  - [ ] Update `react-router-dom` to latest patch
+  - [ ] Update `qs` dependency
+  - [ ] Update `node-tar` dependency
+- [ ] Run `npm audit` again to verify all fixed
+- [ ] Run `npm run build` to verify no breaking changes
+- [ ] Run application and test critical flows
+
+---
+
+### Sprint 2: Security Headers & Error Handling (Week 2)
+
+**Owner:** _________________ **Due Date:** _________________
+
+#### 2.1 Add Security Headers
+- [ ] Open `firebase.json`
+- [ ] Add headers configuration to hosting:
+  ```json
+  {
+    "hosting": {
+      "public": "dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            { "key": "X-Frame-Options", "value": "DENY" },
+            { "key": "X-Content-Type-Options", "value": "nosniff" },
+            { "key": "X-XSS-Protection", "value": "1; mode=block" },
+            { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+            { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+          ]
+        }
+      ],
+      "rewrites": [...]
+    }
+  }
+  ```
+- [ ] Deploy: `firebase deploy --only hosting`
+- [ ] Verify headers using browser DevTools (Network tab)
+- [ ] Test using securityheaders.com
+
+#### 2.2 Add Content Security Policy
+- [ ] Create CSP header (start permissive, tighten later):
+  ```
+  Content-Security-Policy: default-src 'self';
+    script-src 'self' 'unsafe-inline' https://apis.google.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: https:;
+    connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com;
+  ```
+- [ ] Add to firebase.json headers
+- [ ] Test application thoroughly (CSP can break things)
+- [ ] Monitor console for CSP violations
+- [ ] Iterate and tighten as needed
+
+#### 2.3 Add Global Error Boundary
+- [ ] Create `src/components/ErrorBoundary.jsx`:
+  ```jsx
+  import { Component } from 'react';
+
+  class ErrorBoundary extends Component {
+    state = { hasError: false, error: null };
+
+    static getDerivedStateFromError(error) {
+      return { hasError: true, error };
+    }
+
+    componentDidCatch(error, errorInfo) {
+      console.error('Error caught by boundary:', error, errorInfo);
+      // TODO: Send to error reporting service
+    }
+
+    render() {
+      if (this.state.hasError) {
+        return (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-red-600">Something went wrong</h1>
+              <p className="mt-2 text-gray-600">Please refresh the page</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+        );
+      }
+      return this.props.children;
+    }
+  }
+
+  export default ErrorBoundary;
+  ```
+- [ ] Wrap `App` component with `ErrorBoundary` in `main.jsx`
+- [ ] Test by throwing an error in a component
+- [ ] Add i18n support to error messages
+
+#### 2.4 Improve Authentication Error Messages
+- [ ] Open `src/hooks/useAuth.js`
+- [ ] Update error handling to use generic messages:
+  ```javascript
+  const getAuthErrorMessage = (errorCode) => {
+    const genericMessages = {
+      'auth/user-not-found': 'Invalid email or password',
+      'auth/wrong-password': 'Invalid email or password',
+      'auth/invalid-credential': 'Invalid email or password',
+      'auth/too-many-requests': 'Too many attempts. Please try again later.',
+      'auth/email-already-in-use': 'An account with this email already exists',
+    };
+    return genericMessages[errorCode] || 'An error occurred. Please try again.';
+  };
+  ```
+- [ ] Apply to login and registration flows
+- [ ] Test that specific user existence isn't leaked
+
+---
+
+### Sprint 3: Code Quality & TypeScript (Week 3-4)
+
+**Owner:** _________________ **Due Date:** _________________
+
+#### 3.1 Setup Prettier
+- [ ] Install Prettier: `npm install -D prettier`
+- [ ] Create `.prettierrc`:
+  ```json
+  {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "printWidth": 100
+  }
+  ```
+- [ ] Create `.prettierignore`:
+  ```
+  dist
+  node_modules
+  *.md
+  ```
+- [ ] Add script to `package.json`: `"format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\""`
+- [ ] Run `npm run format` to format all files
+- [ ] Commit formatting changes separately
+- [ ] Add Prettier to ESLint config for consistency
+
+#### 3.2 Enable TypeScript Strict Mode (Incremental)
+- [ ] Update `tsconfig.json`:
+  ```json
+  {
+    "compilerOptions": {
+      "strict": true,
+      "noUnusedLocals": true,
+      "noUnusedParameters": true,
+      "noImplicitReturns": true,
+      "noFallthroughCasesInSwitch": true
+    }
+  }
+  ```
+- [ ] Fix type errors one file at a time (start with services)
+- [ ] Priority files to migrate:
+  - [ ] `src/services/transactions.service.js` → `.ts`
+  - [ ] `src/services/budgets.service.js` → `.ts`
+  - [ ] `src/services/assets.service.js` → `.ts`
+  - [ ] `src/hooks/useBudgetData.js` → `.ts`
+  - [ ] `src/store/useBudgetStore.js` → `.ts`
+- [ ] Create shared types file: `src/types/index.ts`
+- [ ] Add TypeScript ESLint rules
+
+#### 3.3 Add Import Sorting
+- [ ] Install plugin: `npm install -D eslint-plugin-import`
+- [ ] Update ESLint config with import rules:
+  ```javascript
+  {
+    "plugins": ["import"],
+    "rules": {
+      "import/order": ["error", {
+        "groups": ["builtin", "external", "internal", "parent", "sibling"],
+        "newlines-between": "always",
+        "alphabetize": { "order": "asc" }
+      }]
+    }
+  }
+  ```
+- [ ] Run `npm run lint -- --fix` to auto-fix
+- [ ] Verify imports are properly sorted
+
+#### 3.4 Add Accessibility Linting
+- [ ] Install: `npm install -D eslint-plugin-jsx-a11y`
+- [ ] Add to ESLint config:
+  ```javascript
+  {
+    "extends": ["plugin:jsx-a11y/recommended"]
+  }
+  ```
+- [ ] Run lint and fix accessibility issues
+- [ ] Priority fixes:
+  - [ ] Add alt text to images
+  - [ ] Add labels to form inputs
+  - [ ] Ensure color contrast meets WCAG AA
+  - [ ] Add keyboard navigation to custom components
+
+---
+
+### Sprint 4: Testing Foundation (Week 5-6)
+
+**Owner:** _________________ **Due Date:** _________________
+
+#### 4.1 Setup Testing Infrastructure
+- [ ] Verify Vitest configuration in `vite.config.js`
+- [ ] Create `src/__tests__/` directory structure:
+  ```
+  src/__tests__/
+  ├── unit/
+  │   ├── services/
+  │   ├── hooks/
+  │   └── utils/
+  ├── integration/
+  └── components/
+  ```
+- [ ] Create mock setup file: `src/__mocks__/firebase.js`
+- [ ] Add coverage script: `"test:coverage": "vitest --coverage"`
+- [ ] Install coverage reporter: `npm install -D @vitest/coverage-v8`
+
+#### 4.2 Write Service Tests
+- [ ] Create `src/__tests__/unit/services/transactions.test.js`:
+  ```javascript
+  import { describe, it, expect, vi, beforeEach } from 'vitest';
+  import { addTransaction, updateTransaction, deleteTransaction } from '@/services/transactions.service';
+
+  // Mock Firestore
+  vi.mock('firebase/firestore', () => ({
+    writeBatch: vi.fn(),
+    doc: vi.fn(),
+    collection: vi.fn(),
+    // ... other mocks
+  }));
+
+  describe('TransactionsService', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    describe('addTransaction', () => {
+      it('should add transaction and update balance', async () => {
+        // Test implementation
+      });
+
+      it('should handle income transactions', async () => {
+        // Test implementation
+      });
+
+      it('should handle expense transactions', async () => {
+        // Test implementation
+      });
+    });
+  });
+  ```
+- [ ] Achieve 80% coverage on `transactions.service.js`
+- [ ] Create tests for `budgets.service.js`
+- [ ] Create tests for `assets.service.js`
+- [ ] Create tests for `loans.service.js`
+
+#### 4.3 Write Hook Tests
+- [ ] Create `src/__tests__/unit/hooks/useAuth.test.js`
+- [ ] Create `src/__tests__/unit/hooks/useBudgetData.test.js`
+- [ ] Create `src/__tests__/unit/hooks/useCurrencyConversion.test.js`
+- [ ] Test currency conversion accuracy
+- [ ] Test authentication state management
+
+#### 4.4 Write Utility Tests
+- [ ] Create tests for `src/utils/currencyUtils.js`
+- [ ] Create tests for `src/utils/revolutParser.js`
+- [ ] Create tests for `src/utils/dateUtils.js`
+- [ ] Achieve 90% coverage on utility functions
+
+#### 4.5 Write Component Tests
+- [ ] Create `src/__tests__/components/TransactionModal.test.jsx`
+- [ ] Create `src/__tests__/components/TransactionItem.test.jsx`
+- [ ] Test form validation
+- [ ] Test user interactions
+- [ ] Add snapshot tests for UI stability
+
+#### 4.6 Setup CI/CD Testing
+- [ ] Create `.github/workflows/test.yml`:
+  ```yaml
+  name: Test
+  on: [push, pull_request]
+  jobs:
+    test:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-node@v4
+          with:
+            node-version: '20'
+            cache: 'npm'
+        - run: npm ci
+        - run: npm run lint
+        - run: npm run test:coverage
+        - run: npm run build
+  ```
+- [ ] Add branch protection rules requiring tests to pass
+- [ ] Add coverage badge to README
+
+---
+
+### Sprint 5: Performance & Documentation (Week 7-8)
+
+**Owner:** _________________ **Due Date:** _________________
+
+#### 5.1 Add React Performance Optimizations
+- [ ] Add `React.memo` to list item components:
+  - [ ] `TransactionItem.jsx`
+  - [ ] `AssetItem.jsx`
+  - [ ] `LoanItem.jsx`
+  - [ ] `CategoryItem.jsx`
+- [ ] Add `useCallback` to event handlers in parent components
+- [ ] Review and optimize `useMemo` usage
+- [ ] Use React DevTools Profiler to identify re-renders
+- [ ] Add virtualization for long lists (react-window)
+
+#### 5.2 Add Bundle Analysis
+- [ ] Install: `npm install -D rollup-plugin-visualizer`
+- [ ] Update `vite.config.js`:
+  ```javascript
+  import { visualizer } from 'rollup-plugin-visualizer';
+
+  export default defineConfig({
+    plugins: [
+      // ... other plugins
+      visualizer({
+        filename: 'dist/stats.html',
+        open: true,
+        gzipSize: true,
+      }),
+    ],
+  });
+  ```
+- [ ] Run `npm run build` and analyze bundle
+- [ ] Identify and optimize large dependencies
+- [ ] Consider lazy loading heavy components
+
+#### 5.3 Add Image Optimization
+- [ ] Audit all images in `public/` and `src/assets/`
+- [ ] Convert images to WebP format
+- [ ] Add lazy loading to images:
+  ```jsx
+  <img loading="lazy" src="..." alt="..." />
+  ```
+- [ ] Add proper image dimensions to prevent layout shift
+- [ ] Consider using a CDN for images
+
+#### 5.4 Create Architecture Documentation
+- [ ] Create `docs/ARCHITECTURE.md`:
+  - [ ] High-level system overview
+  - [ ] Component hierarchy diagram
+  - [ ] Data flow diagrams
+  - [ ] State management patterns
+  - [ ] Firestore schema documentation
+  - [ ] API integration details
+- [ ] Create `docs/CONTRIBUTING.md`:
+  - [ ] Development setup instructions
+  - [ ] Code style guide
+  - [ ] PR process
+  - [ ] Testing requirements
+- [ ] Update `README.md`:
+  - [ ] Feature overview
+  - [ ] Quick start guide
+  - [ ] Environment setup
+  - [ ] Deployment instructions
+
+#### 5.5 Add API Documentation
+- [ ] Document Cloud Functions API:
+  - [ ] `/monobank` endpoint
+  - [ ] `/categorize` endpoint
+- [ ] Document Firestore collections and fields
+- [ ] Add JSDoc comments to all service functions
+- [ ] Generate documentation from JSDoc (optional)
+
+---
+
+### Sprint 6: Accessibility & i18n (Week 9-10)
+
+**Owner:** _________________ **Due Date:** _________________
+
+#### 6.1 WCAG Compliance Audit
+- [ ] Run automated accessibility audit (axe, Lighthouse)
+- [ ] Test with keyboard-only navigation
+- [ ] Test with screen reader (VoiceOver, NVDA)
+- [ ] Check color contrast ratios (4.5:1 minimum)
+- [ ] Verify focus indicators are visible
+- [ ] Document and fix all issues
+
+#### 6.2 Keyboard Navigation
+- [ ] Ensure all interactive elements are focusable
+- [ ] Add keyboard shortcuts for common actions:
+  - [ ] `N` - New transaction
+  - [ ] `Esc` - Close modals
+  - [ ] `Tab` - Navigate between fields
+- [ ] Add skip links for main content
+- [ ] Test tab order is logical
+
+#### 6.3 Screen Reader Support
+- [ ] Add `aria-label` to all icon-only buttons
+- [ ] Add `aria-describedby` for form error messages
+- [ ] Add `role` attributes where needed
+- [ ] Add `aria-live` regions for dynamic content
+- [ ] Test with actual screen readers
+
+#### 6.4 Add More Languages
+- [ ] Create `src/locales/pl.json` (Polish)
+- [ ] Create `src/locales/de.json` (German) - optional
+- [ ] Add language selector in settings
+- [ ] Ensure all strings are externalized
+- [ ] Test RTL support if adding Arabic/Hebrew
+
+---
+
+### Maintenance Checklist (Ongoing)
+
+#### Weekly Tasks
+- [ ] Run `npm audit` and address new vulnerabilities
+- [ ] Review and merge dependabot PRs
+- [ ] Check Firebase usage and costs
+- [ ] Review error logs and fix issues
+
+#### Monthly Tasks
+- [ ] Run full accessibility audit
+- [ ] Review and update dependencies
+- [ ] Performance profiling and optimization
+- [ ] Security headers review
+- [ ] Backup Firestore data
+
+#### Quarterly Tasks
+- [ ] Full security audit
+- [ ] Dependency major version updates
+- [ ] Code quality metrics review
+- [ ] Documentation review and updates
+- [ ] User feedback review and prioritization
+
+---
+
+## 14. Future Features Roadmap
+
+This section outlines potential features for future development, organized by category and complexity.
+
+---
+
+### 14.1 High-Value Features (Recommended Next)
+
+#### 14.1.1 Recurring Transactions
+**Complexity:** Medium | **Impact:** High
+
+**Description:** Automatically create transactions on a schedule (daily, weekly, monthly, yearly).
+
+**Implementation:**
+- [ ] Add `recurringTransactions` collection
+- [ ] Fields: `amount`, `category`, `frequency`, `nextDate`, `endDate`
+- [ ] Create Cloud Function to process recurring transactions daily
+- [ ] Add UI for managing recurring transactions
+- [ ] Support for subscriptions, salaries, rent, etc.
+
+**User Value:** Reduces manual entry, better budget forecasting
+
+---
+
+#### 14.1.2 Budget Goals & Limits
+**Complexity:** Medium | **Impact:** High
+
+**Description:** Set spending limits per category and track progress.
+
+**Implementation:**
+- [ ] Add `budgetGoals` collection with monthly limits per category
+- [ ] Create progress tracking (spent vs. limit)
+- [ ] Add visual indicators (progress bars, alerts)
+- [ ] Push notifications when approaching/exceeding limits
+- [ ] Monthly rollover options
+
+**User Value:** Helps control spending, achieve savings goals
+
+---
+
+#### 14.1.3 Data Export & Reports
+**Complexity:** Low | **Impact:** High
+
+**Description:** Export transactions and generate financial reports.
+
+**Implementation:**
+- [ ] CSV export for all transactions
+- [ ] PDF monthly/yearly reports
+- [ ] Charts export as images
+- [ ] Tax-friendly export formats
+- [ ] Email scheduled reports
+
+**User Value:** Tax preparation, financial planning, backup
+
+---
+
+#### 14.1.4 More Bank Integrations
+**Complexity:** High | **Impact:** High
+
+**Description:** Add support for additional banks and financial services.
+
+**Candidates:**
+- [ ] PrivatBank (Ukraine)
+- [ ] Revolut API (direct integration)
+- [ ] Wise (TransferWise) API
+- [ ] Open Banking (EU PSD2)
+- [ ] Plaid (US banks)
+
+**Implementation:**
+- [ ] Abstract bank integration interface
+- [ ] OAuth flows for each provider
+- [ ] Transaction normalization layer
+- [ ] Rate limiting and error handling
+
+---
+
+#### 14.1.5 Mobile App (React Native)
+**Complexity:** High | **Impact:** Very High
+
+**Description:** Native mobile experience with offline support.
+
+**Options:**
+- [ ] React Native (code sharing with web)
+- [ ] Capacitor wrapper (quick, uses existing code)
+- [ ] PWA improvements (current approach)
+
+**Features:**
+- [ ] Push notifications
+- [ ] Biometric authentication
+- [ ] Camera for receipt scanning
+- [ ] Widgets for quick balance view
+- [ ] Apple/Google Pay integration
+
+---
+
+### 14.2 Medium-Value Features (Future Sprints)
+
+#### 14.2.1 Receipt Scanning (OCR)
+**Complexity:** Medium | **Impact:** Medium
+
+**Description:** Scan receipts to auto-fill transaction details.
+
+**Implementation:**
+- [ ] Integrate Google Cloud Vision or AWS Textract
+- [ ] Extract: amount, date, merchant, items
+- [ ] Store receipt images in Firebase Storage
+- [ ] Link receipts to transactions
+
+---
+
+#### 14.2.2 Financial Insights & Analytics
+**Complexity:** Medium | **Impact:** Medium
+
+**Description:** AI-powered financial insights and recommendations.
+
+**Features:**
+- [ ] Spending pattern analysis
+- [ ] Anomaly detection (unusual spending)
+- [ ] Savings opportunities identification
+- [ ] Bill negotiation suggestions
+- [ ] Subscription tracking and optimization
+
+---
+
+#### 14.2.3 Savings Goals
+**Complexity:** Low | **Impact:** Medium
+
+**Description:** Track progress toward specific savings goals.
+
+**Implementation:**
+- [ ] Create `savingsGoals` collection
+- [ ] Visual progress tracking
+- [ ] Auto-allocation rules
+- [ ] Milestone celebrations
+- [ ] Share goals with family budget members
+
+---
+
+#### 14.2.4 Split Expenses
+**Complexity:** Medium | **Impact:** Medium
+
+**Description:** Split transactions among budget members.
+
+**Implementation:**
+- [ ] Mark transactions as "split"
+- [ ] Assign portions to members
+- [ ] Track who owes what
+- [ ] Settlement tracking
+- [ ] Integration with Splitwise-style calculations
+
+---
+
+#### 14.2.5 Investment Tracking Enhancements
+**Complexity:** Medium | **Impact:** Medium
+
+**Description:** Enhanced investment portfolio tracking.
+
+**Features:**
+- [ ] Stock price real-time updates
+- [ ] Portfolio performance charts
+- [ ] Dividend tracking
+- [ ] Cost basis calculations
+- [ ] Integration with brokerages (read-only)
+
+---
+
+#### 14.2.6 Bill Reminders & Payments
+**Complexity:** Low | **Impact:** Medium
+
+**Description:** Track and remind about upcoming bills.
+
+**Features:**
+- [ ] Bill calendar view
+- [ ] Push/email reminders
+- [ ] Mark as paid functionality
+- [ ] Recurring bill templates
+- [ ] Integration with recurring transactions
+
+---
+
+### 14.3 Nice-to-Have Features (Backlog)
+
+#### 14.3.1 Multi-Account Support
+- [ ] Multiple bank accounts per budget
+- [ ] Transfer tracking between accounts
+- [ ] Consolidated net worth view
+- [ ] Account reconciliation
+
+#### 14.3.2 Tags & Custom Fields
+- [ ] User-defined tags for transactions
+- [ ] Custom metadata fields
+- [ ] Advanced filtering by tags
+- [ ] Tag-based reports
+
+#### 14.3.3 Collaboration Features
+- [ ] Comments on transactions
+- [ ] Activity feed
+- [ ] @mentions for family members
+- [ ] Approval workflows for large purchases
+
+#### 14.3.4 Debt Payoff Planner
+- [ ] Debt snowball/avalanche calculator
+- [ ] Payment schedule optimization
+- [ ] Interest savings projections
+- [ ] Multiple debt comparison
+
+#### 14.3.5 Tax Estimation
+- [ ] Income tax estimation
+- [ ] Deductible expense tracking
+- [ ] Tax category mapping
+- [ ] Country-specific tax rules
+
+#### 14.3.6 Currency Conversion Improvements
+- [ ] Historical exchange rates
+- [ ] Multi-currency transactions
+- [ ] Forex gain/loss tracking
+- [ ] Custom exchange rate overrides
+
+#### 14.3.7 Data Visualization Enhancements
+- [ ] Sankey diagrams (income flow)
+- [ ] Heat maps (spending by day)
+- [ ] Comparison views (month vs month)
+- [ ] Custom date range reports
+- [ ] Trend predictions
+
+#### 14.3.8 Gamification
+- [ ] Achievement badges
+- [ ] Savings streaks
+- [ ] Budget challenges
+- [ ] Leaderboards (family budgets)
+- [ ] Financial health score
+
+#### 14.3.9 Voice Commands
+- [ ] "Add expense $50 for groceries"
+- [ ] "What's my balance?"
+- [ ] "Show this month's spending"
+- [ ] Integration with Google Assistant/Siri
+
+#### 14.3.10 API & Webhooks
+- [ ] Public API for integrations
+- [ ] Webhook notifications
+- [ ] Zapier/IFTTT integration
+- [ ] Export to Google Sheets
+
+---
+
+### 14.4 Technical Debt & Improvements
+
+#### 14.4.1 Full TypeScript Migration
+- [ ] Convert all `.js` files to `.ts`
+- [ ] Add strict type checking
+- [ ] Create comprehensive type definitions
+- [ ] Use Zod for runtime validation
+
+#### 14.4.2 State Management Refactor
+- [ ] Evaluate React Query for server state
+- [ ] Optimize Zustand store structure
+- [ ] Add state persistence layer
+- [ ] Improve offline support
+
+#### 14.4.3 Testing Coverage
+- [ ] Achieve 80% code coverage
+- [ ] Add E2E tests with Playwright
+- [ ] Visual regression testing
+- [ ] Performance testing
+
+#### 14.4.4 Design System
+- [ ] Create component library
+- [ ] Add Storybook for documentation
+- [ ] Design tokens for theming
+- [ ] Animation system
+
+#### 14.4.5 Performance Optimization
+- [ ] Server-side rendering (Next.js migration?)
+- [ ] Edge caching
+- [ ] Database query optimization
+- [ ] Asset optimization pipeline
+
+---
+
+### 14.5 Feature Prioritization Matrix
+
+| Feature | Impact | Effort | Priority Score |
+|---------|--------|--------|----------------|
+| Recurring Transactions | High | Medium | ⭐⭐⭐⭐⭐ |
+| Budget Goals & Limits | High | Medium | ⭐⭐⭐⭐⭐ |
+| Data Export | High | Low | ⭐⭐⭐⭐⭐ |
+| Bank Integrations | High | High | ⭐⭐⭐⭐ |
+| Receipt Scanning | Medium | Medium | ⭐⭐⭐ |
+| Financial Insights | Medium | Medium | ⭐⭐⭐ |
+| Savings Goals | Medium | Low | ⭐⭐⭐⭐ |
+| Split Expenses | Medium | Medium | ⭐⭐⭐ |
+| Mobile App | Very High | High | ⭐⭐⭐⭐ |
+| Investment Enhancements | Medium | Medium | ⭐⭐⭐ |
+| Bill Reminders | Medium | Low | ⭐⭐⭐⭐ |
+| Full TypeScript | Low | High | ⭐⭐ |
+| E2E Testing | Medium | Medium | ⭐⭐⭐ |
+
+---
+
+### 14.6 Recommended Feature Roadmap
+
+#### Q1 2026 (Now - March)
+1. ✅ Security fixes (Sprint 1-2)
+2. ✅ Code quality improvements (Sprint 3-4)
+3. 🔲 Recurring transactions
+4. 🔲 Budget goals & limits
+
+#### Q2 2026 (April - June)
+1. 🔲 Data export & reports
+2. 🔲 Bill reminders
+3. 🔲 Savings goals
+4. 🔲 PrivatBank integration
+
+#### Q3 2026 (July - September)
+1. 🔲 Receipt scanning
+2. 🔲 Financial insights
+3. 🔲 Split expenses
+4. 🔲 PWA improvements / Capacitor app
+
+#### Q4 2026 (October - December)
+1. 🔲 Advanced analytics
+2. 🔲 More bank integrations
+3. 🔲 Performance optimizations
+4. 🔲 Full TypeScript migration
 
 ---
 
