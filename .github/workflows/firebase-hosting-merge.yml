@@ -24,10 +24,12 @@ jobs:
           channelId: live
           projectId: smartbudget-7b00a
       # Deploy Firebase Functions
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SMARTBUDGET_7B00A }}
+
       - name: Deploy Functions
-        run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_SMARTBUDGET_7B00A }}' > $HOME/gcloud.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud.json
-          npx firebase-tools deploy --only functions --project smartbudget-7b00a
+        run: npx firebase-tools deploy --only functions --project smartbudget-7b00a
       # Note: Firestore Rules must be deployed manually via:
       # firebase deploy --only firestore:rules
