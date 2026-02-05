@@ -9,20 +9,13 @@ import ModalManager from './components/modals/ModalManager.jsx';
 import { useCurrency } from './context/CurrencyContext';
 import { useLanguage } from './context/LanguageContext';
 import { db, appId } from './firebase';
-
-// HOOKS
 import { useAppActions } from './hooks/useAppActions';
 import { useAuth } from './hooks/useAuth';
 import { useBudget } from './hooks/useBudget';
 import { useFamilySync } from './hooks/useFamilySync';
 import { useTeamMembers } from './hooks/useTeamMembers';
-
-// COMPONENTS
 import { AppProviders } from './providers/AppProviders';
 import AppRoutes from './routes/AppRoutes.jsx';
-// const ModalManager = React.lazy(() => import('./components/modals/ModalManager'));
-
-// STORE
 
 const AppContent = () => {
     const { lang, setLang, t } = useLanguage();
@@ -47,7 +40,7 @@ const AppContent = () => {
         budgetData.allowedUsers,
         budgetData.budgetOwnerId as string,
         user?.uid || ''
-    ) as { members: any[] };
+    ) as { members: unknown[] };
 
     // Actions Hook
     const actions = useAppActions(activeBudgetId, user, t, currency);
@@ -85,7 +78,6 @@ const AppContent = () => {
     useEffect(() => {
         const initMonobank = async () => {
             if (user?.uid) {
-                // @ts-ignore - dynamic import of JS store
                 const module = await import('./store/useMonobankStore');
                 module.useMonobankStore.getState().initFromFirestore(user.uid);
             }

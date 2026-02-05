@@ -1,8 +1,15 @@
+import {
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    updateProfile,
+    sendEmailVerification,
+    signOut,
+} from 'firebase/auth';
+import { onSnapshot, setDoc } from 'firebase/firestore';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
+
 import { useAuth } from '../../../hooks/useAuth';
-import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 // --- MOCKS ---
 
@@ -42,7 +49,7 @@ describe('useAuth', () => {
     });
 
     it('should initialize with loading state and subscribe to auth', () => {
-        (onAuthStateChanged as any).mockImplementation(() => vi.fn());
+        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as any);
 
         const { result } = renderHook(() => useAuth());
 
@@ -51,16 +58,16 @@ describe('useAuth', () => {
     });
 
     it('should update user and profile on auth state change', async () => {
-        let authCallback: (user: any) => void = () => { };
-        (onAuthStateChanged as any).mockImplementation((_auth: any, cb: any) => {
-            authCallback = cb;
-            return vi.fn();
+        let authCallback: (user: unknown) => void = () => { };
+        vi.mocked(onAuthStateChanged).mockImplementation((_auth: unknown, cb: unknown) => {
+            authCallback = cb as (user: unknown) => void;
+            return vi.fn() as unknown as any;
         });
 
-        let profileCallback: (snap: any) => void = () => { };
-        (onSnapshot as any).mockImplementation((_ref: any, cb: any) => {
-            profileCallback = cb;
-            return vi.fn();
+        let profileCallback: (snap: unknown) => void = () => { };
+        vi.mocked(onSnapshot).mockImplementation((_ref: unknown, cb: unknown) => {
+            profileCallback = cb as (snap: unknown) => void;
+            return vi.fn() as unknown as any;
         });
 
         const { result } = renderHook(() => useAuth());
@@ -92,14 +99,14 @@ describe('useAuth', () => {
 
     it('should handle registration flow', async () => {
         // Setup initial auth subscription to just do nothing so hook renders
-        (onAuthStateChanged as any).mockImplementation(() => vi.fn());
+        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as any);
 
         const { result } = renderHook(() => useAuth());
 
         const mockUser = { uid: 'new-user', email: 'new@test.com' };
-        (createUserWithEmailAndPassword as any).mockResolvedValue({ user: mockUser });
-        (updateProfile as any).mockResolvedValue(undefined);
-        (setDoc as any).mockResolvedValue(undefined); // Profile creation
+        vi.mocked(createUserWithEmailAndPassword).mockResolvedValue({ user: mockUser } as unknown as any);
+        vi.mocked(updateProfile).mockResolvedValue(undefined as unknown as any);
+        vi.mocked(setDoc).mockResolvedValue(undefined as unknown as any); // Profile creation
 
         await act(async () => {
             await result.current.register('new@test.com', 'password', 'New User');
@@ -112,7 +119,7 @@ describe('useAuth', () => {
     });
 
     it('should handle logout', async () => {
-        (onAuthStateChanged as any).mockImplementation(() => vi.fn());
+        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as any);
         const { result } = renderHook(() => useAuth());
 
         await act(async () => {
