@@ -40,7 +40,7 @@ describe('useBudgetData', () => {
 
     it('should subscribe to budget document on mount', () => {
         vi.mocked(onSnapshot).mockImplementation(
-            () => vi.fn() as unknown as any
+            () => vi.fn() as unknown as () => void
         );
 
         const { result } = renderHook(() => useBudgetData(activeBudgetId, false, user, t));
@@ -56,7 +56,7 @@ describe('useBudgetData', () => {
         vi.mocked(onSnapshot).mockImplementation(
             (_ref: unknown, callback: unknown) => {
                 snapshotCallback = callback as (snap: unknown) => void;
-                return vi.fn() as unknown as any;
+                return vi.fn() as unknown as () => void;
             }
         );
 
@@ -92,7 +92,7 @@ describe('useBudgetData', () => {
         vi.mocked(onSnapshot).mockImplementation(
             (_ref: unknown, callback: unknown) => {
                 snapshotCallback = callback as (snap: unknown) => void;
-                return vi.fn() as unknown as any;
+                return vi.fn() as unknown as () => void;
             }
         );
 
@@ -121,7 +121,7 @@ describe('useBudgetData', () => {
         vi.mocked(onSnapshot).mockImplementation(
             (_ref: unknown, callback: unknown) => {
                 snapshotCallback = callback as (snap: unknown) => void;
-                return vi.fn() as unknown as any;
+                return vi.fn() as unknown as () => void;
             }
         );
 

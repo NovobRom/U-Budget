@@ -50,7 +50,7 @@ describe('useAuth', () => {
 
     it('should initialize with loading state and subscribe to auth', () => {
         vi.mocked(onAuthStateChanged).mockImplementation(
-            () => vi.fn() as unknown as any
+            () => vi.fn() as unknown as () => void
         );
 
         const { result } = renderHook(() => useAuth());
@@ -64,14 +64,14 @@ describe('useAuth', () => {
         vi.mocked(onAuthStateChanged).mockImplementation(
             (_auth: unknown, cb: unknown) => {
                 authCallback = cb as (user: unknown) => void;
-                return vi.fn() as unknown as any;
+                return vi.fn() as unknown as () => void;
             }
         );
 
         let profileCallback: (snap: unknown) => void = () => { };
         vi.mocked(onSnapshot).mockImplementation((_ref: unknown, cb: unknown) => {
             profileCallback = cb as (snap: unknown) => void;
-            return vi.fn() as unknown as any;
+            return vi.fn() as unknown as () => void;
         });
 
         const { result } = renderHook(() => useAuth());
@@ -107,7 +107,7 @@ describe('useAuth', () => {
     it('should handle registration flow', async () => {
         // Setup initial auth subscription to just do nothing so hook renders
         vi.mocked(onAuthStateChanged).mockImplementation(
-            () => vi.fn() as unknown as any
+            () => vi.fn() as unknown as () => void
         );
 
         const { result } = renderHook(() => useAuth());
@@ -115,9 +115,9 @@ describe('useAuth', () => {
         const mockUser = { uid: 'new-user', email: 'new@test.com' };
         vi.mocked(createUserWithEmailAndPassword).mockResolvedValue({
             user: mockUser,
-        } as unknown as any);
-        vi.mocked(updateProfile).mockResolvedValue(undefined as unknown as any);
-        vi.mocked(setDoc).mockResolvedValue(undefined as unknown as any); // Profile creation
+        } as any);
+        vi.mocked(updateProfile).mockResolvedValue(undefined as any);
+        vi.mocked(setDoc).mockResolvedValue(undefined as any); // Profile creation
 
         await act(async () => {
             await result.current.register('new@test.com', 'password', 'New User');
@@ -137,7 +137,7 @@ describe('useAuth', () => {
 
     it('should handle logout', async () => {
         vi.mocked(onAuthStateChanged).mockImplementation(
-            () => vi.fn() as unknown as any
+            () => vi.fn() as unknown as () => void
         );
         const { result } = renderHook(() => useAuth());
 
