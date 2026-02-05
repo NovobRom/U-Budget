@@ -1,7 +1,17 @@
-import { 
-    collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp 
+import {
+    collection,
+    doc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    serverTimestamp,
+    CollectionReference,
 } from 'firebase/firestore';
+
 import { db, appId } from '../firebase';
+import { Asset } from '../types';
+
+export type AssetData = Omit<Asset, 'id'>;
 
 /**
  * AssetService
@@ -10,24 +20,21 @@ import { db, appId } from '../firebase';
 class AssetService {
     /**
      * Helper to get assets collection reference
-     * FIXED: Aligned path with useAssets hook (public/data/budgets)
      */
-    getCollectionRef(budgetId) {
+    private getCollectionRef(budgetId: string): CollectionReference {
         return collection(db, 'artifacts', appId, 'public', 'data', 'budgets', budgetId, 'assets');
     }
 
     /**
      * Add a new asset
-     * @param {string} budgetId 
-     * @param {object} data 
      */
-    async addAsset(budgetId, data) {
+    async addAsset(budgetId: string, data: AssetData) {
         if (!budgetId) throw new Error('Missing budgetId');
-        
+
         const payload = {
             ...data,
             createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
         };
 
         const docRef = await addDoc(this.getCollectionRef(budgetId), payload);
@@ -36,17 +43,14 @@ class AssetService {
 
     /**
      * Update an existing asset
-     * @param {string} budgetId 
-     * @param {string} id 
-     * @param {object} data 
      */
-    async updateAsset(budgetId, id, data) {
+    async updateAsset(budgetId: string, id: string, data: Partial<AssetData>) {
         if (!budgetId || !id) throw new Error('Missing budgetId or asset ID');
 
         const docRef = doc(this.getCollectionRef(budgetId), id);
         const payload = {
             ...data,
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
         };
 
         await updateDoc(docRef, payload);
@@ -55,10 +59,8 @@ class AssetService {
 
     /**
      * Delete an asset
-     * @param {string} budgetId 
-     * @param {string} id 
      */
-    async deleteAsset(budgetId, id) {
+    async deleteAsset(budgetId: string, id: string) {
         if (!budgetId || !id) throw new Error('Missing budgetId or asset ID');
         const docRef = doc(this.getCollectionRef(budgetId), id);
         await deleteDoc(docRef);

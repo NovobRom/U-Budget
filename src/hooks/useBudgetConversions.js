@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+
 import { fetchExchangeRate } from '../utils/currency';
 
 const STORAGE_CURRENCY = 'EUR';
@@ -42,7 +43,7 @@ export const useBudgetConversions = (budgetData, displayCurrency) => {
 
                 // Convert limits and round to 2 decimals
                 const newLimits = {};
-                Object.keys(budgetData.limits).forEach(catId => {
+                Object.keys(budgetData.limits).forEach((catId) => {
                     newLimits[catId] = Math.round(budgetData.limits[catId] * rate * 100) / 100;
                 });
                 setConvertedLimits(newLimits);
@@ -58,6 +59,6 @@ export const useBudgetConversions = (budgetData, displayCurrency) => {
 
     return {
         currentBalance,
-        convertedLimits
+        convertedLimits,
     };
 };

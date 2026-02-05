@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+
 import { fetchExchangeRate } from '../utils/currency';
 
 export const useTransactionForm = (isOpen, editingTransaction, currencyCode, onSave, onClose) => {
@@ -17,8 +18,11 @@ export const useTransactionForm = (isOpen, editingTransaction, currencyCode, onS
     useEffect(() => {
         if (isOpen) {
             if (editingTransaction) {
-                const transOriginalCurrency = editingTransaction.originalCurrency || currencyCode || 'EUR';
-                const transOriginalAmount = Math.abs(editingTransaction.originalAmount || editingTransaction.amount);
+                const transOriginalCurrency =
+                    editingTransaction.originalCurrency || currencyCode || 'EUR';
+                const transOriginalAmount = Math.abs(
+                    editingTransaction.originalAmount || editingTransaction.amount
+                );
 
                 setAmount(transOriginalAmount.toString());
                 setSelectedCurrency(transOriginalCurrency);
@@ -97,20 +101,29 @@ export const useTransactionForm = (isOpen, editingTransaction, currencyCode, onS
             description,
             type,
             date,
-            isRecurring
+            isRecurring,
         });
         onClose();
     };
 
     return {
-        amount, setAmount,
-        selectedCurrency, setSelectedCurrency,
-        exchangeRate, isCalculating, exchangeRateError,
-        category, setCategory,
-        description, setDescription,
-        type, setType,
-        date, setDate,
-        isRecurring, setIsRecurring,
-        handleSubmit
+        amount,
+        setAmount,
+        selectedCurrency,
+        setSelectedCurrency,
+        exchangeRate,
+        isCalculating,
+        exchangeRateError,
+        category,
+        setCategory,
+        description,
+        setDescription,
+        type,
+        setType,
+        date,
+        setDate,
+        isRecurring,
+        setIsRecurring,
+        handleSubmit,
     };
 };

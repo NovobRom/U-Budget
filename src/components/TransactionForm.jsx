@@ -1,8 +1,9 @@
-
 import React from 'react';
+
 import { useTransactionForm } from '../hooks/useTransactionForm';
-import CategoryGrid from './forms/transaction/CategoryGrid';
+
 import AmountInput from './forms/transaction/AmountInput';
+import CategoryGrid from './forms/transaction/CategoryGrid';
 
 export default function TransactionForm(props) {
     console.log(useTransactionForm, CategoryGrid, AmountInput);

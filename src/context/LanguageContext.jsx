@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+
 import { TRANSLATIONS } from '../translations';
 
 const LanguageContext = createContext();
@@ -26,12 +27,8 @@ export const LanguageProvider = ({ children }) => {
     const value = {
         lang,
         setLang,
-        t
+        t,
     };
 
-    return (
-        <LanguageContext.Provider value={value}>
-            {children}
-        </LanguageContext.Provider>
-    );
+    return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };

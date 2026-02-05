@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useRef } from 'react';
 import { X, Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react';
-import { parseRevolutCSV, validateFile } from '../../utils/revolutParser';
+import React, { useState, useCallback, useRef } from 'react';
+
 import { categorizeWithAI } from '../../services/geminiCategorizer.service';
+import { parseRevolutCSV, validateFile } from '../../utils/revolutParser';
 
 /**
  * ImportModal - 3-step wizard for importing Revolut CSV transactions
@@ -15,7 +16,7 @@ export default function ImportModal({
     onImport,
     categoryRules = [],
     categories = [],
-    t = {}
+    t = {},
 }) {
     const [step, setStep] = useState(1);
     const [isDragging, setIsDragging] = useState(false);
@@ -33,7 +34,8 @@ export default function ImportModal({
         title: t.import_title || 'Import Transactions',
         dropHint: t.import_drop_hint || 'Drag & drop CSV file here or click to select',
         invalidFormat: t.import_invalid_format || 'Invalid file format. Please select a .csv file',
-        unknownStructure: t.import_unknown_structure || 'Unknown file structure. Expected Revolut CSV format',
+        unknownStructure:
+            t.import_unknown_structure || 'Unknown file structure. Expected Revolut CSV format',
         parseError: t.import_parse_error || 'Error parsing file',
         fileTooLarge: t.import_file_too_large || 'File is too large (max 5MB)',
         previewTitle: t.import_preview_title || 'Preview',
@@ -69,57 +71,65 @@ export default function ImportModal({
     }, [onClose, resetState]);
 
     // File handling
-    const handleFile = useCallback(async (file) => {
-        setError(null);
+    const handleFile = useCallback(
+        async (file) => {
+            setError(null);
 
-        const validation = validateFile(file);
-        if (!validation.valid) {
-            const errorMessages = {
-                'INVALID_FORMAT': labels.invalidFormat,
-                'FILE_TOO_LARGE': labels.fileTooLarge,
-                'NO_FILE': labels.invalidFormat
-            };
-            setError(errorMessages[validation.error] || labels.parseError);
-            return;
-        }
-
-        const result = await parseRevolutCSV(file, categoryRules);
-
-        if (!result.success) {
-            const errorMessages = {
-                'INVALID_FORMAT': labels.invalidFormat,
-                'UNKNOWN_STRUCTURE': labels.unknownStructure,
-                'PARSE_ERROR': labels.parseError
-            };
-            setError(errorMessages[result.error] || labels.parseError);
-            return;
-        }
-
-        if (result.transactions.length === 0) {
-            setError(t.import_no_transactions || 'No valid transactions found in file');
-            return;
-        }
-
-        // Apply AI categorization for transactions that still have 'other' category
-        let categorizedTxs = result.transactions;
-        const uncategorizedTxs = categorizedTxs.filter(tx => tx.category === 'other');
-
-        if (uncategorizedTxs.length > 0 && categories.length > 0) {
-            setIsCategorizingAI(true);
-            try {
-                console.log(`[Import] Running AI categorization for ${uncategorizedTxs.length} transactions...`);
-                categorizedTxs = await categorizeWithAI(categorizedTxs, categories);
-            } catch (err) {
-                console.warn('[Import] AI categorization failed, using keyword rules only:', err);
-            } finally {
-                setIsCategorizingAI(false);
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                const errorMessages = {
+                    INVALID_FORMAT: labels.invalidFormat,
+                    FILE_TOO_LARGE: labels.fileTooLarge,
+                    NO_FILE: labels.invalidFormat,
+                };
+                setError(errorMessages[validation.error] || labels.parseError);
+                return;
             }
-        }
 
-        setTransactions(categorizedTxs);
-        setSelectedIds(new Set(categorizedTxs.map((_, i) => i)));
-        setStep(2);
-    }, [labels, t, categoryRules, categories]);
+            const result = await parseRevolutCSV(file, categoryRules);
+
+            if (!result.success) {
+                const errorMessages = {
+                    INVALID_FORMAT: labels.invalidFormat,
+                    UNKNOWN_STRUCTURE: labels.unknownStructure,
+                    PARSE_ERROR: labels.parseError,
+                };
+                setError(errorMessages[result.error] || labels.parseError);
+                return;
+            }
+
+            if (result.transactions.length === 0) {
+                setError(t.import_no_transactions || 'No valid transactions found in file');
+                return;
+            }
+
+            // Apply AI categorization for transactions that still have 'other' category
+            let categorizedTxs = result.transactions;
+            const uncategorizedTxs = categorizedTxs.filter((tx) => tx.category === 'other');
+
+            if (uncategorizedTxs.length > 0 && categories.length > 0) {
+                setIsCategorizingAI(true);
+                try {
+                    console.log(
+                        `[Import] Running AI categorization for ${uncategorizedTxs.length} transactions...`
+                    );
+                    categorizedTxs = await categorizeWithAI(categorizedTxs, categories);
+                } catch (err) {
+                    console.warn(
+                        '[Import] AI categorization failed, using keyword rules only:',
+                        err
+                    );
+                } finally {
+                    setIsCategorizingAI(false);
+                }
+            }
+
+            setTransactions(categorizedTxs);
+            setSelectedIds(new Set(categorizedTxs.map((_, i) => i)));
+            setStep(2);
+        },
+        [labels, t, categoryRules, categories]
+    );
 
     // Drag & Drop handlers
     const handleDragOver = useCallback((e) => {
@@ -132,26 +142,32 @@ export default function ImportModal({
         setIsDragging(false);
     }, []);
 
-    const handleDrop = useCallback((e) => {
-        e.preventDefault();
-        setIsDragging(false);
+    const handleDrop = useCallback(
+        (e) => {
+            e.preventDefault();
+            setIsDragging(false);
 
-        const file = e.dataTransfer.files?.[0];
-        if (file) {
-            handleFile(file);
-        }
-    }, [handleFile]);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+                handleFile(file);
+            }
+        },
+        [handleFile]
+    );
 
-    const handleFileInput = useCallback((e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            handleFile(file);
-        }
-    }, [handleFile]);
+    const handleFileInput = useCallback(
+        (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                handleFile(file);
+            }
+        },
+        [handleFile]
+    );
 
     // Selection handlers
     const toggleSelection = useCallback((index) => {
-        setSelectedIds(prev => {
+        setSelectedIds((prev) => {
             const next = new Set(prev);
             if (next.has(index)) {
                 next.delete(index);
@@ -202,9 +218,7 @@ export default function ImportModal({
                         <h3 className="text-xl font-bold dark:text-white mb-2">
                             ✨ {labels.aiLoading}
                         </h3>
-                        <p className="text-slate-500 dark:text-slate-400">
-                            {labels.aiLoadingHint}
-                        </p>
+                        <p className="text-slate-500 dark:text-slate-400">{labels.aiLoadingHint}</p>
                     </div>
                 </div>
             )}
@@ -236,9 +250,10 @@ export default function ImportModal({
                                 className={`
                                     border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
                                     transition-all duration-200
-                                    ${isDragging
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                        : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                    ${
+                                        isDragging
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                            : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                                     }
                                 `}
                             >
@@ -249,9 +264,7 @@ export default function ImportModal({
                                 <p className="text-slate-600 dark:text-slate-300 font-medium">
                                     {labels.dropHint}
                                 </p>
-                                <p className="text-sm text-slate-400 mt-2">
-                                    Revolut CSV
-                                </p>
+                                <p className="text-sm text-slate-400 mt-2">Revolut CSV</p>
                             </div>
 
                             <input
@@ -278,7 +291,8 @@ export default function ImportModal({
                                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                                     <FileText size={20} />
                                     <span className="font-medium">
-                                        {selectedIds.size} / {transactions.length} {labels.foundTransactions}
+                                        {selectedIds.size} / {transactions.length}{' '}
+                                        {labels.foundTransactions}
                                     </span>
                                 </div>
                                 <button
@@ -313,9 +327,10 @@ export default function ImportModal({
                                                     onClick={() => toggleSelection(index)}
                                                     className={`
                                                         cursor-pointer transition-colors
-                                                        ${selectedIds.has(index)
-                                                            ? 'bg-blue-50 dark:bg-blue-900/20'
-                                                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                                        ${
+                                                            selectedIds.has(index)
+                                                                ? 'bg-blue-50 dark:bg-blue-900/20'
+                                                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                                                         }
                                                     `}
                                                 >
@@ -323,7 +338,7 @@ export default function ImportModal({
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedIds.has(index)}
-                                                            onChange={() => { }}
+                                                            onChange={() => {}}
                                                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                                         />
                                                     </td>
@@ -333,12 +348,16 @@ export default function ImportModal({
                                                     <td className="p-3 text-slate-700 dark:text-slate-200 truncate max-w-[200px]">
                                                         {tx.comment}
                                                     </td>
-                                                    <td className={`p-3 text-right font-medium whitespace-nowrap ${tx.type === 'expense'
-                                                        ? 'text-red-600 dark:text-red-400'
-                                                        : 'text-green-600 dark:text-green-400'
-                                                        }`}>
+                                                    <td
+                                                        className={`p-3 text-right font-medium whitespace-nowrap ${
+                                                            tx.type === 'expense'
+                                                                ? 'text-red-600 dark:text-red-400'
+                                                                : 'text-green-600 dark:text-green-400'
+                                                        }`}
+                                                    >
                                                         {tx.type === 'expense' ? '-' : '+'}
-                                                        {tx.originalAmount.toFixed(2)} {tx.originalCurrency}
+                                                        {tx.originalAmount.toFixed(2)}{' '}
+                                                        {tx.originalCurrency}
                                                     </td>
                                                 </tr>
                                             ))}

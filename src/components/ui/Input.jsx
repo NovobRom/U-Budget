@@ -1,17 +1,17 @@
 import React from 'react';
 
 const Input = ({
-    type = "text",
+    type = 'text',
     value,
     onChange,
-    placeholder = "",
+    placeholder = '',
     label,
     icon: Icon,
     required = false,
-    className = "",
+    className = '',
     min,
     step,
-    disabled = false
+    disabled = false,
 }) => {
     return (
         <div className={className}>
@@ -22,9 +22,9 @@ const Input = ({
             )}
             <div className="relative">
                 {Icon && (
-                    <Icon 
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" 
-                        size={18} 
+                    <Icon
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        size={18}
                     />
                 )}
                 <input

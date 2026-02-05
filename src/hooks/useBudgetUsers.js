@@ -1,6 +1,7 @@
 import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
-import { db, appId } from '../firebase';
 import { toast } from 'react-hot-toast';
+
+import { db, appId } from '../firebase';
 
 /**
  * useBudgetUsers Hook
@@ -29,19 +30,19 @@ export const useBudgetUsers = (activeBudgetId, user, getBudgetDocRef) => {
         }
 
         if (!uidToRemove) {
-            console.error("removeUser: Invalid user argument", u);
-            toast.error("Error: Invalid user ID");
+            console.error('removeUser: Invalid user argument', u);
+            toast.error('Error: Invalid user ID');
             return;
         }
 
         try {
             await updateDoc(getBudgetDocRef(), {
-                authorizedUsers: arrayRemove(uidToRemove)
+                authorizedUsers: arrayRemove(uidToRemove),
             });
-            toast.success("User removed successfully");
+            toast.success('User removed successfully');
         } catch (e) {
-            console.error("Error removing user:", e);
-            toast.error("Error removing user");
+            console.error('Error removing user:', e);
+            toast.error('Error removing user');
         }
     };
 
@@ -54,19 +55,18 @@ export const useBudgetUsers = (activeBudgetId, user, getBudgetDocRef) => {
         try {
             // Remove self from authorized users
             await updateDoc(getBudgetDocRef(), {
-                authorizedUsers: arrayRemove(user.uid)
+                authorizedUsers: arrayRemove(user.uid),
             });
 
             // Switch to own budget
-            await updateDoc(
-                doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'),
-                { activeBudgetId: user.uid }
-            );
+            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), {
+                activeBudgetId: user.uid,
+            });
 
-            toast.success("You have left the budget");
+            toast.success('You have left the budget');
         } catch (e) {
-            console.error("Error leaving budget:", e);
-            toast.error("Error leaving budget");
+            console.error('Error leaving budget:', e);
+            toast.error('Error leaving budget');
         }
     };
 
@@ -78,22 +78,22 @@ export const useBudgetUsers = (activeBudgetId, user, getBudgetDocRef) => {
         if (!user) return;
 
         try {
-            await updateDoc(
-                doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'),
-                { activeBudgetId: id, isPendingApproval: false }
-            );
+            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'metadata', 'profile'), {
+                activeBudgetId: id,
+                isPendingApproval: false,
+            });
 
             // Reload page to refresh all data
             window.location.reload();
         } catch (e) {
-            console.error("Error switching budget:", e);
-            toast.error("Error switching budget");
+            console.error('Error switching budget:', e);
+            toast.error('Error switching budget');
         }
     };
 
     return {
         removeUser,
         leaveBudget,
-        switchBudget
+        switchBudget,
     };
 };

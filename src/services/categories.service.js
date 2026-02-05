@@ -1,7 +1,13 @@
 import {
-    collection, doc, addDoc, deleteDoc, updateDoc,
-    serverTimestamp, deleteField
+    collection,
+    doc,
+    addDoc,
+    deleteDoc,
+    updateDoc,
+    serverTimestamp,
+    deleteField,
 } from 'firebase/firestore';
+
 import { db, appId } from '../firebase';
 
 /**
@@ -25,16 +31,16 @@ class CategoriesService {
 
     /**
      * Add a custom category
-     * @param {string} budgetId 
+     * @param {string} budgetId
      * @param {object} data - { name, type, color, icon, ... }
      */
     async addCategory(budgetId, data) {
         if (!budgetId) throw new Error('Missing budgetId');
-        
+
         const payload = {
             ...data,
             isCustom: true,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
         };
 
         // Add to the subcollection
@@ -44,12 +50,12 @@ class CategoriesService {
 
     /**
      * Delete a custom category
-     * @param {string} budgetId 
-     * @param {string} categoryId 
+     * @param {string} budgetId
+     * @param {string} categoryId
      */
     async deleteCategory(budgetId, categoryId) {
         if (!budgetId || !categoryId) throw new Error('Missing args');
-        
+
         // Construct reference to the specific category document
         const catRef = doc(this.getCategoriesColRef(budgetId), categoryId);
         await deleteDoc(catRef);
@@ -70,12 +76,12 @@ class CategoriesService {
         if (numAmount <= 0) {
             // Remove limit by deleting the field
             await updateDoc(budgetRef, {
-                [`limits.${categoryId}`]: deleteField()
+                [`limits.${categoryId}`]: deleteField(),
             });
         } else {
             // Update the specific field in the 'limits' map using dot notation
             await updateDoc(budgetRef, {
-                [`limits.${categoryId}`]: numAmount
+                [`limits.${categoryId}`]: numAmount,
             });
         }
     }

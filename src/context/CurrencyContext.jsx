@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+
 import { CURRENCIES } from '../constants';
 
 const CurrencyContext = createContext();
@@ -31,12 +32,8 @@ export const CurrencyProvider = ({ children }) => {
     const value = {
         currency,
         setCurrency,
-        formatMoney
+        formatMoney,
     };
 
-    return (
-        <CurrencyContext.Provider value={value}>
-            {children}
-        </CurrencyContext.Provider>
-    );
+    return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 };

@@ -1,24 +1,79 @@
-import { create } from 'zustand';
 import { toast } from 'react-hot-toast';
+import { create } from 'zustand';
 
 // Services
-import { transactionsService } from '../services/transactions.service';
-import { assetsService } from '../services/assets.service';
-import { loansService } from '../services/loans.service';
-import { categoriesService } from '../services/categories.service';
+import { assetsService, AssetData } from '../services/assets.service';
+// These services are still JS, so they will be treated as any (or implicit types if allowJs allows inference)
 import { budgetService } from '../services/budget.service';
+import { categoriesService } from '../services/categories.service';
+import { loansService } from '../services/loans.service';
+import { transactionsService, TransactionData } from '../services/transactions.service';
+
+interface BudgetStoreState {
+    isTransactionLoading: boolean;
+    isAssetLoading: boolean;
+    isLoanLoading: boolean;
+    isSettingsLoading: boolean;
+    error: string | null;
+
+    // Transactions
+    addTransaction: (
+        budgetId: string,
+        user: any,
+        data: TransactionData,
+        mainCurrency: string,
+        t?: any
+    ) => Promise<void>;
+    updateTransaction: (
+        budgetId: string,
+        id: string,
+        data: TransactionData,
+        mainCurrency: string,
+        t?: any
+    ) => Promise<void>;
+    deleteTransaction: (budgetId: string, id: string, t?: any) => Promise<void>;
+
+    // Assets
+    addAsset: (budgetId: string, data: AssetData, currency?: string, t?: any) => Promise<void>;
+    updateAsset: (
+        budgetId: string,
+        id: string,
+        data: Partial<AssetData>,
+        currency?: string,
+        t?: any
+    ) => Promise<void>;
+    deleteAsset: (budgetId: string, id: string, t?: any) => Promise<void>;
+
+    // Loans (Using 'any' for data until loansService is migrated)
+    addLoan: (budgetId: string, data: any, t?: any) => Promise<void>;
+    updateLoan: (budgetId: string, id: string, data: any, t?: any) => Promise<void>;
+    deleteLoan: (budgetId: string, id: string, t?: any) => Promise<void>;
+    payLoan: (budgetId: string, loan: any, amount: string, t?: any) => Promise<void>;
+
+    // Categories & Settings
+    addCategory: (budgetId: string, data: any, t?: any) => Promise<void>;
+    deleteCategory: (budgetId: string, categoryId: string, t?: any) => Promise<void>;
+    saveCategoryLimit: (
+        budgetId: string,
+        categoryId: string,
+        amount: number,
+        t?: any
+    ) => Promise<void>;
+    removeUserFromBudget: (budgetId: string, userId: string, t?: any) => Promise<void>;
+    leaveBudget: (budgetId: string, userId: string, t?: any) => Promise<void>;
+}
 
 /**
  * useBudgetStore
  * Global state management for budget data.
  * Centralizes all WRITE operations via Service Layer.
  */
-export const useBudgetStore = create((set, get) => ({
+export const useBudgetStore = create<BudgetStoreState>((set) => ({
     // --- STATE ---
     isTransactionLoading: false,
     isAssetLoading: false,
     isLoanLoading: false,
-    isSettingsLoading: false, // General loading state for settings/categories
+    isSettingsLoading: false,
     error: null,
 
     // --- TRANSACTIONS ACTIONS ---
@@ -27,7 +82,7 @@ export const useBudgetStore = create((set, get) => ({
         try {
             await transactionsService.addTransaction(budgetId, user, data, mainCurrency);
             toast.success(t?.success_save || 'Saved successfully');
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
             set({ error: error.message });
             toast.error(t?.error_save || 'Error saving transaction');
@@ -42,7 +97,7 @@ export const useBudgetStore = create((set, get) => ({
         try {
             await transactionsService.updateTransaction(budgetId, id, data, mainCurrency);
             toast.success(t?.success_save || 'Saved successfully');
-        } catch (error) {
+        } catch (error: any) {
             set({ error: error.message });
             toast.error(t?.error_save || 'Error updating');
             throw error;
@@ -65,7 +120,7 @@ export const useBudgetStore = create((set, get) => ({
     addAsset: async (budgetId, data, currency, t) => {
         set({ isAssetLoading: true });
         try {
-            const payload = { ...data, currency: data.currency || currency };
+            const payload = { ...data, currency: data.currency || currency! };
             await assetsService.addAsset(budgetId, payload);
             toast.success(t?.success_save || 'Asset saved');
         } catch (error) {
@@ -159,7 +214,7 @@ export const useBudgetStore = create((set, get) => ({
     },
 
     // --- CATEGORIES & SETTINGS ACTIONS ---
-    
+
     addCategory: async (budgetId, data, t) => {
         set({ isSettingsLoading: true });
         try {
@@ -188,8 +243,6 @@ export const useBudgetStore = create((set, get) => ({
     },
 
     saveCategoryLimit: async (budgetId, categoryId, amount, t) => {
-        // We might not want a global loading spinner for this small action,
-        // but let's keep it consistent for now.
         set({ isSettingsLoading: true });
         try {
             await categoriesService.saveLimit(budgetId, categoryId, amount);
@@ -202,7 +255,7 @@ export const useBudgetStore = create((set, get) => ({
         }
     },
 
-    removeUserFromBudget: async (budgetId, userId, t) => {
+    removeUserFromBudget: async (budgetId, userId, _t) => {
         set({ isSettingsLoading: true });
         try {
             await budgetService.removeUser(budgetId, userId);
@@ -215,17 +268,16 @@ export const useBudgetStore = create((set, get) => ({
         }
     },
 
-    leaveBudget: async (budgetId, userId, t) => {
+    leaveBudget: async (budgetId, userId, _t) => {
         set({ isSettingsLoading: true });
         try {
             await budgetService.leaveBudget(budgetId, userId);
             toast.success('Left budget');
-            // Navigation/Reload might be handled by the component monitoring `activeBudgetId`
         } catch (error) {
             console.error(error);
             toast.error('Error leaving budget');
         } finally {
             set({ isSettingsLoading: false });
         }
-    }
+    },
 }));

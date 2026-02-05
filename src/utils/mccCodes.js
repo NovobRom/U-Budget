@@ -37,7 +37,7 @@ export const MCC_TO_CATEGORY = {
     6011: 'transfer', // Financial Institutions - Automated Cash Disbursements
 
     // Default fallback
-    0: 'other'
+    0: 'other',
 };
 
 export const getCategoryByMcc = (mcc) => {

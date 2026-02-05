@@ -1,19 +1,29 @@
-import React, { useState, useMemo, useRef, Suspense, lazy, useEffect } from 'react';
+import {
+    doc,
+    updateDoc,
+    deleteDoc,
+    writeBatch,
+    collection,
+    getDocs,
+    query,
+} from 'firebase/firestore';
 import { Plus, BarChart3 } from 'lucide-react';
-import { BudgetProgress } from '../BudgetProgress';
-import TransactionList from './budget/TransactionList';
-import BudgetToolbar from './budget/BudgetToolbar';
-import BudgetSummaryCards from './budget/BudgetSummaryCards';
-import BudgetCharts from './budget/BudgetCharts';
-import { useTransactionTotals } from '../../hooks/useTransactionTotals';
-import { doc, updateDoc, deleteDoc, writeBatch, collection, getDocs, query } from 'firebase/firestore';
+import React, { useState, useMemo, useRef, Suspense, lazy, useEffect } from 'react';
+
 import { db, appId } from '../../firebase';
+import { useTransactionTotals } from '../../hooks/useTransactionTotals';
+import { BudgetProgress } from '../BudgetProgress';
 import ConfirmModal from '../modals/ConfirmModal';
+
+import BudgetCharts from './budget/BudgetCharts';
+import BudgetSummaryCards from './budget/BudgetSummaryCards';
+import BudgetToolbar from './budget/BudgetToolbar';
+import TransactionList from './budget/TransactionList';
 
 // Mobile-only chart import can remain lazily or be moved. Charts inside BudgetCharts are already lazy.
 // We need the mobile second chart? Line 270 in original...
 const SimpleBarChart = lazy(() =>
-    import('../Charts').then(module => ({ default: module.SimpleBarChart }))
+    import('../Charts').then((module) => ({ default: module.SimpleBarChart }))
 );
 const MonobankConnect = lazy(() => import('../integrations/MonobankConnect'));
 
@@ -23,14 +33,28 @@ const Skeleton = ({ className }) => (
 
 export default function BudgetView({
     activeBudgetId,
-    transactions, categories, limits, currency, formatMoney, t,
-    onOpenSettings, onOpenInvite, onOpenRecurring, onOpenImport, onAddTransaction, onEditTransaction,
+    transactions,
+    categories,
+    limits,
+    currency,
+    formatMoney,
+    t,
+    onOpenSettings,
+    onOpenInvite,
+    onOpenRecurring,
+    onOpenImport,
+    onAddTransaction,
+    onEditTransaction,
     onDeleteTransaction,
     onExport,
     onOpenJoin,
-    getCategoryStyles, getCategoryName, lang,
-    currentBalance, loadMore, hasMore,
-    onSaveTransaction // Passed from AppRoutes
+    getCategoryStyles,
+    getCategoryName,
+    lang,
+    currentBalance,
+    loadMore,
+    hasMore,
+    onSaveTransaction, // Passed from AppRoutes
 }) {
     const [timeFilter, setTimeFilter] = useState('all');
     const [customStartDate, setCustomStartDate] = useState('');
@@ -41,12 +65,11 @@ export default function BudgetView({
     const historyRef = useRef(null);
 
     // Server-side aggregated totals
-    const { totalIncome: rawIncome, totalExpense: rawExpense, loading: totalsLoading } = useTransactionTotals(
-        activeBudgetId,
-        timeFilter,
-        customStartDate,
-        customEndDate
-    );
+    const {
+        totalIncome: rawIncome,
+        totalExpense: rawExpense,
+        loading: totalsLoading,
+    } = useTransactionTotals(activeBudgetId, timeFilter, customStartDate, customEndDate);
 
     // Exchange Rate State
     const [exchangeRate, setExchangeRate] = useState(1);
@@ -56,7 +79,8 @@ export default function BudgetView({
         let isActive = true;
         const fetchRate = async () => {
             // Default to 1 if currencies match
-            if (currency === 'EUR' || currency === 'UAH' && lang === 'ua') { // Assuming base is EUR, but check logic
+            if (currency === 'EUR' || (currency === 'UAH' && lang === 'ua')) {
+                // Assuming base is EUR, but check logic
                 // Actually logic says STORAGE_CURRENCY = 'EUR'
             }
 
@@ -81,7 +105,9 @@ export default function BudgetView({
 
         fetchRate();
 
-        return () => { isActive = false; };
+        return () => {
+            isActive = false;
+        };
     }, [currency]);
 
     // Derived totals (always consistent with exchangeRate)
@@ -101,7 +127,7 @@ export default function BudgetView({
             return d;
         };
 
-        let list = transactions.filter(t => {
+        let list = transactions.filter((t) => {
             const d = new Date(t.date);
 
             if (timeFilter === 'this_month') {
@@ -117,7 +143,9 @@ export default function BudgetView({
             if (timeFilter === 'custom') {
                 if (!customStartDate && !customEndDate) return true;
                 const txDate = getStartOfDay(t.date);
-                const start = customStartDate ? getStartOfDay(customStartDate) : new Date('1970-01-01');
+                const start = customStartDate
+                    ? getStartOfDay(customStartDate)
+                    : new Date('1970-01-01');
                 const end = customEndDate ? getStartOfDay(customEndDate) : new Date('9999-12-31');
                 return txDate >= start && txDate <= end;
             }
@@ -125,12 +153,14 @@ export default function BudgetView({
         });
 
         if (historyFilter !== 'all') {
-            list = list.filter(t => t.type === historyFilter);
+            list = list.filter((t) => t.type === historyFilter);
         }
 
         if (searchTerm) {
             const lowerTerm = searchTerm.toLowerCase();
-            list = list.filter(t => (t.description || t.comment || '').toLowerCase().includes(lowerTerm));
+            list = list.filter((t) =>
+                (t.description || t.comment || '').toLowerCase().includes(lowerTerm)
+            );
         }
 
         return list;
@@ -138,11 +168,19 @@ export default function BudgetView({
 
     const handleToggleHidden = async (transaction) => {
         try {
-            const txRef = doc(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions', transaction.id);
+            const txRef = doc(
+                db,
+                'artifacts',
+                appId,
+                'users',
+                activeBudgetId,
+                'transactions',
+                transaction.id
+            );
             await updateDoc(txRef, {
-                isHidden: !transaction.isHidden
+                isHidden: !transaction.isHidden,
             });
-            // toast.success(t.success_update || 'Updated'); // Toast not imported? 
+            // toast.success(t.success_update || 'Updated'); // Toast not imported?
         } catch (error) {
             console.error('Error toggling hidden:', error);
         }
@@ -152,7 +190,7 @@ export default function BudgetView({
     const expensesByCategory = useMemo(() => {
         const expenseMap = {};
 
-        filteredTransactions.forEach(t => {
+        filteredTransactions.forEach((t) => {
             if (t.type === 'expense' && t.category && !t.isHidden) {
                 const amount = Number(t.amount) || 0;
                 expenseMap[t.category] = (expenseMap[t.category] || 0) + amount;
@@ -160,14 +198,14 @@ export default function BudgetView({
         });
 
         return categories
-            .filter(c => c.type === 'expense')
-            .map(c => {
+            .filter((c) => c.type === 'expense')
+            .map((c) => {
                 const rawTotal = expenseMap[c.id] || 0;
                 // Apply exchange rate
                 const total = rawTotal * exchangeRate;
                 return { ...c, total };
             })
-            .filter(x => x.total > 0)
+            .filter((x) => x.total > 0)
             .sort((a, b) => b.total - a.total);
     }, [filteredTransactions, categories, exchangeRate]);
 
@@ -193,17 +231,24 @@ export default function BudgetView({
 
         // sort transactions by date first to ensure order if we iterate
         // actually we can just map and then sort keys
-        filteredTransactions.forEach(t => { // Use FILTERED transactions for Trends to match user current view
+        filteredTransactions.forEach((t) => {
+            // Use FILTERED transactions for Trends to match user current view
             if (!t.date || t.isHidden) return;
             const d = new Date(t.date);
             let key, label;
 
             if (mode === 'day') {
                 key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                label = d.toLocaleDateString(lang === 'ua' ? 'uk-UA' : 'en-US', { day: 'numeric', month: 'short' });
+                label = d.toLocaleDateString(lang === 'ua' ? 'uk-UA' : 'en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                });
             } else if (mode === 'month') {
                 key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                label = d.toLocaleString(lang === 'ua' ? 'uk-UA' : 'en-US', { month: 'short', year: 'numeric' });
+                label = d.toLocaleString(lang === 'ua' ? 'uk-UA' : 'en-US', {
+                    month: 'short',
+                    year: 'numeric',
+                });
             } else {
                 key = `${d.getFullYear()}`;
                 label = `${d.getFullYear()}`;
@@ -224,7 +269,6 @@ export default function BudgetView({
         // But for "Trends", seeing the flow is enough.
 
         return Array.from(map.values()).sort((a, b) => a.key.localeCompare(b.key));
-
     }, [filteredTransactions, timeFilter, lang, exchangeRate, customStartDate, customEndDate]);
 
     const handleClearHistory = async () => {
@@ -233,7 +277,9 @@ export default function BudgetView({
             // Or really ALL in Firestore? User said "Clear History" -> implies current budget.
             // Safe approach: Delete from Firestore collection.
 
-            const q = query(collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions'));
+            const q = query(
+                collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions')
+            );
             const snapshot = await getDocs(q);
 
             if (snapshot.empty) return;
@@ -259,16 +305,23 @@ export default function BudgetView({
             // Also reset currentBalance to 0 in the budget document
             // To get budget doc path, we need to know where it is.
             // In usageBudgetData: doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId)
-            const budgetDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId);
+            const budgetDocRef = doc(
+                db,
+                'artifacts',
+                appId,
+                'public',
+                'data',
+                'budgets',
+                activeBudgetId
+            );
             await updateDoc(budgetDocRef, {
-                currentBalance: 0
+                currentBalance: 0,
             });
 
             // UI should update automatically via real-time listeners if logic uses them.
             // BudgetView uses `transactions` prop. If it comes from onSnapshot, it will clear.
-
         } catch (error) {
-            console.error("Failed to clear history:", error);
+            console.error('Failed to clear history:', error);
             // Maybe alert user
         }
     };
@@ -277,17 +330,23 @@ export default function BudgetView({
 
     const handleCardClick = (filterType) => {
         setHistoryFilter(filterType);
-        setTimeout(() => { historyRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 50);
+        setTimeout(() => {
+            historyRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
     };
 
     return (
         <>
             <BudgetToolbar
-                timeFilter={timeFilter} setTimeFilter={setTimeFilter}
-                searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+                timeFilter={timeFilter}
+                setTimeFilter={setTimeFilter}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
                 isCustomRange={isCustomRange}
-                customStartDate={customStartDate} setCustomStartDate={setCustomStartDate}
-                customEndDate={customEndDate} setCustomEndDate={setCustomEndDate}
+                customStartDate={customStartDate}
+                setCustomStartDate={setCustomStartDate}
+                customEndDate={customEndDate}
+                setCustomEndDate={setCustomEndDate}
                 t={t}
                 onRecurring={onOpenRecurring}
                 onInvite={onOpenInvite}
@@ -296,7 +355,17 @@ export default function BudgetView({
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <div><BudgetProgress categories={categories} transactions={transactions} limits={limits} currency={currency} formatMoney={formatMoney} onOpenSettings={onOpenSettings} label={t.limits_title} /></div>
+                <div>
+                    <BudgetProgress
+                        categories={categories}
+                        transactions={transactions}
+                        limits={limits}
+                        currency={currency}
+                        formatMoney={formatMoney}
+                        onOpenSettings={onOpenSettings}
+                        label={t.limits_title}
+                    />
+                </div>
                 <div className="col-span-1 md:col-span-1 lg:col-span-2">
                     <Suspense fallback={<Skeleton className="h-full w-full" />}>
                         <MonobankConnect
@@ -330,7 +399,10 @@ export default function BudgetView({
                     getCategoryName={getCategoryName}
                 />
 
-                <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[765px] shadow-sm border border-slate-100 dark:border-slate-800" ref={historyRef}>
+                <div
+                    className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[765px] shadow-sm border border-slate-100 dark:border-slate-800"
+                    ref={historyRef}
+                >
                     <TransactionList
                         transactions={filteredTransactions}
                         onEdit={onEditTransaction}
@@ -353,7 +425,10 @@ export default function BudgetView({
                 </div>
 
                 <div className="block lg:hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 min-h-[300px]">
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart3 className="text-blue-600 dark:text-blue-400" size={20} /> {t.trends_title}</h3>
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
+                        <BarChart3 className="text-blue-600 dark:text-blue-400" size={20} />{' '}
+                        {t.trends_title}
+                    </h3>
                     <div className="h-[200px]">
                         <Suspense fallback={<Skeleton className="w-full h-full rounded-2xl" />}>
                             <SimpleBarChart data={trendsData} currency={currency} />
@@ -361,14 +436,23 @@ export default function BudgetView({
                     </div>
                 </div>
             </div>
-            <button onClick={onAddTransaction} className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-50"><Plus size={28} /></button>
+            <button
+                onClick={onAddTransaction}
+                className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-50"
+                aria-label={t.add_transaction || 'Add transaction'}
+            >
+                <Plus size={28} />
+            </button>
             <ConfirmModal
                 isOpen={isConfirmClearOpen}
                 onClose={() => setIsConfirmClearOpen(false)}
                 onConfirm={handleClearHistory}
                 title={t.confirm_clear_history_title}
                 message={t.confirm_clear_history_msg}
-                t={{ btn_cancel: t.btn_cancel || "Cancel", btn_confirm: t.btn_confirm || "Delete All" }}
+                t={{
+                    btn_cancel: t.btn_cancel || 'Cancel',
+                    btn_confirm: t.btn_confirm || 'Delete All',
+                }}
             />
         </>
     );

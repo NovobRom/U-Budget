@@ -1,6 +1,5 @@
-import { 
-    doc, updateDoc, arrayRemove 
-} from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove, DocumentReference } from 'firebase/firestore';
+
 import { db, appId } from '../firebase';
 
 /**
@@ -11,33 +10,29 @@ class BudgetService {
     /**
      * Helper: Get main budget document reference
      */
-    getBudgetDocRef(budgetId) {
+    private getBudgetDocRef(budgetId: string): DocumentReference {
         return doc(db, 'artifacts', appId, 'public', 'data', 'budgets', budgetId);
     }
 
     /**
      * Remove a user from the budget
-     * @param {string} budgetId 
-     * @param {string} userIdToRemove 
      */
-    async removeUser(budgetId, userIdToRemove) {
+    async removeUser(budgetId: string, userIdToRemove: string): Promise<void> {
         if (!budgetId || !userIdToRemove) throw new Error('Missing args');
 
         const budgetRef = this.getBudgetDocRef(budgetId);
-        
+
         // Atomically remove the UID from the authorizedUsers array
         // FIXED: Changed 'allowedUsers' to 'authorizedUsers' to match firestore.rules
         await updateDoc(budgetRef, {
-            authorizedUsers: arrayRemove(userIdToRemove)
+            authorizedUsers: arrayRemove(userIdToRemove),
         });
     }
 
     /**
      * Leave the current budget (remove self)
-     * @param {string} budgetId 
-     * @param {string} currentUserId 
      */
-    async leaveBudget(budgetId, currentUserId) {
+    async leaveBudget(budgetId: string, currentUserId: string): Promise<void> {
         // Leaving is essentially removing oneself
         await this.removeUser(budgetId, currentUserId);
     }

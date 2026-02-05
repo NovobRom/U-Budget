@@ -21,9 +21,9 @@ const AppShell = () => (
         </div>
         {/* Content Skeleton */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-             <div className="col-span-2 lg:col-span-1 h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
-             <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
-             <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
+            <div className="col-span-2 lg:col-span-1 h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
+            <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
+            <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
         </div>
     </div>
 );

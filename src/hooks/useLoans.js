@@ -1,19 +1,29 @@
+import {
+    collection,
+    onSnapshot,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    doc,
+    serverTimestamp,
+} from 'firebase/firestore';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db, appId } from '../firebase';
 import { toast } from 'react-hot-toast';
+
+import { db, appId } from '../firebase';
 import { fetchExchangeRate } from '../utils/currency';
 
 export const useLoans = (activeBudgetId, currency, t) => {
     const [loans, setLoans] = useState([]);
     const [totalCreditDebt, setTotalCreditDebt] = useState(0);
 
-    const getLoansColRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId, 'loans');
+    const getLoansColRef = () =>
+        collection(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId, 'loans');
 
     useEffect(() => {
         if (!activeBudgetId) return;
         const unsubscribe = onSnapshot(getLoansColRef(), (snapshot) => {
-            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setLoans(items);
         });
         return () => unsubscribe();
@@ -35,7 +45,7 @@ export const useLoans = (activeBudgetId, currency, t) => {
                         const rate = await fetchExchangeRate(loanCurr, currency);
                         total += amount * rate;
                     } catch (e) {
-                        console.error("Rate fetch error in useLoans", e);
+                        console.error('Rate fetch error in useLoans', e);
                         // Fallback: add as is (better than 0, but inaccurate)
                         total += amount;
                     }
@@ -45,14 +55,16 @@ export const useLoans = (activeBudgetId, currency, t) => {
         };
 
         calcDebt();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+        };
     }, [loans, currency]);
 
     const addLoan = async (data) => {
         if (!activeBudgetId) return;
         await addDoc(getLoansColRef(), {
             ...data,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
         });
     };
 
@@ -72,6 +84,6 @@ export const useLoans = (activeBudgetId, currency, t) => {
         totalCreditDebt,
         addLoan,
         updateLoan,
-        deleteLoan
+        deleteLoan,
     };
 };

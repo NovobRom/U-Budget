@@ -1,52 +1,157 @@
+import {
+    Calendar,
+    ChevronDown,
+    Search,
+    Share2,
+    Users,
+    RefreshCw,
+    X,
+    ArrowRight,
+    Upload,
+} from 'lucide-react';
 import React from 'react';
-import { Calendar, ChevronDown, Search, Share2, Users, RefreshCw, X, ArrowRight, Upload } from 'lucide-react';
 
 export default function BudgetToolbar({
-    timeFilter, setTimeFilter,
-    searchTerm, setSearchTerm,
+    timeFilter,
+    setTimeFilter,
+    searchTerm,
+    setSearchTerm,
     isCustomRange,
-    customStartDate, setCustomStartDate,
-    customEndDate, setCustomEndDate,
+    customStartDate,
+    setCustomStartDate,
+    customEndDate,
+    setCustomEndDate,
     t,
-    onRecurring, onInvite, onJoin, onImport
+    onRecurring,
+    onInvite,
+    onJoin,
+    onImport,
 }) {
     return (
         <div className="flex flex-col gap-3 px-1 mb-4 min-h-[50px]">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
                 <div className="grid grid-cols-2 sm:flex gap-3 w-full sm:w-auto flex-1">
                     <div className="relative flex-1 min-w-[140px]">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                        <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} className="w-full appearance-none pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none cursor-pointer shadow-sm">
+                        <Calendar
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                            size={14}
+                        />
+                        <select
+                            value={timeFilter}
+                            onChange={(e) => setTimeFilter(e.target.value)}
+                            className="w-full appearance-none pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none cursor-pointer shadow-sm"
+                            aria-label={t.time_filter_label || 'Select time period'}
+                        >
                             <option value="this_month">{t.this_month}</option>
                             <option value="last_month">{t.last_month}</option>
                             <option value="this_year">{t.this_year}</option>
                             <option value="all">{t.all_time}</option>
                             <option value="custom">📅 {t.custom_range_picker}</option>
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={14} />
+                        <ChevronDown
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+                            size={14}
+                        />
                     </div>
                     <div className="relative flex-1 min-w-[140px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                        <input type="search" placeholder={t.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none shadow-sm" />
+                        <Search
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                            size={14}
+                        />
+                        <input
+                            type="search"
+                            placeholder={t.search}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck="false"
+                            aria-label={t.search}
+                            aria-autocomplete="none"
+                            data-form-type="other"
+                            data-lpignore="true"
+                            className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none shadow-sm"
+                        />
                     </div>
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">
-                    <button onClick={onImport} className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-emerald-100 transition-colors" title={t.import_btn || 'Import'}><Upload size={16} /><span className="hidden sm:inline">{t.import_btn || 'Import'}</span></button>
-                    <button onClick={onRecurring} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-100 transition-colors"><RefreshCw size={16} /> <span className="hidden sm:inline">{t.recurring_btn}</span></button>
-                    <button onClick={onInvite} className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-indigo-100 transition-colors"><Share2 size={16} /></button>
-                    <button onClick={onJoin} className="flex items-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors"><Users size={16} /></button>
+                    <button
+                        onClick={onImport}
+                        className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-emerald-100 transition-colors"
+                        title={t.import_btn || 'Import'}
+                    >
+                        <Upload size={16} />
+                        <span className="hidden sm:inline">{t.import_btn || 'Import'}</span>
+                    </button>
+                    <button
+                        onClick={onRecurring}
+                        className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-100 transition-colors"
+                        aria-label={t.recurring_title}
+                        title={t.recurring_title}
+                    >
+                        <RefreshCw size={16} aria-hidden="true" />{' '}
+                        <span className="hidden sm:inline">{t.recurring_btn}</span>
+                    </button>
+                    <button
+                        onClick={onInvite}
+                        className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-indigo-100 transition-colors"
+                        aria-label={t.invite_title}
+                        title={t.invite_title}
+                    >
+                        <Share2 size={16} aria-hidden="true" />
+                    </button>
+                    <button
+                        onClick={onJoin}
+                        className="flex items-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-800 px-3 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors"
+                        aria-label={t.join_title}
+                        title={t.join_title}
+                    >
+                        <Users size={16} aria-hidden="true" />
+                    </button>
                 </div>
             </div>
             {isCustomRange && (
                 <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Calendar size={16} className="text-blue-500 group-hover:text-blue-600 transition-colors" /></div>
-                        <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm cursor-pointer" />
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Calendar
+                                size={16}
+                                className="text-blue-500 group-hover:text-blue-600 transition-colors"
+                            />
+                        </div>
+                        <input
+                            type="date"
+                            value={customStartDate}
+                            onChange={(e) => setCustomStartDate(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm cursor-pointer"
+                        />
                     </div>
                     <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><ArrowRight size={16} className="text-indigo-500 group-hover:text-indigo-600 transition-colors" /></div>
-                        <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm cursor-pointer" />
-                        {(customStartDate || customEndDate) && (<button onClick={() => { setCustomStartDate(''); setCustomEndDate(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all z-10"><X size={12} /></button>)}
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <ArrowRight
+                                size={16}
+                                className="text-indigo-500 group-hover:text-indigo-600 transition-colors"
+                            />
+                        </div>
+                        <input
+                            type="date"
+                            value={customEndDate}
+                            onChange={(e) => setCustomEndDate(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm cursor-pointer"
+                        />
+                        {(customStartDate || customEndDate) && (
+                            <button
+                                onClick={() => {
+                                    setCustomStartDate('');
+                                    setCustomEndDate('');
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all z-10"
+                                aria-label="Clear dates"
+                            >
+                                <X size={12} aria-hidden="true" />
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

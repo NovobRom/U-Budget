@@ -1,31 +1,85 @@
-import { useMemo } from 'react';
 import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
-import { db, appId } from '../firebase';
-import { DEFAULT_CATEGORIES } from '../constants';
-import { toast } from 'react-hot-toast';
-import { fetchExchangeRate } from '../utils/currency';
-import { categoriesService } from '../services/categories.service';
-import { 
-    Utensils, Pizza, Coffee, ShoppingBag, ShoppingCart, Home, Car, 
-    Heart, Smartphone, Plane, Wallet, Briefcase, PiggyBank, Star, 
-    Gift, Music, Clapperboard, BookOpen, Zap, Wifi, HelpCircle, TrendingUp,
-    Bitcoin, Banknote, Landmark, PieChart, DollarSign 
+import {
+    Utensils,
+    Pizza,
+    Coffee,
+    ShoppingBag,
+    ShoppingCart,
+    Home,
+    Car,
+    Heart,
+    Smartphone,
+    Plane,
+    Wallet,
+    Briefcase,
+    PiggyBank,
+    Star,
+    Gift,
+    Music,
+    Clapperboard,
+    BookOpen,
+    Zap,
+    Wifi,
+    HelpCircle,
+    TrendingUp,
+    Bitcoin,
+    Banknote,
+    Landmark,
+    PieChart,
+    DollarSign,
 } from 'lucide-react';
+import { useMemo } from 'react';
+import { toast } from 'react-hot-toast';
+
+import { DEFAULT_CATEGORIES } from '../constants';
+import { db, appId } from '../firebase';
+import { categoriesService } from '../services/categories.service';
+import { fetchExchangeRate } from '../utils/currency';
 
 const ICON_MAP = {
-    'utensils': Utensils, 'pizza': Pizza, 'coffee': Coffee,
-    'home': Home, 'car': Car, 'heart': Heart, 'health': Heart,
-    'shopping': ShoppingBag, 'cart': ShoppingCart,
-    'zap': Zap, 'wifi': Wifi, 'smartphone': Smartphone,
-    'plane': Plane, 'wallet': Wallet, 'briefcase': Briefcase,
-    'piggy': PiggyBank, 'star': Star, 'gift': Gift,
-    'music': Music, 'film': Clapperboard, 'book': BookOpen,
-    'bitcoin': Bitcoin, 'cash': Banknote, 'bank': Landmark, 'stock': TrendingUp,
-    'pie': PieChart, 'dollar': DollarSign, 'other': HelpCircle,
-    'food': Utensils, 'cafe': Coffee, 'transport': Car, 'housing': Home,
-    'tech': Smartphone, 'communication': Wifi, 'travel': Plane, 'education': BookOpen,
-    'gifts': Gift, 'services': Zap, 'investments': TrendingUp, 'entertainment': Clapperboard,
-    'salary': Briefcase, 'freelance': Briefcase, 'savings': PiggyBank
+    utensils: Utensils,
+    pizza: Pizza,
+    coffee: Coffee,
+    home: Home,
+    car: Car,
+    heart: Heart,
+    health: Heart,
+    shopping: ShoppingBag,
+    cart: ShoppingCart,
+    zap: Zap,
+    wifi: Wifi,
+    smartphone: Smartphone,
+    plane: Plane,
+    wallet: Wallet,
+    briefcase: Briefcase,
+    piggy: PiggyBank,
+    star: Star,
+    gift: Gift,
+    music: Music,
+    film: Clapperboard,
+    book: BookOpen,
+    bitcoin: Bitcoin,
+    cash: Banknote,
+    bank: Landmark,
+    stock: TrendingUp,
+    pie: PieChart,
+    dollar: DollarSign,
+    other: HelpCircle,
+    food: Utensils,
+    cafe: Coffee,
+    transport: Car,
+    housing: Home,
+    tech: Smartphone,
+    communication: Wifi,
+    travel: Plane,
+    education: BookOpen,
+    gifts: Gift,
+    services: Zap,
+    investments: TrendingUp,
+    entertainment: Clapperboard,
+    salary: Briefcase,
+    freelance: Briefcase,
+    savings: PiggyBank,
 };
 
 const STORAGE_CURRENCY = 'EUR';
@@ -47,18 +101,22 @@ const STORAGE_CURRENCY = 'EUR';
 export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') => {
     const { categories: rawCategories = [], limits: rawLimits = {} } = rawData;
 
-    const getBudgetDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId);
+    const getBudgetDocRef = () =>
+        doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId);
 
     // Merge stored categories with defaults and map icons
     const allCategories = useMemo(() => {
         const storedCats = rawCategories;
-        const mergedStored = storedCats.map(stored => {
-            const def = DEFAULT_CATEGORIES.find(d => d.id === stored.id);
-            if (def) return { ...stored, icon: def.icon, color: def.color, textColor: def.textColor };
+        const mergedStored = storedCats.map((stored) => {
+            const def = DEFAULT_CATEGORIES.find((d) => d.id === stored.id);
+            if (def)
+                return { ...stored, icon: def.icon, color: def.color, textColor: def.textColor };
             const mappedIcon = ICON_MAP[stored.iconId] || Star;
             return { ...stored, icon: mappedIcon };
         });
-        const missingDefaults = DEFAULT_CATEGORIES.filter(d => !mergedStored.some(s => s.id === d.id));
+        const missingDefaults = DEFAULT_CATEGORIES.filter(
+            (d) => !mergedStored.some((s) => s.id === d.id)
+        );
         return [...mergedStored, ...missingDefaults];
     }, [rawCategories]);
 
@@ -68,7 +126,7 @@ export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') 
     const categoryLimits = useMemo(() => {
         return rawLimits;
     }, [rawLimits]);
-    
+
     const addCategory = async (catData) => {
         if (!activeBudgetId) return;
         // Clean icon from object before saving
@@ -83,7 +141,7 @@ export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') 
         const snap = await getDoc(ref);
         if (snap.exists()) {
             const currentCats = snap.data().categories || [];
-            const newCats = currentCats.filter(c => c.id !== catId);
+            const newCats = currentCats.filter((c) => c.id !== catId);
             await updateDoc(ref, { categories: newCats });
         }
     };
@@ -103,8 +161,10 @@ export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') 
             try {
                 const rate = await fetchExchangeRate(mainCurrency, STORAGE_CURRENCY);
                 limitInStorage = limitInStorage * rate;
-                console.log(`Converted limit: ${amount} ${mainCurrency} -> ${limitInStorage.toFixed(2)} ${STORAGE_CURRENCY}`);
-            } catch(e) {
+                console.log(
+                    `Converted limit: ${amount} ${mainCurrency} -> ${limitInStorage.toFixed(2)} ${STORAGE_CURRENCY}`
+                );
+            } catch (e) {
                 console.error('Conversion failed:', e);
                 toast.error(t.conversion_error || 'Currency conversion failed');
                 return;
@@ -114,7 +174,7 @@ export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') 
         try {
             await categoriesService.saveLimit(activeBudgetId, categoryId, limitInStorage);
             toast.success(t.success_save || 'Saved');
-        } catch(e) {
+        } catch (e) {
             console.error('Failed to save limit:', e);
             toast.error(t.error_save || 'Error saving limit');
         }
@@ -125,6 +185,6 @@ export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') 
         categoryLimits, // Note: This might be raw if not processed by parent
         addCategory,
         deleteCategory,
-        saveLimit
+        saveLimit,
     };
 };

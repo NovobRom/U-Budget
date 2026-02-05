@@ -1,16 +1,39 @@
-# React + Vite
+# U-Budget
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Personal Finance Progressive Web Application (PWA) with multi-currency support, team budgets, and AI-powered transaction categorization.
 
-Currently, two official plugins are available:
+## Setup Instructions
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
+- Node.js (v18+)
+- Firebase CLI (`npm install -g firebase-tools`)
 
-## React Compiler
+### Environment Variables
+1. Copy `.env.example` to `.env.local`:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Fill in your Firebase configuration keys in `.env.local`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Installation
+```bash
+npm install
+```
 
-## Expanding the ESLint configuration
+### Development
+```bash
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Deploy
+```bash
+# Deploy Frontend
+npm run build
+firebase deploy --only hosting
+
+# Deploy Cloud Functions
+firebase deploy --only functions
+```
+
+## Security
+This project uses environment variables for sensitive configuration. **Never** commit `.env` or `.env.local` files to version control.

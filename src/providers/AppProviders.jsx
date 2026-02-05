@@ -1,7 +1,8 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import { LanguageProvider } from '../context/LanguageContext';
+
 import { CurrencyProvider } from '../context/CurrencyContext';
+import { LanguageProvider } from '../context/LanguageContext';
 import { ThemeProvider } from '../context/ThemeContext';
 // ModalProvider is removed as we switched to Zustand (useModalStore)
 
@@ -15,9 +16,7 @@ export const AppProviders = ({ children }) => {
         <BrowserRouter>
             <LanguageProvider>
                 <CurrencyProvider>
-                    <ThemeProvider>
-                        {children}
-                    </ThemeProvider>
+                    <ThemeProvider>{children}</ThemeProvider>
                 </CurrencyProvider>
             </LanguageProvider>
         </BrowserRouter>

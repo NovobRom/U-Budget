@@ -21,10 +21,10 @@ export const categorizeWithAI = async (transactions, categories) => {
     // Get category objects (only expense categories)
     // We send {id, name} so the AI understands what each category means
     const categoryObjects = categories
-        .filter(c => c.type === 'expense' || !c.type)
-        .map(c => ({ id: c.id, name: c.name || c.id }));
+        .filter((c) => c.type === 'expense' || !c.type)
+        .map((c) => ({ id: c.id, name: c.name || c.id }));
 
-    const categoryIds = categoryObjects.map(c => c.id);
+    const categoryIds = categoryObjects.map((c) => c.id);
 
     // Add 'other' if not present
     if (!categoryIds.includes('other')) {
@@ -32,8 +32,8 @@ export const categorizeWithAI = async (transactions, categories) => {
     }
 
     // Extract descriptions
-    const descriptions = transactions.map(tx =>
-        tx._raw?.originalDescription || tx.comment || tx.description || ''
+    const descriptions = transactions.map(
+        (tx) => tx._raw?.originalDescription || tx.comment || tx.description || ''
     );
 
     // Process in batches
@@ -44,7 +44,9 @@ export const categorizeWithAI = async (transactions, categories) => {
         const batchStart = i;
 
         try {
-            console.log(`[AI] Categorizing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(descriptions.length / BATCH_SIZE)}`);
+            console.log(
+                `[AI] Categorizing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(descriptions.length / BATCH_SIZE)}`
+            );
 
             const response = await fetch(CATEGORIZE_ENDPOINT, {
                 method: 'POST',
@@ -52,8 +54,8 @@ export const categorizeWithAI = async (transactions, categories) => {
                 body: JSON.stringify({
                     descriptions: batchDescriptions,
                     descriptions: batchDescriptions,
-                    categories: categoryObjects
-                })
+                    categories: categoryObjects,
+                }),
             });
 
             if (!response.ok) {
@@ -76,7 +78,7 @@ export const categorizeWithAI = async (transactions, categories) => {
 
             // Rate limiting: wait 500ms between batches
             if (i + BATCH_SIZE < descriptions.length) {
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise((resolve) => setTimeout(resolve, 500));
             }
         } catch (err) {
             console.error(`[AI] Batch ${Math.floor(i / BATCH_SIZE) + 1} error:`, err.message);
@@ -96,7 +98,7 @@ export const isAIAvailable = async () => {
         const response = await fetch(CATEGORIZE_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descriptions: ['test'], categories: ['other'] })
+            body: JSON.stringify({ descriptions: ['test'], categories: ['other'] }),
         });
         return response.ok || response.status !== 404;
     } catch {

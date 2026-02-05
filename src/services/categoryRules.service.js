@@ -1,10 +1,11 @@
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+
 import { db, appId } from '../firebase';
 
 /**
  * Category Rules Service
  * Manages user-defined keyword-to-category rules for auto-categorization during import.
- * 
+ *
  * Storage: /artifacts/{appId}/users/{budgetId}/settings/categoryRules
  */
 
@@ -105,7 +106,7 @@ export const saveCategoryRules = async (budgetId, rules) => {
         const docRef = getRulesDocRef(budgetId);
         await setDoc(docRef, {
             rules: rules || [],
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
         });
         return true;
     } catch (error) {

@@ -1,18 +1,18 @@
-
 import React, { Suspense } from 'react';
+
 import { useModalStore } from '../../store/useModalStore';
 
 // Static imports to fix build failure
-import TransactionModal from './TransactionModal';
-import LoanModal from './LoanModal';
-import LoanPaymentModal from './LoanPaymentModal';
 import AssetModal from './AssetModal';
 import CategoryModal from './CategoryModal';
-import LinkModal from './LinkModal';
-import SettingsModal from './SettingsModal';
-import InfoModal from './InfoModal';
-import RecurringModal from './RecurringModal';
 import ImportModal from './ImportModal';
+import InfoModal from './InfoModal';
+import LinkModal from './LinkModal';
+import LoanModal from './LoanModal';
+import LoanPaymentModal from './LoanPaymentModal';
+import RecurringModal from './RecurringModal';
+import SettingsModal from './SettingsModal';
+import TransactionModal from './TransactionModal';
 
 export default function ModalManager() {
     const activeModal = useModalStore((state) => state.activeModal);
@@ -38,7 +38,14 @@ export default function ModalManager() {
             case 'settings':
                 return <SettingsModal {...modalProps} isOpen={true} onClose={closeModal} />;
             case 'info':
-                return <InfoModal {...modalProps} isOpen={true} onClose={closeModal} type={modalProps.type} />;
+                return (
+                    <InfoModal
+                        {...modalProps}
+                        isOpen={true}
+                        onClose={closeModal}
+                        type={modalProps.type}
+                    />
+                );
             case 'recurring':
                 return <RecurringModal {...modalProps} isOpen={true} onClose={closeModal} />;
             case 'import':
@@ -49,7 +56,11 @@ export default function ModalManager() {
     };
 
     return (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" />}>
+        <Suspense
+            fallback={
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" />
+            }
+        >
             {renderModal()}
         </Suspense>
     );

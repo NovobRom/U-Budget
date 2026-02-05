@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+
 import { db, appId } from '../firebase';
 
 /**
  * useTransactionTotals Hook
- * 
+ *
  * Loads all transactions and calculates totals client-side.
  * This ensures accurate totals regardless of pagination in the transaction list.
- * 
+ *
  * @param {string} activeBudgetId - Current budget ID
  * @param {string} timeFilter - Time filter ('all', 'this_month', 'last_month', etc.)
  * @param {string} customStartDate - Start date for custom range
  * @param {string} customEndDate - End date for custom range
- * 
+ *
  * @returns {object} { totalIncome, totalExpense, loading }
  */
 export const useTransactionTotals = (
@@ -32,77 +33,97 @@ export const useTransactionTotals = (
             return;
         }
 
-
-        const txCollection = collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions');
+        const txCollection = collection(
+            db,
+            'artifacts',
+            appId,
+            'users',
+            activeBudgetId,
+            'transactions'
+        );
         setLoading(true);
 
-        const unsubscribe = onSnapshot(txCollection, (snapshot) => {
-            try {
-                const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const unsubscribe = onSnapshot(
+            txCollection,
+            (snapshot) => {
+                try {
+                    const transactions = snapshot.docs.map((doc) => ({
+                        id: doc.id,
+                        ...doc.data(),
+                    }));
 
-                // Build date filter function
-                const now = new Date();
-                const currentMonth = now.getMonth();
-                const currentYear = now.getFullYear();
+                    // Build date filter function
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
 
-                const isInRange = (dateStr) => {
-                    if (timeFilter === 'all') return true;
+                    const isInRange = (dateStr) => {
+                        if (timeFilter === 'all') return true;
 
-                    const d = new Date(dateStr);
+                        const d = new Date(dateStr);
 
-                    if (timeFilter === 'this_month') {
-                        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-                    }
-                    if (timeFilter === 'last_month') {
-                        const last = new Date(currentYear, currentMonth - 1, 1);
-                        return d.getMonth() === last.getMonth() && d.getFullYear() === last.getFullYear();
-                    }
-                    if (timeFilter === 'this_year') {
-                        return d.getFullYear() === currentYear;
-                    }
-                    if (timeFilter === 'custom') {
-                        if (!customStartDate && !customEndDate) return true;
-                        const txDate = new Date(dateStr);
-                        txDate.setHours(0, 0, 0, 0);
-                        const start = customStartDate ? new Date(customStartDate) : new Date('1970-01-01');
-                        const end = customEndDate ? new Date(customEndDate) : new Date('9999-12-31');
-                        start.setHours(0, 0, 0, 0);
-                        end.setHours(0, 0, 0, 0);
-                        return txDate >= start && txDate <= end;
-                    }
-                    return true;
-                };
+                        if (timeFilter === 'this_month') {
+                            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                        }
+                        if (timeFilter === 'last_month') {
+                            const last = new Date(currentYear, currentMonth - 1, 1);
+                            return (
+                                d.getMonth() === last.getMonth() &&
+                                d.getFullYear() === last.getFullYear()
+                            );
+                        }
+                        if (timeFilter === 'this_year') {
+                            return d.getFullYear() === currentYear;
+                        }
+                        if (timeFilter === 'custom') {
+                            if (!customStartDate && !customEndDate) return true;
+                            const txDate = new Date(dateStr);
+                            txDate.setHours(0, 0, 0, 0);
+                            const start = customStartDate
+                                ? new Date(customStartDate)
+                                : new Date('1970-01-01');
+                            const end = customEndDate
+                                ? new Date(customEndDate)
+                                : new Date('9999-12-31');
+                            start.setHours(0, 0, 0, 0);
+                            end.setHours(0, 0, 0, 0);
+                            return txDate >= start && txDate <= end;
+                        }
+                        return true;
+                    };
 
-                // Calculate totals
-                let income = 0;
-                let expense = 0;
+                    // Calculate totals
+                    let income = 0;
+                    let expense = 0;
 
-                transactions.forEach(t => {
-                    if (!isInRange(t.date)) return;
-                    if (t.isHidden) return; // Ignore hidden transactions
+                    transactions.forEach((t) => {
+                        if (!isInRange(t.date)) return;
+                        if (t.isHidden) return; // Ignore hidden transactions
 
-                    // Use the stored amount directly (already in storage currency)
-                    const amount = Math.abs(Number(t.amount) || 0);
+                        // Use the stored amount directly (already in storage currency)
+                        const amount = Math.abs(Number(t.amount) || 0);
 
-                    if (t.type === 'income') {
-                        income += amount;
-                    } else if (t.type === 'expense') {
-                        expense += amount;
-                    }
-                });
+                        if (t.type === 'income') {
+                            income += amount;
+                        } else if (t.type === 'expense') {
+                            expense += amount;
+                        }
+                    });
 
-                // Round to 2 decimal places
-                setTotalIncome(Math.round(income * 100) / 100);
-                setTotalExpense(Math.round(expense * 100) / 100);
-            } catch (error) {
-                console.error('[useTransactionTotals] Error processing totals:', error);
-            } finally {
+                    // Round to 2 decimal places
+                    setTotalIncome(Math.round(income * 100) / 100);
+                    setTotalExpense(Math.round(expense * 100) / 100);
+                } catch (error) {
+                    console.error('[useTransactionTotals] Error processing totals:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+            (error) => {
+                console.error('[useTransactionTotals] Snapshot error:', error);
                 setLoading(false);
             }
-        }, (error) => {
-            console.error('[useTransactionTotals] Snapshot error:', error);
-            setLoading(false);
-        });
+        );
 
         return () => unsubscribe();
     }, [activeBudgetId, timeFilter, customStartDate, customEndDate]);
@@ -110,6 +131,6 @@ export const useTransactionTotals = (
     return {
         totalIncome,
         totalExpense,
-        loading
+        loading,
     };
 };

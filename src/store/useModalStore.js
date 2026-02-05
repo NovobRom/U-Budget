@@ -13,16 +13,18 @@ export const useModalStore = create((set) => ({
      * @param {string} modalName - Key matching the ModalManager switch case
      * @param {object} props - Props to pass to the modal component
      */
-    openModal: (modalName, props = {}) => set({ 
-        activeModal: modalName, 
-        modalProps: props 
-    }),
+    openModal: (modalName, props = {}) =>
+        set({
+            activeModal: modalName,
+            modalProps: props,
+        }),
 
     /**
      * Close the currently active modal
      */
-    closeModal: () => set({ 
-        activeModal: null, 
-        modalProps: {} 
-    })
+    closeModal: () =>
+        set({
+            activeModal: null,
+            modalProps: {},
+        }),
 }));

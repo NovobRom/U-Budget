@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
 import { Key, Check, AlertCircle, Loader2, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+
 import {
     getGeminiApiKey,
     saveGeminiApiKey,
-    testGeminiApiKey
+    testGeminiApiKey,
 } from '../../../services/geminiCategorizer.service';
 
 /**
@@ -109,12 +110,13 @@ export default function GeminiSettings({ t = {} }) {
                     <button
                         onClick={handleTest}
                         disabled={status === 'testing'}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${status === 'testing'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                            status === 'testing'
                                 ? 'bg-slate-200 text-slate-500'
                                 : status === 'valid'
-                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                            }`}
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                        }`}
                     >
                         {status === 'testing' && <Loader2 size={14} className="animate-spin" />}
                         {status === 'valid' ? <Check size={14} /> : labels.test}

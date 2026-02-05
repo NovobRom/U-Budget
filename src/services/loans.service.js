@@ -1,6 +1,5 @@
-import { 
-    collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp 
-} from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+
 import { db, appId } from '../firebase';
 
 /**
@@ -18,8 +17,8 @@ class LoanService {
 
     /**
      * Add a new loan
-     * @param {string} budgetId 
-     * @param {object} data 
+     * @param {string} budgetId
+     * @param {object} data
      */
     async addLoan(budgetId, data) {
         if (!budgetId) throw new Error('Missing budgetId');
@@ -27,7 +26,7 @@ class LoanService {
         const payload = {
             ...data,
             createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
         };
 
         const docRef = await addDoc(this.getCollectionRef(budgetId), payload);
@@ -36,9 +35,9 @@ class LoanService {
 
     /**
      * Update an existing loan (also used for payments update)
-     * @param {string} budgetId 
-     * @param {string} id 
-     * @param {object} data 
+     * @param {string} budgetId
+     * @param {string} id
+     * @param {object} data
      */
     async updateLoan(budgetId, id, data) {
         if (!budgetId || !id) throw new Error('Missing budgetId or loan ID');
@@ -46,7 +45,7 @@ class LoanService {
         const docRef = doc(this.getCollectionRef(budgetId), id);
         const payload = {
             ...data,
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
         };
 
         await updateDoc(docRef, payload);
@@ -55,8 +54,8 @@ class LoanService {
 
     /**
      * Delete a loan
-     * @param {string} budgetId 
-     * @param {string} id 
+     * @param {string} budgetId
+     * @param {string} id
      */
     async deleteLoan(budgetId, id) {
         if (!budgetId || !id) throw new Error('Missing budgetId or loan ID');

@@ -1,6 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import React from 'react';
+import { describe, it, expect } from 'vitest';
 
 // Simple component for testing configuration
 const Hello = () => <h1>Hello World</h1>;

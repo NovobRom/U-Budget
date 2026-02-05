@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
 import { Wallet, ArrowRight, Loader2, Check } from 'lucide-react';
+import React, { useState } from 'react';
+
 import AuthForm from './auth/AuthForm';
 import SocialLogin from './auth/SocialLogin';
 
-export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onResetPassword, lang, setLang, t }) {
+export default function AuthScreen({
+    onLogin,
+    onRegister,
+    onGoogleLogin,
+    onResetPassword,
+    lang,
+    setLang,
+    t,
+}) {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,7 +42,7 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
         setSuccessMessage('');
 
         if (!isLogin && !showForgot && !isPassValid) {
-            setError(lang === 'ua' ? "Пароль надто слабкий" : "Password is too weak");
+            setError(lang === 'ua' ? 'Пароль надто слабкий' : 'Password is too weak');
             return;
         }
 
@@ -41,7 +50,11 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
         try {
             if (showForgot) {
                 await onResetPassword(email);
-                setSuccessMessage(lang === 'ua' ? "Інструкції надіслано на пошту!" : "Reset instructions sent to email!");
+                setSuccessMessage(
+                    lang === 'ua'
+                        ? 'Інструкції надіслано на пошту!'
+                        : 'Reset instructions sent to email!'
+                );
                 setTimeout(() => {
                     setShowForgot(false);
                     setSuccessMessage('');
@@ -50,9 +63,11 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
                 await onLogin(email, password);
             } else {
                 await onRegister(email, password, name);
-                setSuccessMessage(lang === 'ua'
-                    ? "Аккаунт створено! Перевірте пошту для підтвердження."
-                    : "Account created! Check your email for verification.");
+                setSuccessMessage(
+                    lang === 'ua'
+                        ? 'Аккаунт створено! Перевірте пошту для підтвердження.'
+                        : 'Account created! Check your email for verification.'
+                );
             }
         } catch (err) {
             console.error(err);
@@ -70,23 +85,50 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
         try {
             await providerMethod();
         } catch (err) {
-            console.error("Social Auth Failed:", err);
+            console.error('Social Auth Failed:', err);
             handleAuthError(err);
             setIsSocialLoading(false);
         }
     };
 
     const handleAuthError = (err) => {
-        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-            setError(lang === 'ua' ? "Невірний email або пароль" : "Invalid email or password");
-        } else if (err.code === 'auth/email-already-in-use') {
-            setError(lang === 'ua' ? "Цей email вже зареєстрований" : "Email already in use");
-        } else if (err.code === 'auth/popup-closed-by-user') {
-            setError(lang === 'ua' ? "Вхід скасовано користувачем" : "Sign in cancelled by user");
-        } else if (err.code === 'auth/too-many-requests') {
-            setError(lang === 'ua' ? "Забагато спроб. Спробуйте пізніше" : "Too many attempts. Try again later");
+        const code = err.code || '';
+
+        // Security: Avoid leaking user existence by using generic messages
+        if (
+            code === 'auth/invalid-credential' ||
+            code === 'auth/user-not-found' ||
+            code === 'auth/wrong-password' ||
+            code === 'auth/invalid-email'
+        ) {
+            setError(lang === 'ua' ? 'Невірний email або пароль' : 'Invalid email or password');
+        } else if (code === 'auth/email-already-in-use') {
+            setError(lang === 'ua' ? 'Цей email вже зареєстрований' : 'Email already in use');
+        } else if (code === 'auth/popup-closed-by-user') {
+            setError(lang === 'ua' ? 'Вхід скасовано' : 'Sign in cancelled');
+        } else if (code === 'auth/too-many-requests') {
+            setError(
+                lang === 'ua'
+                    ? 'Забагато спроб. Спробуйте пізніше'
+                    : 'Too many attempts. Try again later'
+            );
+        } else if (code === 'auth/network-request-failed') {
+            setError(
+                lang === 'ua'
+                    ? "Помилка мережі. Перевірте з'єднання"
+                    : 'Network error. Check your connection'
+            );
+        } else if (code === 'auth/weak-password') {
+            setError(lang === 'ua' ? 'Пароль надто слабкий' : 'Password is too weak');
+        } else if (code === 'auth/operation-not-allowed') {
+            setError(lang === 'ua' ? 'Цей метод входу вимкнено' : 'Sign in method disabled');
         } else {
-            setError(err.message);
+            console.error('Unknown Auth Error:', err);
+            setError(
+                lang === 'ua'
+                    ? 'Сталася помилка. Спробуйте ще раз'
+                    : 'An error occurred. Please try again'
+            );
         }
     };
 
@@ -95,21 +137,25 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
             {/* Language Switcher */}
             <div className="absolute top-6 right-6">
                 <button
-                    onClick={() => setLang(lang === 'ua' ? 'en' : 'ua')}
+                    onClick={() => {
+                        const nextLang = lang === 'ua' ? 'en' : lang === 'en' ? 'pl' : 'ua';
+                        setLang(nextLang);
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 rounded-full shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition-transform hover:scale-105"
                 >
-                    {lang === 'ua' ? '🇺🇦 UA' : '🇺🇸 EN'}
+                    {lang === 'ua' ? '🇺🇦 UA' : lang === 'en' ? '🇺🇸 EN' : '🇵🇱 PL'}
                 </button>
             </div>
 
             <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-8 sm:p-10 transition-all">
-
                 {/* Header / Logo */}
                 <div className="flex flex-col items-center mb-8">
                     <div className="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30 transform -rotate-6">
                         <Wallet className="text-white" size={32} />
                     </div>
-                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">U-Budget</h1>
+                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">
+                        U-Budget
+                    </h1>
                     <p className="text-blue-500 font-medium text-sm">{t.welcome_slogan}</p>
                 </div>
 
@@ -118,14 +164,22 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
                     <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl mb-8 relative">
                         <button
                             type="button"
-                            onClick={() => { setIsLogin(true); setError(''); setSuccessMessage(''); }}
+                            onClick={() => {
+                                setIsLogin(true);
+                                setError('');
+                                setSuccessMessage('');
+                            }}
                             className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${isLogin ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
                         >
                             {t.login}
                         </button>
                         <button
                             type="button"
-                            onClick={() => { setIsLogin(false); setError(''); setSuccessMessage(''); }}
+                            onClick={() => {
+                                setIsLogin(false);
+                                setError('');
+                                setSuccessMessage('');
+                            }}
                             className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${!isLogin ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
                         >
                             {t.register}
@@ -136,11 +190,16 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <AuthForm
-                        isLogin={isLogin} showForgot={showForgot}
-                        email={email} setEmail={setEmail}
-                        password={password} setPassword={setPassword}
-                        name={name} setName={setName}
-                        passChecks={passChecks} t={t}
+                        isLogin={isLogin}
+                        showForgot={showForgot}
+                        email={email}
+                        setEmail={setEmail}
+                        password={password}
+                        setPassword={setPassword}
+                        name={name}
+                        setName={setName}
+                        passChecks={passChecks}
+                        t={t}
                     />
 
                     {error && (
@@ -158,7 +217,11 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
 
                     {!showForgot && isLogin && (
                         <div className="flex justify-end">
-                            <button type="button" onClick={() => setShowForgot(true)} className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors">
+                            <button
+                                type="button"
+                                onClick={() => setShowForgot(true)}
+                                className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors"
+                            >
                                 {t.forgot_password}
                             </button>
                         </div>
@@ -169,9 +232,15 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
                         disabled={loading || isSocialLoading}
                         className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10 disabled:opacity-50 disabled:scale-100"
                     >
-                        {loading ? <Loader2 className="animate-spin" size={20} /> : (
+                        {loading ? (
+                            <Loader2 className="animate-spin" size={20} />
+                        ) : (
                             <>
-                                {showForgot ? t.send_reset : (isLogin ? t.login_btn : t.create_account)}
+                                {showForgot
+                                    ? t.send_reset
+                                    : isLogin
+                                        ? t.login_btn
+                                        : t.create_account}
                                 {!loading && <ArrowRight size={18} />}
                             </>
                         )}
@@ -179,7 +248,10 @@ export default function AuthScreen({ onLogin, onRegister, onGoogleLogin, onReset
                 </form>
 
                 {showForgot && (
-                    <button onClick={() => setShowForgot(false)} className="w-full mt-4 py-3 text-sm font-bold text-slate-500 hover:text-slate-700">
+                    <button
+                        onClick={() => setShowForgot(false)}
+                        className="w-full mt-4 py-3 text-sm font-bold text-slate-500 hover:text-slate-700"
+                    >
                         {t.back_to_login}
                     </button>
                 )}

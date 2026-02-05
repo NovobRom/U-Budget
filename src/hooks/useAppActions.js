@@ -1,7 +1,8 @@
-import { fetchExchangeRate } from '../utils/currency';
+import { toast } from 'react-hot-toast';
+
 import { useBudgetStore } from '../store/useBudgetStore';
 import { useModalStore } from '../store/useModalStore';
-import { toast } from 'react-hot-toast';
+import { fetchExchangeRate } from '../utils/currency';
 
 export const useAppActions = (activeBudgetId, user, t, currency) => {
     const store = useBudgetStore();
@@ -16,7 +17,9 @@ export const useAppActions = (activeBudgetId, user, t, currency) => {
                 await store.addTransaction(activeBudgetId, user, data, currency, t);
             }
             closeModal();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const handleDeleteTransaction = async (id) => {
@@ -33,7 +36,9 @@ export const useAppActions = (activeBudgetId, user, t, currency) => {
                 await store.addLoan(activeBudgetId, data, t);
             }
             closeModal();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const handleDeleteLoan = async (id) => {
@@ -45,7 +50,9 @@ export const useAppActions = (activeBudgetId, user, t, currency) => {
         try {
             await store.payLoan(activeBudgetId, loan, amount, t);
             closeModal();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     // Assets
@@ -57,7 +64,9 @@ export const useAppActions = (activeBudgetId, user, t, currency) => {
                 await store.addAsset(activeBudgetId, data, currency, t);
             }
             closeModal();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const handleDeleteAsset = async (id) => {
@@ -72,7 +81,7 @@ export const useAppActions = (activeBudgetId, user, t, currency) => {
     };
 
     const handleDeleteCategory = async (catId) => {
-         await store.deleteCategory(activeBudgetId, catId, t);
+        await store.deleteCategory(activeBudgetId, catId, t);
     };
 
     const handleSaveLimit = async (catId, amount) => {
@@ -84,7 +93,7 @@ export const useAppActions = (activeBudgetId, user, t, currency) => {
     };
 
     const handleLeaveBudget = async () => {
-        if (!confirm("Are you sure?")) return;
+        if (!confirm('Are you sure?')) return;
         await store.leaveBudget(activeBudgetId, user?.uid, t);
     };
 
@@ -95,26 +104,40 @@ export const useAppActions = (activeBudgetId, user, t, currency) => {
             if (rate && rate !== 1) {
                 setValCb(rate);
                 toast.success(`Rate: ${rate} ${currency}`);
-            } else { 
-                toast.error("Could not fetch rate.");
+            } else {
+                toast.error('Could not fetch rate.');
             }
-        } catch(e) { toast.error("Fetch failed"); }
+        } catch (e) {
+            toast.error('Fetch failed');
+        }
     };
 
     const handleExport = (data, filename = 'export') => {
         const tableContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table>${data}</table></body></html>`;
         const blob = new Blob([tableContent], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a"); link.href = url; link.download = `${filename}.xls`;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename}.xls`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return {
-        handleSaveTransaction, handleDeleteTransaction,
-        handleSaveLoan, handleDeleteLoan, handleLoanPayment,
-        handleSaveAsset, handleDeleteAsset,
-        handleAddCategory, handleDeleteCategory, handleSaveLimit,
-        handleRemoveUser, handleLeaveBudget,
-        handleFetchCryptoRate, handleExport
+        handleSaveTransaction,
+        handleDeleteTransaction,
+        handleSaveLoan,
+        handleDeleteLoan,
+        handleLoanPayment,
+        handleSaveAsset,
+        handleDeleteAsset,
+        handleAddCategory,
+        handleDeleteCategory,
+        handleSaveLimit,
+        handleRemoveUser,
+        handleLeaveBudget,
+        handleFetchCryptoRate,
+        handleExport,
     };
 };

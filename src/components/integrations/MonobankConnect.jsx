@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
 import { Loader2, Check, RefreshCw, Smartphone, Eye, EyeOff } from 'lucide-react';
-import { useMonobankStore } from '../../store/useMonobankStore';
-import { fetchClientInfo, fetchStatements } from '../../services/monobank.service';
-import { getCategoryByMcc } from '../../utils/mccCodes';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 
+import { fetchClientInfo, fetchStatements } from '../../services/monobank.service';
+import { useMonobankStore } from '../../store/useMonobankStore';
+import { getCategoryByMcc } from '../../utils/mccCodes';
+
 export default function MonobankConnect({ lang, onSyncTransactions, existingTransactions = [] }) {
-    const { token, setToken, accounts, setAccounts, lastSyncTime, setLastSyncTime, isLoading } = useMonobankStore();
+    const { token, setToken, accounts, setAccounts, lastSyncTime, setLastSyncTime, isLoading } =
+        useMonobankStore();
     const [inputToken, setInputToken] = useState(token);
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
@@ -18,7 +20,9 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
             const data = await fetchClientInfo(inputToken);
             await setToken(inputToken);
             await setAccounts(data.accounts);
-            toast.success(lang === 'ua' ? 'Monobank успішно підключено!' : 'Monobank connected successfully!');
+            toast.success(
+                lang === 'ua' ? 'Monobank успішно підключено!' : 'Monobank connected successfully!'
+            );
         } catch (error) {
             toast.error(error.message);
         } finally {
@@ -43,12 +47,14 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
 
             // 2. Fetch Transactions (Statements) - Last 31 days (max allowed is 31 days + 1 hour)
             const to = Math.floor(now / 1000);
-            const from = to - (30 * 24 * 60 * 60); // 30 days ago
+            const from = to - 30 * 24 * 60 * 60; // 30 days ago
 
             let newTxCount = 0;
 
             // Fetch for visible accounts only
-            const visibleAccounts = clientData.accounts.filter(a => !useMonobankStore.getState().hiddenAccountIds?.includes(a.id));
+            const visibleAccounts = clientData.accounts.filter(
+                (a) => !useMonobankStore.getState().hiddenAccountIds?.includes(a.id)
+            );
 
             // Limit to first 3 visible accounts to be safe with rate limits
             const targetAccounts = visibleAccounts.slice(0, 3);
@@ -59,10 +65,16 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                         const statements = await fetchStatements(token, account.id, from, to);
                         if (Array.isArray(statements)) {
                             // Filter duplicates
-                            const newItems = statements.filter(stmt => {
-                                const exists = existingTransactions.some(tx =>
-                                    tx.monobankId === stmt.id ||
-                                    (tx.date === new Date(stmt.time * 1000).toISOString().split('T')[0] && tx.amount === Math.abs(stmt.amount / 100) && tx.description === stmt.description)
+                            const newItems = statements.filter((stmt) => {
+                                const exists = existingTransactions.some(
+                                    (tx) =>
+                                        tx.monobankId === stmt.id ||
+                                        (tx.date ===
+                                            new Date(stmt.time * 1000)
+                                                .toISOString()
+                                                .split('T')[0] &&
+                                            tx.amount === Math.abs(stmt.amount / 100) &&
+                                            tx.description === stmt.description)
                                 );
                                 return !exists;
                             });
@@ -71,7 +83,12 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                                 const isExpense = item.amount < 0;
                                 let amount = Math.abs(item.amount / 100);
                                 let originalAmount = amount;
-                                let originalCurrency = account.currencyCode === 980 ? 'UAH' : (account.currencyCode === 840 ? 'USD' : 'EUR');
+                                let originalCurrency =
+                                    account.currencyCode === 980
+                                        ? 'UAH'
+                                        : account.currencyCode === 840
+                                          ? 'USD'
+                                          : 'EUR';
 
                                 // Smart Import: Use operationAmount if different (foreign spend)
                                 if (item.operationAmount && item.operationAmount !== item.amount) {
@@ -82,15 +99,13 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                                     // amount = -42000 (420 UAH)
                                     // operationAmount = -1000 (10 EUR)
                                     // We want to store: amount = 10 EUR (base), original = 10 EUR.
-
                                     // Simplification: Just allow the budget view to convert everything from base.
                                     // We need to store consistent BASE Currency (EUR).
-                                    // Since we don't have a reliable converter here without async, we will trust the `amount` (card currency) 
+                                    // Since we don't have a reliable converter here without async, we will trust the `amount` (card currency)
                                     // and let the view convert it.
                                     // WAIT: The user specifically complained about cross-border accuracy.
                                     // If we store UAH, it converts to EUR using TODAY's rate.
                                     // If we store the original 10 EUR, it remains 10 EUR forever. MUCH BETTER.
-
                                     // So:
                                     /*
                                     if (item.currencyCode === 978) { // Operation was in EUR
@@ -99,11 +114,14 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                                         originalAmount = amount;
                                     }
                                     */
-                                    // Generalizing is risky without ISO mapping here. 
+                                    // Generalizing is risky without ISO mapping here.
                                     // Let's stick to reliable defaults for now, but mark Transfers.
                                 }
 
-                                const categoryId = (item.mcc === 4829 || item.mcc === 6012) ? 'transfer' : getCategoryByMcc(item.mcc);
+                                const categoryId =
+                                    item.mcc === 4829 || item.mcc === 6012
+                                        ? 'transfer'
+                                        : getCategoryByMcc(item.mcc);
 
                                 // Construct U-Budget Transaction
                                 const newTx = {
@@ -118,7 +136,7 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                                     description: item.description,
                                     monobankId: item.id,
                                     originalCurrency: originalCurrency,
-                                    originalAmount: originalAmount
+                                    originalAmount: originalAmount,
                                 };
 
                                 await onSyncTransactions(newTx, null);
@@ -130,17 +148,20 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                     }
                     // Delay to respect rate limit (60s is per endpoint? Docs say 60s per client)
                     // We might hit limit if we do >1 account.
-                    if (targetAccounts.length > 1) await new Promise(r => setTimeout(r, 61000)); // Brutal wait but safe
+                    if (targetAccounts.length > 1) await new Promise((r) => setTimeout(r, 61000)); // Brutal wait but safe
                 }
             }
 
             await setLastSyncTime(Date.now());
             if (newTxCount > 0) {
-                toast.success(lang === 'ua' ? `Додано ${newTxCount} транзакцій` : `Added ${newTxCount} transactions`);
+                toast.success(
+                    lang === 'ua'
+                        ? `Додано ${newTxCount} транзакцій`
+                        : `Added ${newTxCount} transactions`
+                );
             } else {
                 toast.success(lang === 'ua' ? 'Баланс оновлено' : 'Balance synced');
             }
-
         } catch (error) {
             console.error(error);
             toast.error(error.message);
@@ -157,7 +178,15 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                 </div>
                 <div>
                     <h3 className="font-bold text-slate-900 dark:text-white">Monobank</h3>
-                    <p className="text-xs text-slate-500">{accounts.length > 0 ? (lang === 'ua' ? 'Підключено' : 'Connected') : (lang === 'ua' ? 'Не підключено' : 'Not connected')}</p>
+                    <p className="text-xs text-slate-500">
+                        {accounts.length > 0
+                            ? lang === 'ua'
+                                ? 'Підключено'
+                                : 'Connected'
+                            : lang === 'ua'
+                              ? 'Не підключено'
+                              : 'Not connected'}
+                    </p>
                 </div>
             </div>
 
@@ -181,24 +210,41 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                             disabled={loading || !inputToken}
                             className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 disabled:opacity-50"
                         >
-                            {loading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                            {loading ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Check size={16} />
+                            )}
                         </button>
                     </div>
                 </div>
             ) : (
                 <div className="space-y-4">
                     <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                        {accounts.map(acc => {
-                            const isHidden = useMonobankStore.getState().hiddenAccountIds?.includes(acc.id);
+                        {accounts.map((acc) => {
+                            const isHidden = useMonobankStore
+                                .getState()
+                                .hiddenAccountIds?.includes(acc.id);
                             return (
-                                <div key={acc.id} className={`flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl ${isHidden ? 'opacity-50 grayscale' : ''}`}>
+                                <div
+                                    key={acc.id}
+                                    className={`flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl ${isHidden ? 'opacity-50 grayscale' : ''}`}
+                                >
                                     <div className="flex items-center gap-3">
                                         <div className="text-slate-400">
                                             <Smartphone size={18} />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{acc.maskedPan ? acc.maskedPan[0] : 'Рахунок'}</p>
-                                            <p className="text-[10px] text-slate-500">{acc.currencyCode === 980 ? 'UAH' : (acc.currencyCode === 840 ? 'USD' : 'EUR')}</p>
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                                {acc.maskedPan ? acc.maskedPan[0] : 'Рахунок'}
+                                            </p>
+                                            <p className="text-[10px] text-slate-500">
+                                                {acc.currencyCode === 980
+                                                    ? 'UAH'
+                                                    : acc.currencyCode === 840
+                                                      ? 'USD'
+                                                      : 'EUR'}
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
@@ -206,9 +252,21 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                                             {(acc.balance / 100).toFixed(2)}
                                         </div>
                                         <button
-                                            onClick={() => useMonobankStore.getState().toggleAccountVisibility(acc.id)}
+                                            onClick={() =>
+                                                useMonobankStore
+                                                    .getState()
+                                                    .toggleAccountVisibility(acc.id)
+                                            }
                                             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                            title={isHidden ? (lang === 'ua' ? 'Показати' : 'Show') : (lang === 'ua' ? 'Приховати' : 'Hide')}
+                                            title={
+                                                isHidden
+                                                    ? lang === 'ua'
+                                                        ? 'Показати'
+                                                        : 'Show'
+                                                    : lang === 'ua'
+                                                      ? 'Приховати'
+                                                      : 'Hide'
+                                            }
                                         >
                                             {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
@@ -223,8 +281,14 @@ export default function MonobankConnect({ lang, onSyncTransactions, existingTran
                         disabled={syncing}
                         className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                     >
-                        {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                        {lang === 'ua' ? 'Оновити баланс і транзакції' : 'Sync Balance & Transactions'}
+                        {syncing ? (
+                            <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                            <RefreshCw size={16} />
+                        )}
+                        {lang === 'ua'
+                            ? 'Оновити баланс і транзакції'
+                            : 'Sync Balance & Transactions'}
                     </button>
 
                     <div className="text-[10px] text-center text-slate-400">

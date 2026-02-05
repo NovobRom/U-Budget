@@ -32,18 +32,14 @@ export const ThemeProvider = ({ children }) => {
     }, [darkMode]);
 
     const toggleTheme = () => {
-        setDarkMode(prev => !prev);
+        setDarkMode((prev) => !prev);
     };
 
     const value = {
         darkMode,
         setDarkMode,
-        toggleTheme
+        toggleTheme,
     };
 
-    return (
-        <ThemeContext.Provider value={value}>
-            {children}
-        </ThemeContext.Provider>
-    );
+    return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

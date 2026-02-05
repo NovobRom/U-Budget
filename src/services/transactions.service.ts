@@ -1,8 +1,31 @@
 import {
-    collection, doc, writeBatch, serverTimestamp, increment, runTransaction
+    collection,
+    doc,
+    writeBatch,
+    serverTimestamp,
+    increment,
+    runTransaction,
+    query,
+    where,
+    getDocs,
+    updateDoc,
+    DocumentReference,
+    CollectionReference,
 } from 'firebase/firestore';
+
 import { db, appId } from '../firebase';
+import { Transaction } from '../types';
 import { fetchExchangeRate } from '../utils/currency';
+
+export interface TransactionData extends Omit<Transaction, 'id' | 'userId' | 'date'> {
+    date: Date;
+    originalAmount: number;
+    originalCurrency?: string;
+    importId?: string;
+    importSource?: string;
+    comment?: string;
+    category?: string;
+}
 
 /**
  * TransactionService
@@ -10,6 +33,8 @@ import { fetchExchangeRate } from '../utils/currency';
  * Decoupled from React state and hooks.
  */
 class TransactionService {
+    private storageCurrency: string;
+
     constructor() {
         this.storageCurrency = 'EUR';
     }
@@ -17,25 +42,26 @@ class TransactionService {
     /**
      * Helper to get transaction collection reference
      */
-    getTxColRef(budgetId) {
+    private getTxColRef(budgetId: string): CollectionReference {
         return collection(db, 'artifacts', appId, 'users', budgetId, 'transactions');
     }
 
     /**
      * Helper to get budget document reference
      */
-    getBudgetDocRef(budgetId) {
+    private getBudgetDocRef(budgetId: string): DocumentReference {
         return doc(db, 'artifacts', appId, 'public', 'data', 'budgets', budgetId);
     }
 
     /**
      * Add a new transaction
-     * @param {string} budgetId - The active budget ID
-     * @param {object} user - The current user object (uid, displayName)
-     * @param {object} data - Transaction form data
-     * @param {string} mainCurrency - The user's main display currency
      */
-    async addTransaction(budgetId, user, data, mainCurrency = 'EUR') {
+    async addTransaction(
+        budgetId: string,
+        user: { uid: string; displayName: string | null; email: string | null },
+        data: TransactionData,
+        mainCurrency: string = 'EUR'
+    ) {
         if (!budgetId || !user) throw new Error('Missing budgetId or user');
 
         const batch = writeBatch(db);
@@ -48,8 +74,8 @@ class TransactionService {
         if (inputCurrency !== this.storageCurrency) {
             try {
                 rateToStorage = await fetchExchangeRate(inputCurrency, this.storageCurrency);
-            } catch (error) {
-                console.error("Failed to fetch rate:", error);
+            } catch (error: any) {
+                console.error('Failed to fetch rate:', error);
                 throw new Error(`Currency conversion failed: ${error.message}`);
             }
         }
@@ -62,9 +88,9 @@ class TransactionService {
             originalAmount: absOriginal,
             amount: amountInStorage,
             userId: user.uid,
-            userName: user.displayName || user.email?.split('@')[0],
+            userName: user.displayName || user.email?.split('@')[0] || 'Unknown',
             updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
         };
 
         batch.set(newTxRef, payload);
@@ -80,7 +106,12 @@ class TransactionService {
     /**
      * Update an existing transaction
      */
-    async updateTransaction(budgetId, id, newData, mainCurrency = 'EUR') {
+    async updateTransaction(
+        budgetId: string,
+        id: string,
+        newData: TransactionData,
+        mainCurrency: string = 'EUR'
+    ) {
         if (!budgetId) throw new Error('Missing budgetId');
 
         const txRef = doc(this.getTxColRef(budgetId), id);
@@ -88,7 +119,7 @@ class TransactionService {
 
         await runTransaction(db, async (transaction) => {
             const txDoc = await transaction.get(txRef);
-            if (!txDoc.exists()) throw new Error("Transaction does not exist!");
+            if (!txDoc.exists()) throw new Error('Transaction does not exist!');
 
             const oldData = txDoc.data();
             const oldStorageAmount = Math.abs(parseFloat(oldData.amount));
@@ -100,8 +131,8 @@ class TransactionService {
             if (inputCurrency !== this.storageCurrency) {
                 try {
                     newRateToStorage = await fetchExchangeRate(inputCurrency, this.storageCurrency);
-                } catch (error) {
-                    console.error("Failed to fetch rate:", error);
+                } catch (error: any) {
+                    console.error('Failed to fetch rate:', error);
                     throw new Error(`Currency conversion failed: ${error.message}`);
                 }
             }
@@ -116,7 +147,7 @@ class TransactionService {
                 ...newData,
                 originalAmount: absNewOriginal,
                 amount: newStorageAmount,
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
             });
 
             // Optimize write: only update balance if significant change
@@ -129,7 +160,7 @@ class TransactionService {
     /**
      * Delete a transaction
      */
-    async deleteTransaction(budgetId, id) {
+    async deleteTransaction(budgetId: string, id: string) {
         if (!budgetId) throw new Error('Missing budgetId');
 
         const txRef = doc(this.getTxColRef(budgetId), id);
@@ -137,7 +168,7 @@ class TransactionService {
 
         await runTransaction(db, async (transaction) => {
             const txDoc = await transaction.get(txRef);
-            if (!txDoc.exists()) throw new Error("Transaction not found");
+            if (!txDoc.exists()) throw new Error('Transaction not found');
 
             const oldData = txDoc.data();
             const oldStorageAmount = Math.abs(parseFloat(oldData.amount));
@@ -149,15 +180,14 @@ class TransactionService {
     }
 
     /**
-     * Import multiple transactions from CSV (Revolut, etc.)
-     * Includes deduplication based on importId fingerprint
-     * @param {string} budgetId - The active budget ID
-     * @param {object} user - The current user object
-     * @param {object[]} transactions - Array of parsed transaction objects
-     * @param {string} mainCurrency - The user's main display currency
-     * @returns {{ imported: number, skipped: number }}
+     * Import multiple transactions from CSV
      */
-    async importTransactions(budgetId, user, transactions, mainCurrency = 'EUR') {
+    async importTransactions(
+        budgetId: string,
+        user: { uid: string; displayName: string | null; email: string | null },
+        transactions: TransactionData[],
+        mainCurrency: string = 'EUR'
+    ) {
         if (!budgetId || !user) throw new Error('Missing budgetId or user');
         if (!transactions || transactions.length === 0) {
             return { imported: 0, skipped: 0 };
@@ -168,18 +198,15 @@ class TransactionService {
 
         // Extract all importIds from incoming transactions
         const incomingImportIds = transactions
-            .filter(tx => tx.importId)
-            .map(tx => tx.importId);
+            .filter((tx) => tx.importId)
+            .map((tx) => tx.importId as string);
 
         // Query existing transactions with these importIds to detect duplicates
-        // Note: Firestore 'in' query is limited to 30 items, so we chunk if needed
-        let existingImportIds = new Set();
+        const existingImportIds = new Set<string>();
 
         if (incomingImportIds.length > 0) {
-            const { query, where, getDocs } = await import('firebase/firestore');
-
             // Chunk into groups of 30 for Firestore 'in' query limit
-            const chunks = [];
+            const chunks: string[][] = [];
             for (let i = 0; i < incomingImportIds.length; i += 30) {
                 chunks.push(incomingImportIds.slice(i, i + 30));
             }
@@ -187,7 +214,7 @@ class TransactionService {
             for (const chunk of chunks) {
                 const q = query(txColRef, where('importId', 'in', chunk));
                 const snapshot = await getDocs(q);
-                snapshot.forEach(doc => {
+                snapshot.forEach((doc) => {
                     const data = doc.data();
                     if (data.importId) {
                         existingImportIds.add(data.importId);
@@ -197,8 +224,8 @@ class TransactionService {
         }
 
         // Filter out duplicates
-        const newTransactions = transactions.filter(tx =>
-            !tx.importId || !existingImportIds.has(tx.importId)
+        const newTransactions = transactions.filter(
+            (tx) => !tx.importId || !existingImportIds.has(tx.importId)
         );
 
         if (newTransactions.length === 0) {
@@ -222,7 +249,10 @@ class TransactionService {
 
                 if (inputCurrency !== this.storageCurrency) {
                     try {
-                        rateToStorage = await fetchExchangeRate(inputCurrency, this.storageCurrency);
+                        rateToStorage = await fetchExchangeRate(
+                            inputCurrency,
+                            this.storageCurrency
+                        );
                     } catch (error) {
                         console.warn(`[Import] Failed to fetch rate for ${inputCurrency}:`, error);
                         // Use 1:1 as fallback
@@ -244,9 +274,9 @@ class TransactionService {
                     importId: txData.importId,
                     importSource: 'revolut',
                     userId: user.uid,
-                    userName: user.displayName || user.email?.split('@')[0],
+                    userName: user.displayName || user.email?.split('@')[0] || 'Unknown',
                     updatedAt: serverTimestamp(),
-                    createdAt: serverTimestamp()
+                    createdAt: serverTimestamp(),
                 };
 
                 batch.set(newTxRef, payload);
@@ -261,13 +291,12 @@ class TransactionService {
 
         // Update budget balance
         if (Math.abs(totalBalanceChange) > 0.0001) {
-            const { updateDoc } = await import('firebase/firestore');
             await updateDoc(budgetRef, { currentBalance: increment(totalBalanceChange) });
         }
 
         return {
             imported: newTransactions.length,
-            skipped: transactions.length - newTransactions.length
+            skipped: transactions.length - newTransactions.length,
         };
     }
 }

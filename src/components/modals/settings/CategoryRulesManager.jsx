@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Tag, Loader2 } from 'lucide-react';
-import { getCategoryRules, saveCategoryRules, getDefaultRules } from '../../../services/categoryRules.service';
+import React, { useState, useEffect } from 'react';
+
+import {
+    getCategoryRules,
+    saveCategoryRules,
+    getDefaultRules,
+} from '../../../services/categoryRules.service';
 
 /**
  * CategoryRulesManager
@@ -10,7 +15,7 @@ export default function CategoryRulesManager({
     budgetId,
     categories = [],
     getCategoryName,
-    t = {}
+    t = {},
 }) {
     const [rules, setRules] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -70,11 +75,11 @@ export default function CategoryRulesManager({
 
         const newRule = {
             keyword: newKeyword.trim().toLowerCase(),
-            categoryId: newCategoryId
+            categoryId: newCategoryId,
         };
 
         // Check for duplicates
-        const exists = rules.some(r => r.keyword === newRule.keyword);
+        const exists = rules.some((r) => r.keyword === newRule.keyword);
         if (exists) return;
 
         const newRules = [...rules, newRule];
@@ -96,7 +101,7 @@ export default function CategoryRulesManager({
     };
 
     // Get expense categories for dropdown
-    const expenseCategories = categories.filter(c => c.type === 'expense' || !c.type);
+    const expenseCategories = categories.filter((c) => c.type === 'expense' || !c.type);
 
     if (isLoading) {
         return (
@@ -126,8 +131,12 @@ export default function CategoryRulesManager({
             {rules.length > 0 && (
                 <div className="max-h-[200px] overflow-y-auto space-y-2">
                     {rules.map((rule, index) => {
-                        const cat = categories.find(c => c.id === rule.categoryId);
-                        const catName = cat ? (getCategoryName ? getCategoryName(cat) : cat.name) : rule.categoryId;
+                        const cat = categories.find((c) => c.id === rule.categoryId);
+                        const catName = cat
+                            ? getCategoryName
+                                ? getCategoryName(cat)
+                                : cat.name
+                            : rule.categoryId;
 
                         return (
                             <div
@@ -139,7 +148,9 @@ export default function CategoryRulesManager({
                                         {rule.keyword}
                                     </code>
                                     <span className="text-slate-400">→</span>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${cat?.color || 'bg-slate-300'} ${cat?.textColor || 'text-slate-700'}`}>
+                                    <span
+                                        className={`px-2 py-0.5 rounded text-xs font-medium ${cat?.color || 'bg-slate-300'} ${cat?.textColor || 'text-slate-700'}`}
+                                    >
                                         {catName}
                                     </span>
                                 </div>
@@ -179,7 +190,7 @@ export default function CategoryRulesManager({
                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer dark:text-white"
                     >
                         <option value="">...</option>
-                        {expenseCategories.map(cat => (
+                        {expenseCategories.map((cat) => (
                             <option key={cat.id} value={cat.id}>
                                 {getCategoryName ? getCategoryName(cat) : cat.name}
                             </option>

@@ -1,10 +1,11 @@
 import Papa from 'papaparse';
+
 import { detectCategory } from '../services/categoryRules.service';
 
 /**
  * Revolut CSV Parser
  * Parses Revolut bank statement CSV files and transforms them into transaction objects.
- * 
+ *
  * Expected CSV columns:
  * - Type, Completed Date, Description, Amount, Currency, State
  */
@@ -27,7 +28,7 @@ const generateFingerprint = (dateString, amount, description) => {
 /**
  * Parse date from Revolut CSV format
  * Format: "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DD"
- * @param {string} dateString 
+ * @param {string} dateString
  * @returns {string} ISO date string (YYYY-MM-DD)
  */
 const parseRevolutDate = (dateString) => {
@@ -56,12 +57,12 @@ const parseRevolutDate = (dateString) => {
  * @returns {{ valid: boolean, missing: string[] }}
  */
 const validateStructure = (headers) => {
-    const headerSet = new Set(headers.map(h => h?.trim()));
-    const missing = REQUIRED_COLUMNS.filter(col => !headerSet.has(col));
+    const headerSet = new Set(headers.map((h) => h?.trim()));
+    const missing = REQUIRED_COLUMNS.filter((col) => !headerSet.has(col));
 
     return {
         valid: missing.length === 0,
-        missing
+        missing,
     };
 };
 
@@ -77,7 +78,7 @@ export const parseRevolutCSV = (file, categoryRules = []) => {
         if (!file.name.toLowerCase().endsWith('.csv')) {
             resolve({
                 success: false,
-                error: 'INVALID_FORMAT'
+                error: 'INVALID_FORMAT',
             });
             return;
         }
@@ -91,7 +92,7 @@ export const parseRevolutCSV = (file, categoryRules = []) => {
                 if (!results.meta?.fields) {
                     resolve({
                         success: false,
-                        error: 'UNKNOWN_STRUCTURE'
+                        error: 'UNKNOWN_STRUCTURE',
                     });
                     return;
                 }
@@ -101,19 +102,19 @@ export const parseRevolutCSV = (file, categoryRules = []) => {
                     console.warn('[RevolutParser] Missing columns:', validation.missing);
                     resolve({
                         success: false,
-                        error: 'UNKNOWN_STRUCTURE'
+                        error: 'UNKNOWN_STRUCTURE',
                     });
                     return;
                 }
 
                 // Filter and transform transactions
                 const transactions = results.data
-                    .filter(row => {
+                    .filter((row) => {
                         // Only import COMPLETED transactions
                         const state = row['State']?.trim().toUpperCase();
                         return state === 'COMPLETED';
                     })
-                    .map(row => {
+                    .map((row) => {
                         const amount = parseFloat(row['Amount']) || 0;
                         const absAmount = Math.abs(amount);
                         const type = amount < 0 ? 'expense' : 'income';
@@ -138,11 +139,11 @@ export const parseRevolutCSV = (file, categoryRules = []) => {
                             _raw: {
                                 completedDate: dateString,
                                 originalDescription: description,
-                                txType
-                            }
+                                txType,
+                            },
                         };
                     })
-                    .filter(tx => tx.originalAmount > 0); // Remove zero-amount transactions
+                    .filter((tx) => tx.originalAmount > 0); // Remove zero-amount transactions
 
                 resolve({
                     success: true,
@@ -150,24 +151,24 @@ export const parseRevolutCSV = (file, categoryRules = []) => {
                     stats: {
                         total: results.data.length,
                         imported: transactions.length,
-                        filtered: results.data.length - transactions.length
-                    }
+                        filtered: results.data.length - transactions.length,
+                    },
                 });
             },
             error: (error) => {
                 console.error('[RevolutParser] Parse error:', error);
                 resolve({
                     success: false,
-                    error: 'PARSE_ERROR'
+                    error: 'PARSE_ERROR',
                 });
-            }
+            },
         });
     });
 };
 
 /**
  * Validate file before parsing (quick check)
- * @param {File} file 
+ * @param {File} file
  * @returns {{ valid: boolean, error?: string }}
  */
 export const validateFile = (file) => {

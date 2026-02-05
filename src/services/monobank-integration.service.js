@@ -1,10 +1,11 @@
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+
 import { db, appId } from '../firebase';
 
 /**
  * Monobank Integration Service
  * Stores Monobank token and accounts in Firestore for cross-device sync
- * 
+ *
  * Path: /artifacts/{appId}/users/{userId}/integrations/monobank
  */
 
@@ -40,12 +41,16 @@ export const saveMonobankConfig = async (userId, config) => {
 
     try {
         const docRef = getIntegrationDocRef(userId);
-        await setDoc(docRef, {
-            token: config.token || '',
-            accounts: config.accounts || [],
-            lastSyncTime: config.lastSyncTime || 0,
-            updatedAt: Date.now()
-        }, { merge: true });
+        await setDoc(
+            docRef,
+            {
+                token: config.token || '',
+                accounts: config.accounts || [],
+                lastSyncTime: config.lastSyncTime || 0,
+                updatedAt: Date.now(),
+            },
+            { merge: true }
+        );
 
         return true;
     } catch (error) {
