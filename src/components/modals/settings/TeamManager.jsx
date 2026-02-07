@@ -1,7 +1,7 @@
 import { Users, Trash2, LogOut, Crown } from 'lucide-react';
 import React from 'react';
 
-export default function TeamManager({ allowedUsers = [], removeUser, onLeave, currentUserId, t }) {
+export default function TeamManager({ allowedUsers = [], removeUser, onLeave, t }) {
     return (
         <div className="mb-6">
             <h3 className="font-bold text-xs uppercase text-slate-500 mb-3 flex items-center gap-2">

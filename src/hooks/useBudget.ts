@@ -1,14 +1,10 @@
 import { TRANSLATIONS } from '../translations';
-
-// Core budget hooks
-import { Asset, Loan, Transaction, Category } from '../types';
+import { Asset, Category, Loan, Transaction } from '../types';
 
 import { useAssets } from './useAssets';
 import { useBudgetConversions } from './useBudgetConversions';
 import { useBudgetData } from './useBudgetData';
 import { useBudgetUsers } from './useBudgetUsers';
-
-// Sub-hooks for specific data domains
 import { useCategories } from './useCategories';
 import { useLoans } from './useLoans';
 import { useTransactions } from './useTransactions';
@@ -23,7 +19,7 @@ export const useBudget = (
     lang: string,
     currency: string
 ) => {
-    // @ts-ignore - TRANSLATIONS is a JS object
+    // @ts-expect-error - TRANSLATIONS is a JS object
     const t = TRANSLATIONS[lang] || TRANSLATIONS['ua'];
 
     // --- CORE BUDGET DATA ---
@@ -35,11 +31,11 @@ export const useBudget = (
     );
 
     // --- CURRENCY CONVERSIONS ---
-    // @ts-ignore
+    // @ts-expect-error - useBudgetConversions is JS hook without types
     const { currentBalance, convertedLimits } = useBudgetConversions(budgetData, currency);
 
     // --- USER MANAGEMENT ---
-    // @ts-ignore
+    // @ts-expect-error - useBudgetUsers is JS hook without types
     const { removeUser, leaveBudget, switchBudget } = useBudgetUsers(
         activeBudgetId as string,
         user,
@@ -47,7 +43,7 @@ export const useBudget = (
     ) as any;
 
     // --- SUB-HOOKS FOR SPECIFIC DATA ---
-    // @ts-ignore
+    // @ts-expect-error - useTransactions is JS hook without types
     const transactionLogic = useTransactions(
         activeBudgetId as string,
         user,
@@ -56,13 +52,13 @@ export const useBudget = (
         budgetData.baseCurrency
     ) as any;
 
-    // @ts-ignore
+    // @ts-expect-error - useAssets is JS hook without types
     const assetLogic = useAssets(activeBudgetId as string, currency, t) as any;
 
-    // @ts-ignore
+    // @ts-expect-error - useLoans is JS hook without types
     const loanLogic = useLoans(activeBudgetId as string, currency, t) as any;
 
-    // @ts-ignore
+    // @ts-expect-error - useCategories is JS hook without types
     const categoryLogic = useCategories(
         activeBudgetId as string,
         { categories: budgetData.categories, limits: convertedLimits },

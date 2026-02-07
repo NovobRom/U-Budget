@@ -65,9 +65,6 @@ export default function GeminiSettings({ t = {} }) {
         saveGeminiApiKey(null);
     };
 
-    // Mask key for display
-    const displayKey = showKey ? apiKey : apiKey.replace(/./g, '•').slice(0, 20);
-
     return (
         <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-4">
             <div className="flex items-center justify-between">

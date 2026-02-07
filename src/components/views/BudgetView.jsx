@@ -1,12 +1,4 @@
-import {
-    doc,
-    updateDoc,
-    deleteDoc,
-    writeBatch,
-    collection,
-    getDocs,
-    query,
-} from 'firebase/firestore';
+import { doc, updateDoc, writeBatch, collection, getDocs, query } from 'firebase/firestore';
 import { Plus, BarChart3 } from 'lucide-react';
 import React, { useState, useMemo, useRef, Suspense, lazy, useEffect } from 'react';
 

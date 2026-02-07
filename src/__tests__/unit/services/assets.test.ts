@@ -1,18 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { assetsService, AssetData } from '../../../services/assets.service';
 import { addDoc, updateDoc, deleteDoc, doc, collection } from 'firebase/firestore';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { assetsService, AssetData } from '../../../services/assets.service';
 
 // --- MOCKS ---
 
 vi.mock('../../../firebase', () => ({
     db: {},
-    appId: 'test-app-id'
+    appId: 'test-app-id',
 }));
 
 const { mockDocRef, mockCollectionRef } = vi.hoisted(() => {
     return {
         mockDocRef: { id: 'mock-doc-id', path: 'mock/path' },
-        mockCollectionRef: { id: 'mock-col-id', path: 'mock/path' }
+        mockCollectionRef: { id: 'mock-col-id', path: 'mock/path' },
     };
 });
 
@@ -23,7 +24,7 @@ vi.mock('firebase/firestore', () => ({
     updateDoc: vi.fn().mockResolvedValue(undefined),
     deleteDoc: vi.fn().mockResolvedValue(undefined),
     serverTimestamp: vi.fn(() => 'mock-timestamp'),
-    CollectionReference: class { },
+    CollectionReference: class {},
 }));
 
 describe('AssetsService', () => {
@@ -39,19 +40,27 @@ describe('AssetsService', () => {
             name: 'Test Asset',
             value: 1000,
             currency: 'USD',
-            type: 'bank'
+            type: 'bank',
         };
 
         it('should add asset using addDoc', async () => {
             const result = await assetsService.addAsset(budgetId, assetData);
 
             expect(collection).toHaveBeenCalled();
-            expect(addDoc).toHaveBeenCalledWith(mockCollectionRef, expect.objectContaining({
+            expect(addDoc).toHaveBeenCalledWith(
+                mockCollectionRef,
+                expect.objectContaining({
+                    ...assetData,
+                    createdAt: 'mock-timestamp',
+                    updatedAt: 'mock-timestamp',
+                })
+            );
+            expect(result).toEqual({
+                id: 'mock-doc-id',
                 ...assetData,
                 createdAt: 'mock-timestamp',
-                updatedAt: 'mock-timestamp'
-            }));
-            expect(result).toEqual({ id: 'mock-doc-id', ...assetData, createdAt: 'mock-timestamp', updatedAt: 'mock-timestamp' });
+                updatedAt: 'mock-timestamp',
+            });
         });
 
         it('should throw if budgetId missing', async () => {
@@ -61,21 +70,26 @@ describe('AssetsService', () => {
 
     describe('updateAsset', () => {
         const updateData: Partial<AssetData> = {
-            value: 1200
+            value: 1200,
         };
 
         it('should update asset using updateDoc', async () => {
             await assetsService.updateAsset(budgetId, assetId, updateData);
 
             expect(doc).toHaveBeenCalled();
-            expect(updateDoc).toHaveBeenCalledWith(mockDocRef, expect.objectContaining({
-                ...updateData,
-                updatedAt: 'mock-timestamp'
-            }));
+            expect(updateDoc).toHaveBeenCalledWith(
+                mockDocRef,
+                expect.objectContaining({
+                    ...updateData,
+                    updatedAt: 'mock-timestamp',
+                })
+            );
         });
 
         it('should throw if args missing', async () => {
-            await expect(assetsService.updateAsset('', assetId, updateData)).rejects.toThrow('Missing budgetId');
+            await expect(assetsService.updateAsset('', assetId, updateData)).rejects.toThrow(
+                'Missing budgetId'
+            );
         });
     });
 

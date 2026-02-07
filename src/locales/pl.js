@@ -9,7 +9,7 @@ export default {
     create_account: 'Utwórz konto',
     or_via: 'Lub kontynuuj przez',
     manage_money: 'Opanuj swoje finanse',
-    welcome_slogan: "Bo chodzi o U (Ciebie)",
+    welcome_slogan: 'Bo chodzi o U (Ciebie)',
     forgot_password: 'Zapomniałeś hasła?',
     reset_password: 'Zresetuj hasło',
     send_reset: 'Wyślij link resetujący',
@@ -112,10 +112,8 @@ export default {
 
     // --- Confirm Modal ---
     confirm_title: 'Jesteś pewien?',
-    confirm_remove_user_msg:
-        'Ten użytkownik straci dostęp do budżetu. Jego transakcje pozostaną.',
-    confirm_leave_budget_msg:
-        'Stracisz dostęp do tego budżetu. Twoje transakcje pozostaną.',
+    confirm_remove_user_msg: 'Ten użytkownik straci dostęp do budżetu. Jego transakcje pozostaną.',
+    confirm_leave_budget_msg: 'Stracisz dostęp do tego budżetu. Twoje transakcje pozostaną.',
     btn_confirm: 'Tak, kontynuuj',
     btn_cancel: 'Anuluj',
 

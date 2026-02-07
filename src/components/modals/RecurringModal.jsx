@@ -10,10 +10,9 @@ export default function RecurringModal({
     currency,
     t,
 }) {
-    if (!isOpen) return null;
-
     // Знаходимо унікальні регулярні платежі (за описом), беремо найсвіжіші
     const uniqueRecurring = useMemo(() => {
+        if (!isOpen) return [];
         const map = {};
         transactions.forEach((tx) => {
             if (tx.isRecurring) {
@@ -28,6 +27,8 @@ export default function RecurringModal({
         // Сортуємо: новіші зверху
         return Object.values(map).sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [transactions]);
+
+    if (!isOpen) return null;
 
     const handleAdd = (tx) => {
         // Створюємо копію транзакції на сьогодні

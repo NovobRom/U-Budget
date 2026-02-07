@@ -1,17 +1,18 @@
+import { doc, updateDoc } from 'firebase/firestore';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { budgetService } from '../../../services/budget.service';
-import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 
 // --- MOCKS ---
 
 vi.mock('../../../firebase', () => ({
     db: {},
-    appId: 'test-app-id'
+    appId: 'test-app-id',
 }));
 
 const { mockDocRef } = vi.hoisted(() => {
     return {
-        mockDocRef: { id: 'mock-doc-id', path: 'mock/path' }
+        mockDocRef: { id: 'mock-doc-id', path: 'mock/path' },
     };
 });
 
@@ -19,7 +20,7 @@ vi.mock('firebase/firestore', () => ({
     doc: vi.fn(() => mockDocRef),
     updateDoc: vi.fn(),
     arrayRemove: vi.fn((...args) => ({ type: 'arrayRemove', elements: args })),
-    DocumentReference: class { },
+    DocumentReference: class {},
 }));
 
 describe('BudgetService', () => {
@@ -36,7 +37,10 @@ describe('BudgetService', () => {
 
             expect(doc).toHaveBeenCalled();
             expect(updateDoc).toHaveBeenCalledWith(mockDocRef, {
-                authorizedUsers: expect.objectContaining({ type: 'arrayRemove', elements: [userId] })
+                authorizedUsers: expect.objectContaining({
+                    type: 'arrayRemove',
+                    elements: [userId],
+                }),
             });
         });
 

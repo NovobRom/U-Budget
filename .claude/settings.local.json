@@ -2,7 +2,22 @@
   "permissions": {
     "allow": [
       "Bash(git add:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(gcloud:*)",
+      "Bash(npx firebase-tools:*)",
+      "Bash(where:*)",
+      "Bash(firebase:*)",
+      "Bash(cmd.exe /c \"where gcloud 2>nul && gcloud --version\")",
+      "Bash(/c/Windows/System32/cmd.exe /c \"where gcloud 2>nul && gcloud --version\")",
+      "Bash(/c/Windows/System32/cmd.exe /c \"npx firebase-tools --version\")",
+      "Bash(npm install:*)",
+      "Bash(where.exe npm)",
+      "Bash(where.exe:*)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/roman/AppData/Roaming/npm:$PATH\")",
+      "Bash(npm:*)",
+      "Bash(node --version:*)",
+      "Bash(gh run list:*)",
+      "Bash(cmd.exe /c \"where npm && where node\")"
     ]
   }
 }

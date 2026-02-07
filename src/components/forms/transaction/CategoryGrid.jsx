@@ -36,10 +36,11 @@ export default function CategoryGrid({
                                 onClick={() => setCategory(c.id)}
                                 aria-pressed={isSelected}
                                 aria-label={getCategoryName(c)}
-                                className={`flex flex-col items-center justify-start p-2 rounded-xl border transition-all gap-1 h-auto min-h-[80px] ${isSelected
+                                className={`flex flex-col items-center justify-start p-2 rounded-xl border transition-all gap-1 h-auto min-h-[80px] ${
+                                    isSelected
                                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                         : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
-                                    }`}
+                                }`}
                             >
                                 <div
                                     className={`w-8 h-8 min-w-[2rem] min-h-[2rem] rounded-full flex items-center justify-center text-white text-xs ${c.color || 'bg-slate-400'}`}

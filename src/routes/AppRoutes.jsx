@@ -89,7 +89,7 @@ export default function AppRoutes({
         try {
             await cancelSentRequest();
             toast.success('Request cancelled');
-        } catch (e) {
+        } catch {
             toast.error('Error cancelling request');
         }
     };

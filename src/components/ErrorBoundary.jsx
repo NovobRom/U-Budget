@@ -60,7 +60,7 @@ class ErrorBoundary extends Component {
                                 Try Again
                             </button>
                         </div>
-                        {process.env.NODE_ENV === 'development' && (
+                        {import.meta.env.DEV && (
                             <div className="mt-8 p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg text-left overflow-auto max-h-48">
                                 <p className="text-xs font-mono text-red-600 dark:text-red-400">
                                     {this.state.error?.toString()}

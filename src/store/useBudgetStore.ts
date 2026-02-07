@@ -255,7 +255,7 @@ export const useBudgetStore = create<BudgetStoreState>((set) => ({
         }
     },
 
-    removeUserFromBudget: async (budgetId, userId, _t) => {
+    removeUserFromBudget: async (budgetId, userId) => {
         set({ isSettingsLoading: true });
         try {
             await budgetService.removeUser(budgetId, userId);
@@ -268,7 +268,7 @@ export const useBudgetStore = create<BudgetStoreState>((set) => ({
         }
     },
 
-    leaveBudget: async (budgetId, userId, _t) => {
+    leaveBudget: async (budgetId, userId) => {
         set({ isSettingsLoading: true });
         try {
             await budgetService.leaveBudget(budgetId, userId);

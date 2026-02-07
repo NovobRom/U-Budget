@@ -39,7 +39,15 @@ export default function LinkModal({ isOpen, onClose, userUid, onJoinRequest, t }
                 <div className="mb-8">
                     <p className="text-sm text-slate-500 mb-3 leading-relaxed">{t.invite_desc}</p>
                     <div
+                        role="button"
+                        tabIndex={0}
                         onClick={handleCopy}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleCopy();
+                            }
+                        }}
                         className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 relative group cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                     >
                         <div className="font-mono text-sm font-bold text-slate-700 dark:text-slate-200 break-all text-center">

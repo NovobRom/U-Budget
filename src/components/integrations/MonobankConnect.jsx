@@ -7,7 +7,7 @@ import { useMonobankStore } from '../../store/useMonobankStore';
 import { getCategoryByMcc } from '../../utils/mccCodes';
 
 export default function MonobankConnect({ lang, onSyncTransactions, existingTransactions = [] }) {
-    const { token, setToken, accounts, setAccounts, lastSyncTime, setLastSyncTime, isLoading } =
+    const { token, setToken, accounts, setAccounts, lastSyncTime, setLastSyncTime } =
         useMonobankStore();
     const [inputToken, setInputToken] = useState(token);
     const [loading, setLoading] = useState(false);

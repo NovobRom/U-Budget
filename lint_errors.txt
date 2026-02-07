@@ -1,0 +1,175 @@
+
+> smart-budget@0.0.0 lint
+> eslint .
+
+
+C:\Users\roman\Projects\smart-budget\src\__tests__\unit\hooks\useAuth.test.ts
+  112:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\roman\Projects\smart-budget\src\__tests__\unit\services\budget.test.ts
+  1:26  error  'arrayRemove' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\__tests__\unit\services\transactions.test.ts
+    2:5   error    'collection' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  @typescript-eslint/no-unused-vars
+    7:5   error    'where' is defined but never used. Allowed unused vars must match /^[A-Z_]/u       @typescript-eslint/no-unused-vars
+    8:5   error    'query' is defined but never used. Allowed unused vars must match /^[A-Z_]/u       @typescript-eslint/no-unused-vars
+   70:31  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  204:25  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+C:\Users\roman\Projects\smart-budget\src\__tests__\unit\utils\currency.test.ts
+    1:48  error    'afterEach' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  @typescript-eslint/no-unused-vars
+    7:28  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+   53:19  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+   81:19  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+   97:19  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  111:19  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  114:19  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+C:\Users\roman\Projects\smart-budget\src\components\Charts.jsx
+  152:23  error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  166:11  error  'formatValue' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\components\ErrorBoundary.jsx
+  63:26  error  'process' is not defined  no-undef
+
+C:\Users\roman\Projects\smart-budget\src\components\integrations\MonobankConnect.jsx
+  10:84  error  'isLoading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\components\modals\AssetModal.jsx
+  95:8  warning  React Hook useEffect has a missing dependency: 'valuePerUnit'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\roman\Projects\smart-budget\src\components\modals\ImportModal.jsx
+   33:11  warning  The 'labels' object makes the dependencies of useCallback Hook (at line 131) change on every render. To fix this, wrap the initialization of 'labels' in its own useMemo() Hook                                                                    react-hooks/exhaustive-deps
+  187:8   warning  React Hook useCallback has a missing dependency: 'transactions'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setSelectedIds' needs the current value of 'transactions'  react-hooks/exhaustive-deps
+  245:29  error    Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                                                                     jsx-a11y/click-events-have-key-events
+  245:29  error    Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                  jsx-a11y/no-static-element-interactions
+
+C:\Users\roman\Projects\smart-budget\src\components\modals\LinkModal.jsx
+  41:21  error  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+  41:21  error  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+
+C:\Users\roman\Projects\smart-budget\src\components\modals\LoanPaymentModal.jsx
+  41:29  error  The autoFocus prop should not be used, as it can reduce usability and accessibility for users  jsx-a11y/no-autofocus
+
+C:\Users\roman\Projects\smart-budget\src\components\modals\RecurringModal.jsx
+  16:29  error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+
+C:\Users\roman\Projects\smart-budget\src\components\modals\TransactionModal.jsx
+  86:33  error  The autoFocus prop should not be used, as it can reduce usability and accessibility for users  jsx-a11y/no-autofocus
+
+C:\Users\roman\Projects\smart-budget\src\components\modals\settings\GeminiSettings.jsx
+  69:11  error  'displayKey' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\components\modals\settings\TeamManager.jsx
+  4:79  error  'currentUserId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\components\views\BudgetView.jsx
+    4:5  error    'deleteDoc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                         @typescript-eslint/no-unused-vars
+  111:8  warning  React Hook useEffect has a missing dependency: 'lang'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\roman\Projects\smart-budget\src\context\CurrencyContext.jsx
+  7:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\roman\Projects\smart-budget\src\context\LanguageContext.jsx
+  7:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\roman\Projects\smart-budget\src\context\ThemeContext.jsx
+  5:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useAppActions.js
+  110:18  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useAssets.js
+  31:8  warning  React Hook useEffect has a missing dependency: 'getAssetsColRef'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useAuth.ts
+  154:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useBudget.ts
+   1:1   error    There should be no empty line within import group                                                                    import/order
+   9:1   error    There should be no empty line within import group                                                                    import/order
+  22:11  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  26:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  38:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  42:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  47:10  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  50:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  57:10  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  59:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  60:76  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  62:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  63:74  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  65:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  71:10  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useBudgetData.ts
+  28:23  error    'icon' is defined but never used          @typescript-eslint/no-unused-vars
+  38:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useCategories.js
+  133:17  error  'icon' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useCurrencyRates.js
+  45:8  warning  React Hook useEffect has a missing dependency: 'currencyCodes'. Either include it or remove the dependency array                          react-hooks/exhaustive-deps
+  45:9  warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked  react-hooks/exhaustive-deps
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useLoans.js
+  30:8  warning  React Hook useEffect has a missing dependency: 'getLoansColRef'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useTeamMembers.js
+  95:8  warning  React Hook useEffect has a missing dependency: 'authorizedUsers'. Either include it or remove the dependency array                        react-hooks/exhaustive-deps
+  95:9  warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked  react-hooks/exhaustive-deps
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useTransactionTotals.js
+  1:22  error  'query' is defined but never used. Allowed unused vars must match /^[A-Z_]/u    @typescript-eslint/no-unused-vars
+  1:29  error  'where' is defined but never used. Allowed unused vars must match /^[A-Z_]/u    @typescript-eslint/no-unused-vars
+  1:36  error  'getDocs' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\hooks\useTransactions.js
+  25:11  error    'getBudgetDocRef' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                 @typescript-eslint/no-unused-vars
+  26:9   error    'doc' is not defined                                                                                            no-undef
+  60:8   warning  React Hook useEffect has a missing dependency: 'getTxColRef'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\roman\Projects\smart-budget\src\routes\AppRoutes.jsx
+  92:18  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\services\geminiCategorizer.service.js
+  56:21  error  Duplicate key 'descriptions'  no-dupe-keys
+
+C:\Users\roman\Projects\smart-budget\src\services\transactions.service.ts
+   77:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  134:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\roman\Projects\smart-budget\src\store\useBudgetStore.ts
+   22:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   25:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   32:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   34:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   37:74  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   43:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   45:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   48:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   48:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   49:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   49:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   50:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   51:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   51:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   54:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   54:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   55:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   60:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   62:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   63:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   85:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  258:52  error    '_t' is defined but never used            @typescript-eslint/no-unused-vars
+  271:43  error    '_t' is defined but never used            @typescript-eslint/no-unused-vars
+
+C:\Users\roman\Projects\smart-budget\src\types\index.ts
+  13:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 98 problems (40 errors, 58 warnings)
+

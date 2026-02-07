@@ -1,5 +1,6 @@
 import { CreditCard, Download, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import React from 'react';
+
 import LoanItem from './LoanItem';
 
 export default function CreditsView({
@@ -69,51 +70,49 @@ export default function CreditsView({
                 )}
             </div>
 
-            {
-                paidLoans.length > 0 && (
-                    <div className="mt-8">
-                        <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 border-t border-slate-200 dark:border-slate-800 pt-6">
-                            {t.loan_history}
-                        </h3>
-                        <div className="space-y-3">
-                            {paidLoans.map((loan) => (
-                                <div
-                                    key={loan.id}
-                                    className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 opacity-75"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-                                            <CheckCircle2 size={20} />
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-sm text-slate-700 dark:text-slate-300">
-                                                {loan.name}
-                                            </div>
-                                            <div className="text-xs text-slate-400">
-                                                {t.total_debt}:{' '}
-                                                {formatMoney(loan.totalAmount, loan.currency)}
-                                            </div>
-                                        </div>
+            {paidLoans.length > 0 && (
+                <div className="mt-8">
+                    <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 border-t border-slate-200 dark:border-slate-800 pt-6">
+                        {t.loan_history}
+                    </h3>
+                    <div className="space-y-3">
+                        {paidLoans.map((loan) => (
+                            <div
+                                key={loan.id}
+                                className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 opacity-75"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                                        <CheckCircle2 size={20} />
                                     </div>
-                                    <div className="text-right">
-                                        <div className="text-xs font-bold text-green-600 uppercase">
-                                            {t.paid_off}
+                                    <div>
+                                        <div className="font-bold text-sm text-slate-700 dark:text-slate-300">
+                                            {loan.name}
                                         </div>
-                                        <button
-                                            onClick={() => onDeleteLoan(loan.id)}
-                                            className="text-slate-300 hover:text-red-500 mt-1"
-                                            aria-label={t.delete || 'Delete'}
-                                            title={t.delete}
-                                        >
-                                            <Trash2 size={14} aria-hidden="true" />
-                                        </button>
+                                        <div className="text-xs text-slate-400">
+                                            {t.total_debt}:{' '}
+                                            {formatMoney(loan.totalAmount, loan.currency)}
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                                <div className="text-right">
+                                    <div className="text-xs font-bold text-green-600 uppercase">
+                                        {t.paid_off}
+                                    </div>
+                                    <button
+                                        onClick={() => onDeleteLoan(loan.id)}
+                                        className="text-slate-300 hover:text-red-500 mt-1"
+                                        aria-label={t.delete || 'Delete'}
+                                        title={t.delete}
+                                    >
+                                        <Trash2 size={14} aria-hidden="true" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 }

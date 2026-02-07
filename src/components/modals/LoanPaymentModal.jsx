@@ -38,7 +38,6 @@ export default function LoanPaymentModal({ isOpen, onClose, onPayment, loan, cur
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                             className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none text-xl font-bold"
-                            autoFocus
                             required
                             min="0.01"
                             step="0.01"

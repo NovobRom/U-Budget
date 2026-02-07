@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useBudgetData } from '../../../hooks/useBudgetData';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { useBudgetData } from '../../../hooks/useBudgetData';
 
 // --- MOCKS ---
 
@@ -26,7 +27,7 @@ vi.mock('firebase/firestore', () => ({
     setDoc: vi.fn(),
     updateDoc: vi.fn(),
     serverTimestamp: vi.fn(() => 'mock-timestamp'),
-    DocumentReference: class { },
+    DocumentReference: class {},
 }));
 
 describe('useBudgetData', () => {
@@ -39,9 +40,7 @@ describe('useBudgetData', () => {
     });
 
     it('should subscribe to budget document on mount', () => {
-        vi.mocked(onSnapshot).mockImplementation(
-            () => vi.fn() as unknown as () => void
-        );
+        vi.mocked(onSnapshot).mockImplementation(() => vi.fn() as unknown as () => void);
 
         const { result } = renderHook(() => useBudgetData(activeBudgetId, false, user, t));
 
@@ -51,14 +50,12 @@ describe('useBudgetData', () => {
     });
 
     it('should update state when snapshot received', async () => {
-        let snapshotCallback: (snap: unknown) => void = () => { };
+        let snapshotCallback: (snap: unknown) => void = () => {};
 
-        vi.mocked(onSnapshot).mockImplementation(
-            (_ref: unknown, callback: unknown) => {
-                snapshotCallback = callback as (snap: unknown) => void;
-                return vi.fn() as unknown as () => void;
-            }
-        );
+        vi.mocked(onSnapshot).mockImplementation((_ref: unknown, callback: unknown) => {
+            snapshotCallback = callback as (snap: unknown) => void;
+            return vi.fn() as unknown as () => void;
+        });
 
         const { result } = renderHook(() => useBudgetData(activeBudgetId, false, user, t));
 
@@ -68,12 +65,12 @@ describe('useBudgetData', () => {
             ownerId: 'user-abc',
             categories: [],
             limits: {},
-            baseCurrency: 'USD'
+            baseCurrency: 'USD',
         };
 
         const mockSnap = {
             exists: () => true,
-            data: () => mockData
+            data: () => mockData,
         };
 
         act(() => {
@@ -88,19 +85,17 @@ describe('useBudgetData', () => {
     });
 
     it('should create budget if it does not exist and user is owner', async () => {
-        let snapshotCallback: (snap: unknown) => void = () => { };
-        vi.mocked(onSnapshot).mockImplementation(
-            (_ref: unknown, callback: unknown) => {
-                snapshotCallback = callback as (snap: unknown) => void;
-                return vi.fn() as unknown as () => void;
-            }
-        );
+        let snapshotCallback: (snap: unknown) => void = () => {};
+        vi.mocked(onSnapshot).mockImplementation((_ref: unknown, callback: unknown) => {
+            snapshotCallback = callback as (snap: unknown) => void;
+            return vi.fn() as unknown as () => void;
+        });
 
         // Use user.uid as activeBudgetId to simulate personal budget
         renderHook(() => useBudgetData(user.uid, false, user, t));
 
         const mockSnap = {
-            exists: () => false
+            exists: () => false,
         };
 
         await act(async () => {
@@ -117,24 +112,22 @@ describe('useBudgetData', () => {
     });
 
     it('should redirect if user access is revoked', async () => {
-        let snapshotCallback: (snap: unknown) => void = () => { };
-        vi.mocked(onSnapshot).mockImplementation(
-            (_ref: unknown, callback: unknown) => {
-                snapshotCallback = callback as (snap: unknown) => void;
-                return vi.fn() as unknown as () => void;
-            }
-        );
+        let snapshotCallback: (snap: unknown) => void = () => {};
+        vi.mocked(onSnapshot).mockImplementation((_ref: unknown, callback: unknown) => {
+            snapshotCallback = callback as (snap: unknown) => void;
+            return vi.fn() as unknown as () => void;
+        });
 
         renderHook(() => useBudgetData(activeBudgetId, false, user, t));
 
         const mockData = {
             ownerId: 'other-owner',
-            authorizedUsers: ['other-user'] // Current user not authorized
+            authorizedUsers: ['other-user'], // Current user not authorized
         };
 
         const mockSnap = {
             exists: () => true,
-            data: () => mockData
+            data: () => mockData,
         };
 
         await act(async () => {

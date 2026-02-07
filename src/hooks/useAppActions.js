@@ -107,7 +107,7 @@ export const useAppActions = (activeBudgetId, user, t, currency) => {
             } else {
                 toast.error('Could not fetch rate.');
             }
-        } catch (e) {
+        } catch {
             toast.error('Fetch failed');
         }
     };

@@ -1,5 +1,6 @@
 import { Wallet, Download, X, Trash2 } from 'lucide-react';
 import React from 'react';
+
 import TransactionItem from './TransactionItem';
 
 /**

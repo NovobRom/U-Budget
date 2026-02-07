@@ -1,26 +1,15 @@
 import { Banknote, Bitcoin, DollarSign, PieChart, Pencil, Trash2 } from 'lucide-react';
 import React, { memo } from 'react';
 
-const AssetItem = memo(({
-    asset,
-    currency,
-    formatMoney,
-    t,
-    onEditAsset,
-    onDeleteAsset,
-}) => {
+const AssetItem = memo(({ asset, currency, formatMoney, t, onEditAsset, onDeleteAsset }) => {
     const totalVal = asset.amount * (asset.valuePerUnit || 1);
     let Icon = Banknote;
     if (asset.type === 'crypto')
-        Icon = asset.name.toLowerCase().includes('bitcoin')
-            ? Bitcoin
-            : DollarSign;
+        Icon = asset.name.toLowerCase().includes('bitcoin') ? Bitcoin : DollarSign;
     if (asset.type === 'stock') Icon = PieChart;
 
     return (
-        <div
-            className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 relative group"
-        >
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 relative group">
             <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                     onClick={() => onEditAsset(asset)}
@@ -46,15 +35,13 @@ const AssetItem = memo(({
                     <Icon size={24} />
                 </div>
                 <div>
-                    <h3 className="font-bold text-lg dark:text-white">
-                        {asset.name}
-                    </h3>
+                    <h3 className="font-bold text-lg dark:text-white">{asset.name}</h3>
                     <p className="text-xs text-slate-500">
                         {asset.type === 'crypto'
                             ? `${asset.amount} × ${formatMoney(asset.valuePerUnit, currency)}`
                             : asset.type === 'stock'
-                                ? t.asset_type_stock
-                                : t.asset_type_cash}
+                              ? t.asset_type_stock
+                              : t.asset_type_cash}
                     </p>
                 </div>
                 <div className="ml-auto text-right">

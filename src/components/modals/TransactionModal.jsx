@@ -83,7 +83,6 @@ export default function TransactionModal({
                                 placeholder="0.00"
                                 required
                                 step="any"
-                                autoFocus
                             />
                             <select
                                 value={selectedCurrency}

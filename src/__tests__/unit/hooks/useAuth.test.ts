@@ -25,7 +25,7 @@ vi.mock('firebase/firestore', () => ({
     doc: vi.fn(() => mockDocRef),
     setDoc: vi.fn(),
     onSnapshot: vi.fn(),
-    DocumentReference: class { },
+    DocumentReference: class {},
 }));
 
 vi.mock('firebase/auth', () => ({
@@ -37,7 +37,7 @@ vi.mock('firebase/auth', () => ({
     sendPasswordResetEmail: vi.fn(),
     updateProfile: vi.fn(),
     GoogleAuthProvider: class {
-        setCustomParameters() { }
+        setCustomParameters() {}
     },
     signInWithPopup: vi.fn(),
     sendEmailVerification: vi.fn(),
@@ -49,9 +49,7 @@ describe('useAuth', () => {
     });
 
     it('should initialize with loading state and subscribe to auth', () => {
-        vi.mocked(onAuthStateChanged).mockImplementation(
-            () => vi.fn() as unknown as () => void
-        );
+        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as () => void);
 
         const { result } = renderHook(() => useAuth());
 
@@ -60,15 +58,13 @@ describe('useAuth', () => {
     });
 
     it('should update user and profile on auth state change', async () => {
-        let authCallback: (user: unknown) => void = () => { };
-        vi.mocked(onAuthStateChanged).mockImplementation(
-            (_auth: unknown, cb: unknown) => {
-                authCallback = cb as (user: unknown) => void;
-                return vi.fn() as unknown as () => void;
-            }
-        );
+        let authCallback: (user: unknown) => void = () => {};
+        vi.mocked(onAuthStateChanged).mockImplementation((_auth: unknown, cb: unknown) => {
+            authCallback = cb as (user: unknown) => void;
+            return vi.fn() as unknown as () => void;
+        });
 
-        let profileCallback: (snap: unknown) => void = () => { };
+        let profileCallback: (snap: unknown) => void = () => {};
         vi.mocked(onSnapshot).mockImplementation((_ref: unknown, cb: unknown) => {
             profileCallback = cb as (snap: unknown) => void;
             return vi.fn() as unknown as () => void;
@@ -106,9 +102,7 @@ describe('useAuth', () => {
 
     it('should handle registration flow', async () => {
         // Setup initial auth subscription to just do nothing so hook renders
-        vi.mocked(onAuthStateChanged).mockImplementation(
-            () => vi.fn() as unknown as () => void
-        );
+        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as () => void);
 
         const { result } = renderHook(() => useAuth());
 
@@ -136,9 +130,7 @@ describe('useAuth', () => {
     });
 
     it('should handle logout', async () => {
-        vi.mocked(onAuthStateChanged).mockImplementation(
-            () => vi.fn() as unknown as () => void
-        );
+        vi.mocked(onAuthStateChanged).mockImplementation(() => vi.fn() as unknown as () => void);
         const { result } = renderHook(() => useAuth());
 
         await act(async () => {

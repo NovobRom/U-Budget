@@ -130,7 +130,7 @@ export const useCategories = (activeBudgetId, rawData, t, mainCurrency = 'EUR') 
     const addCategory = async (catData) => {
         if (!activeBudgetId) return;
         // Clean icon from object before saving
-        const { icon, ...rest } = catData;
+        const { icon: _icon, ...rest } = catData;
         await updateDoc(getBudgetDocRef(), { categories: arrayUnion(rest) });
     };
 

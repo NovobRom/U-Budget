@@ -1,31 +1,17 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import React, { memo } from 'react';
 
-const LoanItem = memo(({
-    loan,
-    formatMoney,
-    t,
-    onEditLoan,
-    onDeleteLoan,
-    onPayLoan,
-}) => {
+const LoanItem = memo(({ loan, formatMoney, t, onEditLoan, onDeleteLoan, onPayLoan }) => {
     const progress =
         loan.totalAmount > 0
             ? Math.min(
-                100,
-                Math.max(
-                    0,
-                    ((loan.totalAmount - loan.currentBalance) /
-                        loan.totalAmount) *
-                    100
-                )
-            )
+                  100,
+                  Math.max(0, ((loan.totalAmount - loan.currentBalance) / loan.totalAmount) * 100)
+              )
             : 0;
 
     return (
-        <div
-            className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm text-left border border-slate-100 dark:border-slate-800 relative group"
-        >
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm text-left border border-slate-100 dark:border-slate-800 relative group">
             <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                     onClick={() => onEditLoan(loan)}
@@ -45,9 +31,7 @@ const LoanItem = memo(({
                 </button>
             </div>
             <div className="flex justify-between pr-8 mb-1">
-                <div className="font-bold text-lg dark:text-white">
-                    {loan.name}
-                </div>
+                <div className="font-bold text-lg dark:text-white">{loan.name}</div>
                 <div className="text-lg font-bold">
                     {formatMoney(loan.currentBalance, loan.currency || 'UAH')}
                 </div>
@@ -64,8 +48,7 @@ const LoanItem = memo(({
                     {progress.toFixed(0)}% {t.paid_off}
                 </span>
                 <span>
-                    {t.total_debt}:{' '}
-                    {formatMoney(loan.totalAmount, loan.currency || 'UAH')}
+                    {t.total_debt}: {formatMoney(loan.totalAmount, loan.currency || 'UAH')}
                 </span>
             </div>
 
@@ -74,17 +57,13 @@ const LoanItem = memo(({
                     <div>
                         {t.min_payment}:{' '}
                         <span className="font-bold">
-                            {formatMoney(
-                                loan.minPayment,
-                                loan.currency || 'UAH'
-                            )}
+                            {formatMoney(loan.minPayment, loan.currency || 'UAH')}
                         </span>
                     </div>
                 )}
                 {loan.dueDate > 0 && (
                     <div>
-                        {t.due_date}:{' '}
-                        <span className="font-bold">{loan.dueDate}</span>
+                        {t.due_date}: <span className="font-bold">{loan.dueDate}</span>
                     </div>
                 )}
             </div>

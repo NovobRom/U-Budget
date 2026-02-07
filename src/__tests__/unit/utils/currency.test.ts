@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // We don't import the module statically because we need to reset it between tests
 // import { fetchExchangeRate } from '../../../utils/currency';
@@ -20,7 +20,7 @@ describe('Currency Utils', () => {
                 }),
                 clear: vi.fn(() => {
                     store = {};
-                })
+                }),
             };
         })();
 
@@ -46,13 +46,13 @@ describe('Currency Utils', () => {
                 currencyCodeB: 980, // UAH
                 date: 123456789,
                 rateBuy: 40.0,
-                rateSell: 41.0
-            }
+                rateSell: 41.0,
+            },
         ];
 
         (fetch as any).mockResolvedValueOnce({
             ok: true,
-            json: async () => mockMomoData
+            json: async () => mockMomoData,
         });
 
         const rate = await fetchExchangeRate('USD', 'UAH');
@@ -68,19 +68,19 @@ describe('Currency Utils', () => {
                 currencyCodeA: 840, // USD
                 currencyCodeB: 980, // UAH
                 rateBuy: 40.0, // USD -> UAH
-                rateSell: 40.0
+                rateSell: 40.0,
             },
             {
                 currencyCodeA: 978, // EUR
                 currencyCodeB: 980, // UAH
                 rateBuy: 44.0, // EUR -> UAH
-                rateSell: 44.0
-            }
+                rateSell: 44.0,
+            },
         ];
 
         (fetch as any).mockResolvedValueOnce({
             ok: true,
-            json: async () => mockMomoData
+            json: async () => mockMomoData,
         });
 
         // USD -> EUR = (USD->UAH) / (EUR->UAH) = 40 / 44 = 0.909...
@@ -90,13 +90,13 @@ describe('Currency Utils', () => {
 
     it('should use cache if available and fresh', async () => {
         const mockMomoData = [
-            { currencyCodeA: 840, currencyCodeB: 980, rateBuy: 40.0, rateSell: 40.0 }
+            { currencyCodeA: 840, currencyCodeB: 980, rateBuy: 40.0, rateSell: 40.0 },
         ];
 
         // 1. First call to populate cache
         (fetch as any).mockResolvedValueOnce({
             ok: true,
-            json: async () => mockMomoData
+            json: async () => mockMomoData,
         });
         await fetchExchangeRate('USD', 'UAH');
         expect(fetch).toHaveBeenCalledTimes(1);
@@ -113,7 +113,7 @@ describe('Currency Utils', () => {
         // Second call succeeds (Fallback)
         (fetch as any).mockResolvedValueOnce({
             ok: true,
-            json: async () => ({ rates: { EUR: 0.9 } })
+            json: async () => ({ rates: { EUR: 0.9 } }),
         });
 
         const rate = await fetchExchangeRate('USD', 'EUR');

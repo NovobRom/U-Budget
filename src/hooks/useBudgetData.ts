@@ -25,6 +25,7 @@ interface BudgetData {
 }
 
 const cleanCategoriesForFirestore = (categories: Category[]): Omit<Category, 'icon'>[] =>
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     categories.map(({ icon, ...rest }) => rest);
 
 /**

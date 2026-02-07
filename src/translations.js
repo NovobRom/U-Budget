@@ -1,6 +1,6 @@
 import en from './locales/en';
-import ua from './locales/ua';
 import pl from './locales/pl';
+import ua from './locales/ua';
 
 export const TRANSLATIONS = {
     ua,

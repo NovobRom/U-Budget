@@ -239,8 +239,8 @@ export default function AuthScreen({
                                 {showForgot
                                     ? t.send_reset
                                     : isLogin
-                                        ? t.login_btn
-                                        : t.create_account}
+                                      ? t.login_btn
+                                      : t.create_account}
                                 {!loading && <ArrowRight size={18} />}
                             </>
                         )}

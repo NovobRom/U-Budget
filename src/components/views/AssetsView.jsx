@@ -1,9 +1,6 @@
-import {
-    Landmark,
-    Download,
-    Plus,
-} from 'lucide-react';
+import { Landmark, Download, Plus } from 'lucide-react';
 import React, { useMemo } from 'react';
+
 import AssetItem from './AssetItem';
 
 export default function AssetsView({

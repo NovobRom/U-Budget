@@ -1,13 +1,14 @@
+import { doc, writeBatch, runTransaction, getDocs } from 'firebase/firestore';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { transactionsService, TransactionData } from '../../../services/transactions.service';
-import { collection, doc, writeBatch, runTransaction, getDocs, where, query } from 'firebase/firestore';
 import { fetchExchangeRate } from '../../../utils/currency';
 
 // --- MOCKS ---
 
 vi.mock('../../../firebase', () => ({
     db: {},
-    appId: 'test-app-id'
+    appId: 'test-app-id',
 }));
 
 const { mockBatch, mockTransactionHandler, mockDocRef, mockCollectionRef } = vi.hoisted(() => {
@@ -16,16 +17,16 @@ const { mockBatch, mockTransactionHandler, mockDocRef, mockCollectionRef } = vi.
             set: vi.fn(),
             update: vi.fn(),
             delete: vi.fn(),
-            commit: vi.fn().mockResolvedValue(undefined)
+            commit: vi.fn().mockResolvedValue(undefined),
         },
         mockTransactionHandler: {
             get: vi.fn(),
             update: vi.fn(),
             set: vi.fn(),
-            delete: vi.fn()
+            delete: vi.fn(),
         },
         mockDocRef: { id: 'mock-doc-id', path: 'mock/path' },
-        mockCollectionRef: { id: 'mock-col-id', path: 'mock/path' }
+        mockCollectionRef: { id: 'mock-col-id', path: 'mock/path' },
     };
 });
 
@@ -40,12 +41,12 @@ vi.mock('firebase/firestore', () => ({
     where: vi.fn(),
     getDocs: vi.fn(),
     updateDoc: vi.fn(),
-    DocumentReference: class { },
-    CollectionReference: class { }
+    DocumentReference: class {},
+    CollectionReference: class {},
 }));
 
 vi.mock('../../../utils/currency', () => ({
-    fetchExchangeRate: vi.fn()
+    fetchExchangeRate: vi.fn(),
 }));
 
 describe('TransactionsService', () => {
@@ -76,7 +77,7 @@ describe('TransactionsService', () => {
             currency: 'USD',
             originalCurrency: 'USD',
             originalAmount: 100,
-            isTransfer: false
+            isTransfer: false,
         };
 
         it('should add an expense transaction and update budget balance (decrement)', async () => {
@@ -104,7 +105,7 @@ describe('TransactionsService', () => {
         });
 
         it('should handle currency conversion', async () => {
-            // Adding USD transaction, storage is EUR. 
+            // Adding USD transaction, storage is EUR.
             // 100 USD * 0.9 = 90 EUR.
             await transactionsService.addTransaction(budgetId, user, txData, mainCurrency);
 
@@ -123,7 +124,7 @@ describe('TransactionsService', () => {
             currency: 'USD',
             originalCurrency: 'USD',
             originalAmount: 200,
-            isTransfer: false
+            isTransfer: false,
         };
 
         it('should update transaction and balance diff', async () => {
@@ -135,7 +136,7 @@ describe('TransactionsService', () => {
                     currency: 'USD',
                     type: 'expense',
                     // ... other fields
-                })
+                }),
             });
 
             await transactionsService.updateTransaction(budgetId, oldTxId, newData, mainCurrency);
@@ -147,11 +148,12 @@ describe('TransactionsService', () => {
 
         it('should throw if transaction does not exist', async () => {
             mockTransactionHandler.get.mockResolvedValue({
-                exists: () => false
+                exists: () => false,
             });
 
-            await expect(transactionsService.updateTransaction(budgetId, oldTxId, newData, mainCurrency))
-                .rejects.toThrow('Transaction does not exist!');
+            await expect(
+                transactionsService.updateTransaction(budgetId, oldTxId, newData, mainCurrency)
+            ).rejects.toThrow('Transaction does not exist!');
         });
     });
 
@@ -163,8 +165,8 @@ describe('TransactionsService', () => {
                 exists: () => true,
                 data: () => ({
                     amount: '90',
-                    type: 'expense'
-                })
+                    type: 'expense',
+                }),
             });
 
             await transactionsService.deleteTransaction(budgetId, txId);
@@ -186,16 +188,21 @@ describe('TransactionsService', () => {
                     currency: 'USD',
                     originalCurrency: 'USD',
                     originalAmount: 50,
-                    importId: 'import-1'
-                }
+                    importId: 'import-1',
+                },
             ];
 
             // Mock getDocs to return empty snapshot (no duplicates)
             (getDocs as any).mockResolvedValue({
-                forEach: vi.fn()
+                forEach: vi.fn(),
             });
 
-            const result = await transactionsService.importTransactions(budgetId, user, importData, mainCurrency);
+            const result = await transactionsService.importTransactions(
+                budgetId,
+                user,
+                importData,
+                mainCurrency
+            );
 
             expect(getDocs).toHaveBeenCalled();
             expect(mockBatch.commit).toHaveBeenCalled();

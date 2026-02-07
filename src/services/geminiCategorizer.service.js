@@ -53,7 +53,6 @@ export const categorizeWithAI = async (transactions, categories) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     descriptions: batchDescriptions,
-                    descriptions: batchDescriptions,
                     categories: categoryObjects,
                 }),
             });

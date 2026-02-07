@@ -71,9 +71,10 @@ export default function GeneralSettings() {
                             onClick={() => setLang(l)}
                             className={`
                                 py-2.5 rounded-xl text-sm font-bold border transition-all flex items-center justify-center gap-1
-                                ${lang === l
-                                    ? 'bg-white dark:bg-slate-700 border-blue-200 dark:border-slate-600 shadow-sm text-slate-900 dark:text-white'
-                                    : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                ${
+                                    lang === l
+                                        ? 'bg-white dark:bg-slate-700 border-blue-200 dark:border-slate-600 shadow-sm text-slate-900 dark:text-white'
+                                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }
                             `}
                         >
@@ -95,9 +96,10 @@ export default function GeneralSettings() {
                             onClick={() => setCurrency(c)}
                             className={`
                                 py-2 rounded-xl text-xs font-bold border transition-all 
-                                ${currency === c
-                                    ? 'bg-white dark:bg-slate-700 border-blue-200 dark:border-slate-600 shadow-sm text-slate-900 dark:text-white'
-                                    : 'border-transparent text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                ${
+                                    currency === c
+                                        ? 'bg-white dark:bg-slate-700 border-blue-200 dark:border-slate-600 shadow-sm text-slate-900 dark:text-white'
+                                        : 'border-transparent text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }
                             `}
                         >

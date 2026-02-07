@@ -243,7 +243,15 @@ export default function ImportModal({
                     {step === 1 && (
                         <div className="space-y-4">
                             <div
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => fileInputRef.current?.click()}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        fileInputRef.current?.click();
+                                    }
+                                }}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={handleDrop}
@@ -324,9 +332,8 @@ export default function ImportModal({
                                             {transactions.map((tx, index) => (
                                                 <tr
                                                     key={index}
-                                                    onClick={() => toggleSelection(index)}
                                                     className={`
-                                                        cursor-pointer transition-colors
+                                                        transition-colors
                                                         ${
                                                             selectedIds.has(index)
                                                                 ? 'bg-blue-50 dark:bg-blue-900/20'
@@ -338,8 +345,8 @@ export default function ImportModal({
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedIds.has(index)}
-                                                            onChange={() => {}}
-                                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                            onChange={() => toggleSelection(index)}
+                                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                                         />
                                                     </td>
                                                     <td className="p-3 text-slate-700 dark:text-slate-200 whitespace-nowrap">

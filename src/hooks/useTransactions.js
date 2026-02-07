@@ -22,8 +22,6 @@ export const useTransactions = (
     // Helper for paths
     const getTxColRef = () =>
         collection(db, 'artifacts', appId, 'users', activeBudgetId, 'transactions');
-    const getBudgetDocRef = () =>
-        doc(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId);
 
     // 1. Real-time Transaction Listener
     useEffect(() => {
