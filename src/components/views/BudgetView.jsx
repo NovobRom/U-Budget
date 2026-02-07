@@ -100,7 +100,7 @@ export default function BudgetView({
         return () => {
             isActive = false;
         };
-    }, [currency]);
+    }, [currency, lang]);
 
     // Derived totals (always consistent with exchangeRate)
     const totalIncome = useMemo(() => rawIncome * exchangeRate, [rawIncome, exchangeRate]);

@@ -8,7 +8,7 @@ import { db, appId } from '../firebase';
  * Handles user management operations for budgets
  *
  * @param {string} activeBudgetId - Current budget ID
- * @param {object} user - Current user object
+ * @param {object|null} user - Current user object
  * @param {function} getBudgetDocRef - Function to get budget document reference
  *
  * @returns {object} { removeUser, leaveBudget, switchBudget }

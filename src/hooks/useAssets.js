@@ -7,7 +7,7 @@ import {
     doc,
     serverTimestamp,
 } from 'firebase/firestore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 
 import { db, appId } from '../firebase';
@@ -17,8 +17,20 @@ export const useAssets = (activeBudgetId, currency, t) => {
     const [assets, setAssets] = useState([]);
     const [rawAssets, setRawAssets] = useState([]);
 
-    const getAssetsColRef = () =>
-        collection(db, 'artifacts', appId, 'public', 'data', 'budgets', activeBudgetId, 'assets');
+    const getAssetsColRef = useCallback(
+        () =>
+            collection(
+                db,
+                'artifacts',
+                appId,
+                'public',
+                'data',
+                'budgets',
+                activeBudgetId,
+                'assets'
+            ),
+        [activeBudgetId]
+    );
 
     // Listen
     useEffect(() => {

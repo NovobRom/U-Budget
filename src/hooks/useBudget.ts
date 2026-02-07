@@ -1,3 +1,5 @@
+import { User } from 'firebase/auth';
+
 import { TRANSLATIONS } from '../translations';
 import { Asset, Category, Loan, Transaction } from '../types';
 
@@ -15,7 +17,7 @@ import { useTransactions } from './useTransactions';
 export const useBudget = (
     activeBudgetId: string | null,
     isPendingApproval: boolean,
-    user: any | null,
+    user: User | null,
     lang: string,
     currency: string
 ) => {

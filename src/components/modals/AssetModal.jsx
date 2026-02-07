@@ -92,7 +92,7 @@ export default function AssetModal({
             isMounted = false;
             clearTimeout(timer);
         };
-    }, [selectedCurrency, mainCurrency, type, isOpen, editingAsset]);
+    }, [selectedCurrency, mainCurrency, type, isOpen, editingAsset, valuePerUnit]);
 
     const handleCryptoFetch = async () => {
         setIsFetchingRate(true);

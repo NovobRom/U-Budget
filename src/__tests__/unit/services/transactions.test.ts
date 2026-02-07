@@ -59,7 +59,7 @@ describe('TransactionsService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Default exchange rates
-        (fetchExchangeRate as any).mockImplementation((from: string, to: string) => {
+        vi.mocked(fetchExchangeRate).mockImplementation((from: string, to: string) => {
             if (from === to) return Promise.resolve(1);
             if (from === 'USD' && to === 'EUR') return Promise.resolve(0.9);
             if (from === 'EUR' && to === 'USD') return Promise.resolve(1.1);
@@ -193,9 +193,9 @@ describe('TransactionsService', () => {
             ];
 
             // Mock getDocs to return empty snapshot (no duplicates)
-            (getDocs as any).mockResolvedValue({
+            vi.mocked(getDocs).mockResolvedValue({
                 forEach: vi.fn(),
-            });
+            } as any);
 
             const result = await transactionsService.importTransactions(
                 budgetId,

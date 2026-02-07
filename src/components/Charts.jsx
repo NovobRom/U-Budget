@@ -76,7 +76,10 @@ export const SimpleDonutChart = memo(
 
         return (
             <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
-                <div className="relative w-full h-[250px]" style={{ minHeight: '250px', minWidth: 0 }}>
+                <div
+                    className="relative w-full h-[250px]"
+                    style={{ minHeight: '250px', minWidth: 0 }}
+                >
                     <ResponsiveContainer width="99%" height="100%">
                         <PieChart>
                             <Pie

@@ -151,7 +151,7 @@ export const useAuth = (): AuthState => {
             const result = await signInWithPopup(auth, provider);
             return result.user;
         } catch (error) {
-            console.error('Google Login Error:', error as any);
+            console.error('Google Login Error:', error);
             throw error;
         }
     }, []);

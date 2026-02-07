@@ -26,7 +26,7 @@ export default function RecurringModal({
         });
         // Сортуємо: новіші зверху
         return Object.values(map).sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [transactions]);
+    }, [transactions, isOpen]);
 
     if (!isOpen) return null;
 

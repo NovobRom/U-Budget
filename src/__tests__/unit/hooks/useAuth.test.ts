@@ -5,6 +5,7 @@ import {
     updateProfile,
     sendEmailVerification,
     signOut,
+    UserCredential,
 } from 'firebase/auth';
 import { onSnapshot, setDoc } from 'firebase/firestore';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -109,9 +110,9 @@ describe('useAuth', () => {
         const mockUser = { uid: 'new-user', email: 'new@test.com' };
         vi.mocked(createUserWithEmailAndPassword).mockResolvedValue({
             user: mockUser,
-        } as any);
-        vi.mocked(updateProfile).mockResolvedValue(undefined as any);
-        vi.mocked(setDoc).mockResolvedValue(undefined as any); // Profile creation
+        } as unknown as UserCredential);
+        vi.mocked(updateProfile).mockResolvedValue(undefined);
+        vi.mocked(setDoc).mockResolvedValue(undefined); // Profile creation
 
         await act(async () => {
             await result.current.register('new@test.com', 'password', 'New User');

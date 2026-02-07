@@ -1,5 +1,5 @@
 import { X, Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react';
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 
 import { categorizeWithAI } from '../../services/geminiCategorizer.service';
 import { parseRevolutCSV, validateFile } from '../../utils/revolutParser';
@@ -30,31 +30,35 @@ export default function ImportModal({
     const fileInputRef = useRef(null);
 
     // Translations with fallbacks
-    const labels = {
-        title: t.import_title || 'Import Transactions',
-        dropHint: t.import_drop_hint || 'Drag & drop CSV file here or click to select',
-        invalidFormat: t.import_invalid_format || 'Invalid file format. Please select a .csv file',
-        unknownStructure:
-            t.import_unknown_structure || 'Unknown file structure. Expected Revolut CSV format',
-        parseError: t.import_parse_error || 'Error parsing file',
-        fileTooLarge: t.import_file_too_large || 'File is too large (max 5MB)',
-        previewTitle: t.import_preview_title || 'Preview',
-        foundTransactions: t.import_found_transactions || 'transactions found',
-        back: t.import_back || 'Back',
-        confirm: t.import_confirm || 'Import',
-        success: t.import_success || 'Successfully imported',
-        skipped: t.import_skipped_duplicates || 'duplicates skipped',
-        close: t.btn_cancel || 'Close',
-        selectAll: t.import_select_all || 'Select All',
-        date: t.date || 'Date',
-        description: t.description || 'Description',
-        amount: t.amount || 'Amount',
-        type: t.type || 'Type',
-        expense: t.expense || 'Expense',
-        income: t.income || 'Income',
-        aiLoading: t.ai_loading || 'AI is analyzing your expenses...',
-        aiLoadingHint: t.ai_loading_hint || 'This may take a few seconds',
-    };
+    const labels = useMemo(
+        () => ({
+            title: t.import_title || 'Import Transactions',
+            dropHint: t.import_drop_hint || 'Drag & drop CSV file here or click to select',
+            invalidFormat:
+                t.import_invalid_format || 'Invalid file format. Please select a .csv file',
+            unknownStructure:
+                t.import_unknown_structure || 'Unknown file structure. Expected Revolut CSV format',
+            parseError: t.import_parse_error || 'Error parsing file',
+            fileTooLarge: t.import_file_too_large || 'File is too large (max 5MB)',
+            previewTitle: t.import_preview_title || 'Preview',
+            foundTransactions: t.import_found_transactions || 'transactions found',
+            back: t.import_back || 'Back',
+            confirm: t.import_confirm || 'Import',
+            success: t.import_success || 'Successfully imported',
+            skipped: t.import_skipped_duplicates || 'duplicates skipped',
+            close: t.btn_cancel || 'Close',
+            selectAll: t.import_select_all || 'Select All',
+            date: t.date || 'Date',
+            description: t.description || 'Description',
+            amount: t.amount || 'Amount',
+            type: t.type || 'Type',
+            expense: t.expense || 'Expense',
+            income: t.income || 'Income',
+            aiLoading: t.ai_loading || 'AI is analyzing your expenses...',
+            aiLoadingHint: t.ai_loading_hint || 'This may take a few seconds',
+        }),
+        [t]
+    );
 
     const resetState = useCallback(() => {
         setStep(1);

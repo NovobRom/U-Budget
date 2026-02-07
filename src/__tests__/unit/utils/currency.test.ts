@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 // We don't import the module statically because we need to reset it between tests
 // import { fetchExchangeRate } from '../../../utils/currency';
 
 describe('Currency Utils', () => {
-    let fetchExchangeRate: any;
+    let fetchExchangeRate: (base: string, target: string) => Promise<number>;
 
     beforeEach(async () => {
         vi.resetModules();
@@ -50,7 +50,7 @@ describe('Currency Utils', () => {
             },
         ];
 
-        (fetch as any).mockResolvedValueOnce({
+        (fetch as Mock).mockResolvedValueOnce({
             ok: true,
             json: async () => mockMomoData,
         });
@@ -78,7 +78,7 @@ describe('Currency Utils', () => {
             },
         ];
 
-        (fetch as any).mockResolvedValueOnce({
+        (fetch as Mock).mockResolvedValueOnce({
             ok: true,
             json: async () => mockMomoData,
         });
@@ -94,7 +94,7 @@ describe('Currency Utils', () => {
         ];
 
         // 1. First call to populate cache
-        (fetch as any).mockResolvedValueOnce({
+        (fetch as Mock).mockResolvedValueOnce({
             ok: true,
             json: async () => mockMomoData,
         });
@@ -108,10 +108,10 @@ describe('Currency Utils', () => {
 
     it('should fallback to open.er-api if Monobank fails', async () => {
         // First call fails (Monobank)
-        (fetch as any).mockResolvedValueOnce({ ok: false });
+        (fetch as Mock).mockResolvedValueOnce({ ok: false });
 
         // Second call succeeds (Fallback)
-        (fetch as any).mockResolvedValueOnce({
+        (fetch as Mock).mockResolvedValueOnce({
             ok: true,
             json: async () => ({ rates: { EUR: 0.9 } }),
         });
