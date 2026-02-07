@@ -17,7 +17,8 @@
       "Bash(npm:*)",
       "Bash(node --version:*)",
       "Bash(gh run list:*)",
-      "Bash(cmd.exe /c \"where npm && where node\")"
+      "Bash(cmd.exe /c \"where npm && where node\")",
+      "Bash(git commit:*)"
     ]
   }
 }

@@ -32,9 +32,11 @@ exports.monobank = onRequest(
             apiPath = '/' + apiPath;
         }
 
-        // 2. Validate Token
+        // 2. Validate Token (Skip for public endpoints)
+        const isPublicEndpoint = apiPath.startsWith('/bank/currency');
         const token = req.get('X-Token');
-        if (!token) {
+
+        if (!token && !isPublicEndpoint) {
             res.status(401).json({ error: 'Missing X-Token header' });
             return;
         }

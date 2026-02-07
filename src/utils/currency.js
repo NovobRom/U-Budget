@@ -1,7 +1,7 @@
 // src/utils/currency.js
 
 // Monobank API URL
-const MOMO_RATES_URL = 'https://api.monobank.ua/bank/currency';
+const MOMO_RATES_URL = '/monobank/bank/currency';
 
 // ISO 4217 Code Mapping (Numeric -> Alpha)
 // Monobank returns numeric codes (840 for USD, 980 for UAH, etc.)

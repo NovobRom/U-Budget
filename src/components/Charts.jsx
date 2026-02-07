@@ -76,8 +76,8 @@ export const SimpleDonutChart = memo(
 
         return (
             <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
-                <div className="relative w-full h-[250px]" style={{ minHeight: '250px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="relative w-full h-[250px]" style={{ minHeight: '250px', minWidth: 0 }}>
+                    <ResponsiveContainer width="99%" height="100%">
                         <PieChart>
                             <Pie
                                 data={chartData}
@@ -153,8 +153,8 @@ export const SimpleBarChart = memo(({ data, currency }) => {
     if (!data || data.length === 0) return null;
 
     return (
-        <div className="w-full h-[200px] mt-4" style={{ minHeight: '200px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full h-[200px] mt-4" style={{ minHeight: '200px', minWidth: 0 }}>
+            <ResponsiveContainer width="99%" height="100%">
                 <BarChart data={chartData}>
                     <CartesianGrid
                         strokeDasharray="3 3"

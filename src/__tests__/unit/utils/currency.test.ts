@@ -57,7 +57,7 @@ describe('Currency Utils', () => {
 
         const rate = await fetchExchangeRate('USD', 'UAH');
 
-        expect(fetch).toHaveBeenCalledWith('https://api.monobank.ua/bank/currency');
+        expect(fetch).toHaveBeenCalledWith('/monobank/bank/currency');
         // rate should be (40+41)/2 = 40.5
         expect(rate).toBe(40.5);
     });
