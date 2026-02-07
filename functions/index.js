@@ -201,12 +201,27 @@ RESPOND with JSON array ONLY - exact category IDs in same order:
 
             const resultCategories = JSON.parse(jsonMatch[0]);
 
+            // Ensure response length matches input
+            while (resultCategories.length < descriptions.length) {
+                resultCategories.push('other');
+            }
+            if (resultCategories.length > descriptions.length) {
+                resultCategories.length = descriptions.length;
+            }
+
+            // Create a map for case-insensitive lookup to original ID
+            const idMap = new Map();
+            categoriesList.forEach((c) => {
+                idMap.set(c.id.toLowerCase(), c.id);
+            });
+            idMap.set('other', 'other');
+
             // Validate and sanitize
-            const sanitized = resultCategories.map((c) =>
-                typeof c === 'string' && categories.includes(c.toLowerCase())
-                    ? c.toLowerCase()
-                    : 'other'
-            );
+            const sanitized = resultCategories.map((c) => {
+                if (typeof c !== 'string') return 'other';
+                const lowerC = c.toLowerCase();
+                return idMap.has(lowerC) ? idMap.get(lowerC) : 'other';
+            });
 
             res.status(200).json({ categories: sanitized });
         } catch (error) {

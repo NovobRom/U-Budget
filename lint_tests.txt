@@ -1,0 +1,11 @@
+
+C:\Users\roman\Projects\smart-budget\src\__tests__\unit\utils\currency.test.ts
+    7:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   53:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   81:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   97:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 6 problems (0 errors, 6 warnings)
+

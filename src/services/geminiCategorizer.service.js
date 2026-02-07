@@ -97,7 +97,10 @@ export const isAIAvailable = async () => {
         const response = await fetch(CATEGORIZE_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descriptions: ['test'], categories: ['other'] }),
+            body: JSON.stringify({
+                descriptions: ['test'],
+                categories: [{ id: 'other', name: 'Other' }],
+            }),
         });
         return response.ok || response.status !== 404;
     } catch {
