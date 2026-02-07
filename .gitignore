@@ -28,6 +28,11 @@ dist-ssr
 
 # Приховуємо секретні файли
 .env
-.env.local 
-.env.development.local 
+.env.local
+.env.development.local
 .env.production.local
+
+# Generated files
+coverage/
+stats.html
+lint_errors.txt

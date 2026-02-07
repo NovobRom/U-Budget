@@ -35,7 +35,6 @@ export const useBudget = (
     const { currentBalance, convertedLimits } = useBudgetConversions(budgetData, currency);
 
     // --- USER MANAGEMENT ---
-    // @ts-expect-error - useBudgetUsers is JS hook without types
     const { removeUser, leaveBudget, switchBudget } = useBudgetUsers(
         activeBudgetId as string,
         user,
@@ -43,7 +42,6 @@ export const useBudget = (
     ) as any;
 
     // --- SUB-HOOKS FOR SPECIFIC DATA ---
-    // @ts-expect-error - useTransactions is JS hook without types
     const transactionLogic = useTransactions(
         activeBudgetId as string,
         user,
@@ -52,13 +50,10 @@ export const useBudget = (
         budgetData.baseCurrency
     ) as any;
 
-    // @ts-expect-error - useAssets is JS hook without types
     const assetLogic = useAssets(activeBudgetId as string, currency, t) as any;
 
-    // @ts-expect-error - useLoans is JS hook without types
     const loanLogic = useLoans(activeBudgetId as string, currency, t) as any;
 
-    // @ts-expect-error - useCategories is JS hook without types
     const categoryLogic = useCategories(
         activeBudgetId as string,
         { categories: budgetData.categories, limits: convertedLimits },
