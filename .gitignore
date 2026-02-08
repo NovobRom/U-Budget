@@ -35,4 +35,4 @@ dist-ssr
 # Generated files
 coverage/
 stats.html
-lint_errors.txt
+lint_errors.txt.agent/
